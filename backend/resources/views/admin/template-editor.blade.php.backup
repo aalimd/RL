@@ -1,0 +1,873 @@
+@extends('layouts.admin')
+
+@section('page-title', isset($template) ? 'Edit Template' : 'Create Template')
+
+@section('styles')
+    <!-- Summernote CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
+    <style>
+        /* ========== VERTICAL LAYOUT - Tools on Top, Preview Below ========== */
+        :root {
+            --topbar-height: 60px;
+            --toolbar-height: 50px;
+        }
+
+        .main-content {
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 0 !important;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .app-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* ========== TOP SECTION: Command Bar + Editor ========== */
+        .editor-top-section {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        /* Command Bar */
+        .command-bar {
+            height: var(--topbar-height);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            background: linear-gradient(to right, #f8fafc, #ffffff);
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .template-title-input {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1f2937;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 0.375rem;
+            padding: 0.25rem 0.5rem;
+            margin-left: 1rem;
+            transition: all 0.2s;
+            min-width: 300px;
+        }
+        .template-title-input:hover, .template-title-input:focus {
+            background: white;
+            border-color: #e5e7eb;
+            outline: none;
+        }
+
+        /* Tabs Row */
+        .editor-tabs {
+            display: flex;
+            align-items: center;
+            background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0 1rem;
+            gap: 0.25rem;
+        }
+
+        .editor-tab-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64748b;
+            background: transparent;
+            border: none;
+            border-radius: 0.5rem 0.5rem 0 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .editor-tab-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+        .editor-tab-btn:hover {
+            color: #334155;
+            background: rgba(255,255,255,0.7);
+        }
+        .editor-tab-btn.active {
+            color: #4f46e5;
+            background: white;
+        }
+        .editor-tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+        }
+
+        /* Variable Chips in Tab Row */
+        .tab-row-right {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .variable-chips-inline {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .variable-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+            color: #4338ca;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #c7d2fe;
+            transition: all 0.2s ease;
+        }
+        .variable-chip:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+        }
+        .variable-chip svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* Editor Content Area */
+        .editor-content-area {
+            background: #fafbfc;
+            overflow-y: auto;
+            max-height: 350px;
+            padding: 1.5rem;
+        }
+
+        .tab-pane {
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Tab Content Grid */
+        .editor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* Form Styles */
+        .form-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 0.5rem;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .form-control {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            background: white;
+        }
+        .form-control:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        /* ========== BOTTOM SECTION: Preview ========== */
+        .preview-section {
+            flex: 1;
+            background-color: #e5e5f7;
+            background-image: radial-gradient(#444cf7 0.5px, #e5e5f7 0.5px);
+            background-size: 20px 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        .preview-section.hidden-preview {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+        }
+        .preview-section.hidden-preview .live-preview-paper {
+            display: none;
+        }
+        .preview-section.hidden-preview::after {
+            content: 'Click "Show Preview" to see the recommendation template';
+            font-size: 1.1rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .live-preview-paper {
+            background: white;
+            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.2);
+            min-width: 210mm;
+            min-height: 297mm;
+            position: relative;
+        }
+
+        /* Preview Toggle Button */
+        .preview-toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .preview-toggle-btn:hover {
+            background: #e2e8f0;
+        }
+        .preview-toggle-btn.active {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        /* ========== SUMMERNOTE FIXES ========== */
+        .note-editor.note-frame {
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 0.5rem !important;
+            box-shadow: none !important;
+        }
+        .note-editor .note-toolbar {
+            background: linear-gradient(to bottom, #f8fafc, #f1f5f9) !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            padding: 0.5rem !important;
+        }
+        .note-btn {
+            background: white !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 0.375rem !important;
+            padding: 0.375rem 0.5rem !important;
+            color: #475569 !important;
+        }
+        .note-btn:hover {
+            background: #f1f5f9 !important;
+        }
+        .note-btn.active {
+            background: #4f46e5 !important;
+            color: white !important;
+        }
+        .note-dropdown-menu {
+            position: absolute !important;
+            z-index: 9999 !important;
+            background: white !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 0.5rem !important;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+        }
+        .note-editable {
+            padding: 1rem !important;
+            min-height: 150px !important;
+        }
+
+        /* Easy Header Builder Card */
+        .header-builder-card {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border: 1px solid #a7f3d0;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+        }
+        .header-builder-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #047857;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .upload-zone {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            border: 2px dashed #a7f3d0;
+            border-radius: 0.5rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 0.75rem;
+        }
+        .upload-zone:hover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        .upload-zone-content {
+            text-align: center;
+            color: #059669;
+        }
+        .generate-btn {
+            width: 100%;
+            padding: 0.625rem 1rem;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+        .generate-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .mb-3 { margin-bottom: 0.75rem; }
+        .mb-4 { margin-bottom: 1rem; }
+
+        /* Interactive Preview Zones */
+        .preview-interactive-zone {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .preview-interactive-zone:hover {
+            outline: 2px dashed #4f46e5;
+            outline-offset: 4px;
+        }
+
+        /* Scrollbar */
+        .editor-content-area::-webkit-scrollbar {
+            width: 6px;
+        }
+        .editor-content-area::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+    </style>
+@endsection
+
+@section('content')
+    @php
+        $layoutSettings = [];
+        if (isset($template) && $template->layout_settings) {
+            $layoutSettings = is_array($template->layout_settings) ? $template->layout_settings : json_decode($template->layout_settings, true) ?? [];
+        }
+    @endphp
+
+    <form method="POST" id="templateForm" class="app-container"
+        action="{{ isset($template) ? route('admin.templates.update', $template->id) : route('admin.templates.store') }}">
+        @csrf
+        @if(isset($template))
+            @method('PUT')
+        @endif
+
+        {{-- Validation Errors --}}
+        @if ($errors->any())
+            <div style="position: fixed; top: 90px; left: 50%; transform: translateX(-50%); z-index: 1000; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 1rem 2rem; border-radius: 0.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 500px;">
+                <strong style="display: block; margin-bottom: 0.5rem;">Please fix the following errors:</strong>
+                <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.875rem;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <!-- ========== TOP SECTION: Editor ========== -->
+        <div class="editor-top-section">
+            <!-- Command Bar -->
+            <div class="command-bar">
+                <div style="display: flex; align-items: center;">
+                    <a href="{{ route('admin.templates') }}" class="btn btn-ghost btn-sm" style="color: #6b7280;">
+                        <i data-feather="arrow-left"></i>
+                    </a>
+                    <input type="text" name="name" class="template-title-input" 
+                        value="{{ old('name', $template->name ?? 'Untitled Template') }}"
+                        placeholder="Template Name" required>
+                </div>
+                
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <!-- Preview Toggle -->
+                    <button type="button" class="preview-toggle-btn" id="previewToggleBtn" onclick="togglePreview()">
+                        <i data-feather="eye" style="width: 16px; height: 16px;"></i>
+                        <span>Show Preview</span>
+                    </button>
+                    
+                    <!-- Auto-Save Indicator -->
+                    <span id="autoSaveIndicator" style="font-size: 0.75rem; color: #64748b; font-style: italic; margin-right: 1rem;"></span>
+
+                    <!-- Active Toggle -->
+                    <label style="display: flex; align-items: center; cursor: pointer; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; color: #374151;">
+                        <input type="checkbox" name="is_active" {{ old('is_active', $template->is_active ?? true) ? 'checked' : '' }}>
+                        <span>Active</span>
+                    </label>
+
+                    <button type="submit" class="btn btn-primary shadow-sm" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1.5rem;">
+                        <i data-feather="save" style="width: 18px; height: 18px;"></i>
+                        <span>Save Template</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs Row -->
+            <div class="editor-tabs">
+                <button type="button" class="editor-tab-btn active" data-tab="header">
+                    <i data-feather="type"></i> Header
+                </button>
+                <button type="button" class="editor-tab-btn" data-tab="body">
+                    <i data-feather="file-text"></i> Body
+                </button>
+                <button type="button" class="editor-tab-btn" data-tab="footer">
+                    <i data-feather="align-justify"></i> Footer
+                </button>
+                <button type="button" class="editor-tab-btn" data-tab="signatory">
+                    <i data-feather="pen-tool"></i> Signature
+                </button>
+                <button type="button" class="editor-tab-btn" data-tab="settings">
+                    <i data-feather="sliders"></i> Settings
+                </button>
+
+                <!-- Variable Chips on Right -->
+                <div class="tab-row-right">
+                    <span style="font-size: 0.7rem; color: #6366f1; font-weight: 600; margin-right: 0.5rem;">Insert Variable:</span>
+                    <div class="variable-chips-inline">
+                        <span class="variable-chip" onclick="insertVariable('studentName')">
+                            <i data-feather="user"></i> Student
+                        </span>
+                        <span class="variable-chip" onclick="insertVariable('university')">
+                            <i data-feather="home"></i> University
+                        </span>
+                        <span class="variable-chip" onclick="insertVariable('purpose')">
+                            <i data-feather="target"></i> Purpose
+                        </span>
+                        <span class="variable-chip" onclick="insertVariable('date')">
+                            <i data-feather="calendar"></i> Date
+                        </span>
+                        <span class="variable-chip" onclick="insertVariable('trackingId')">
+                            <i data-feather="hash"></i> Tracking
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Editor Content -->
+            <div class="editor-content-area">
+                <!-- Tab: Header -->
+                <div id="tab-header" class="tab-pane active">
+                    <div class="editor-grid">
+                        <div class="header-builder-card">
+                            <h5 class="header-builder-title">
+                                <i data-feather="layout"></i> Easy Header Builder
+                            </h5>
+                            <div class="upload-zone" onclick="document.getElementById('builder_logo_file').click()">
+                                <div class="upload-zone-content">
+                                    <i data-feather="upload-cloud" style="width: 24px; height: 24px; margin-bottom: 0.25rem;"></i>
+                                    <p style="margin: 0; font-size: 0.75rem; font-weight: 600;">Upload Logo</p>
+                                </div>
+                            </div>
+                            <input type="file" id="builder_logo_file" accept="image/*" style="display: none;">
+                            <input type="hidden" id="builder_logo_base64">
+                            <input type="hidden" id="builder_logo_pos" value="center">
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <div>
+                                    <label style="font-size: 0.65rem; color: #047857; font-weight: 600; display: block; margin-bottom: 0.25rem;">Left Text</label>
+                                    <textarea id="builder_text_left" class="form-control" rows="2" placeholder="Organization name..."></textarea>
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.65rem; color: #047857; font-weight: 600; display: block; margin-bottom: 0.25rem;">Right Text</label>
+                                    <textarea id="builder_text_right" class="form-control" rows="2" placeholder="Additional text..."></textarea>
+                                </div>
+                            </div>
+                            <button type="button" class="generate-btn" onclick="generateHeaderHtml()">
+                                <i data-feather="zap" style="width: 14px; height: 14px;"></i>
+                                Generate & Insert
+                            </button>
+                        </div>
+                        <div>
+                            <label class="form-label">Header HTML</label>
+                            <textarea name="header_content" id="input_header_content" class="form-textarea">{{ old('header_content', $template->header_content ?? '') }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Body -->
+                <div id="tab-body" class="tab-pane">
+                    <label class="form-label">Body Content</label>
+                    <textarea name="body_content" id="input_body_content" class="form-textarea">{{ old('body_content', $template->body_content ?? '') }}</textarea>
+                </div>
+
+                <!-- Tab: Footer -->
+                <div id="tab-footer" class="tab-pane">
+                    <label class="form-label">Footer Content</label>
+                    <textarea name="footer_content" id="input_footer_content" class="form-textarea">{{ old('footer_content', $template->footer_content ?? '') }}</textarea>
+                </div>
+
+                <!-- Tab: Signatory -->
+                <div id="tab-signatory" class="tab-pane">
+                    <div class="editor-grid">
+                        <div>
+                            <label class="form-label">Name</label>
+                            <input type="text" name="signature_name" id="input_signature_name" class="form-control mb-3"
+                                value="{{ old('signature_name', $template->signature_name ?? '') }}">
+                        </div>
+                        <div>
+                            <label class="form-label">Job Title</label>
+                            <input type="text" name="signature_title" id="input_signature_title" class="form-control mb-3"
+                                value="{{ old('signature_title', $template->signature_title ?? '') }}">
+                        </div>
+                        <div>
+                            <label class="form-label">Department</label>
+                            <input type="text" name="signature_department" id="input_signature_department" class="form-control mb-3"
+                                value="{{ old('signature_department', $template->signature_department ?? '') }}">
+                        </div>
+                        <div>
+                            <label class="form-label">Institution</label>
+                            <input type="text" name="signature_institution" id="input_signature_institution" class="form-control mb-3"
+                                value="{{ old('signature_institution', $template->signature_institution ?? '') }}">
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <label class="form-label">Signature Image URL</label>
+                            <input type="text" name="signature_image" id="input_signature_image" class="form-control"
+                                value="{{ old('signature_image', $template->signature_image ?? '') }}" placeholder="https://...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Settings -->
+                <div id="tab-settings" class="tab-pane">
+                    <div class="editor-grid">
+                        <div>
+                            <label class="form-label">Font Family</label>
+                            <select name="layout_settings[fontFamily]" id="input_fontFamily" class="form-control mb-3">
+                                <option value="Arial, sans-serif" {{ ($layoutSettings['fontFamily'] ?? 'Arial') === 'Arial, sans-serif' ? 'selected' : '' }}>Arial</option>
+                                <option value="'Times New Roman', serif" {{ ($layoutSettings['fontFamily'] ?? '') === "'Times New Roman', serif" ? 'selected' : '' }}>Times New Roman</option>
+                                <option value="'Courier New', monospace" {{ ($layoutSettings['fontFamily'] ?? '') === "'Courier New', monospace" ? 'selected' : '' }}>Courier New</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Font Size (pt)</label>
+                            <input type="number" name="layout_settings[fontSize]" id="input_fontSize" class="form-control mb-3" value="{{ $layoutSettings['fontSize'] ?? 12 }}">
+                        </div>
+                        <div>
+                            <label class="form-label">Margins (mm)</label>
+                            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;">
+                                <input type="number" name="layout_settings[margins][top]" id="input_margin_top" class="form-control" value="{{ $layoutSettings['margins']['top'] ?? 20 }}" placeholder="Top">
+                                <input type="number" name="layout_settings[margins][right]" id="input_margin_right" class="form-control" value="{{ $layoutSettings['margins']['right'] ?? 20 }}" placeholder="Right">
+                                <input type="number" name="layout_settings[margins][bottom]" id="input_margin_bottom" class="form-control" value="{{ $layoutSettings['margins']['bottom'] ?? 20 }}" placeholder="Bottom">
+                                <input type="number" name="layout_settings[margins][left]" id="input_margin_left" class="form-control" value="{{ $layoutSettings['margins']['left'] ?? 20 }}" placeholder="Left">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label" style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="checkbox" name="layout_settings[border][enabled]" id="input_border_enabled"
+                                    {{ ($layoutSettings['border']['enabled'] ?? false) ? 'checked' : '' }}
+                                    onchange="toggleBorderSettings(); renderPreview();">
+                                Show Page Border
+                            </label>
+                            <div id="border_settings_panel" style="display: {{ ($layoutSettings['border']['enabled'] ?? false) ? 'grid' : 'none' }}; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-top: 0.5rem;">
+                                <input type="number" name="layout_settings[border][width]" id="input_border_width" class="form-control" value="{{ $layoutSettings['border']['width'] ?? 1 }}" placeholder="Width">
+                                <select name="layout_settings[border][style]" id="input_border_style" class="form-control">
+                                    @foreach(['solid', 'double', 'dashed', 'dotted'] as $style)
+                                        <option value="{{ $style }}" {{ ($layoutSettings['border']['style'] ?? 'solid') === $style ? 'selected' : '' }}>{{ ucfirst($style) }}</option>
+                                    @endforeach
+                                </select>
+                                <input type="color" name="layout_settings[border][color]" id="input_border_color" class="form-control" value="{{ $layoutSettings['border']['color'] ?? '#000000' }}" style="height: 38px; padding: 2px;">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">Template Language</label>
+                            <select name="language" id="input_language" class="form-control" required>
+                                <option value="en" {{ old('language', $template->language ?? 'en') === 'en' ? 'selected' : '' }}>English</option>
+                                <option value="ar" {{ old('language', $template->language ?? 'en') === 'ar' ? 'selected' : '' }}>العربية</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== BOTTOM SECTION: Preview ========== -->
+        <div class="preview-section hidden-preview" id="previewSection">
+            <div id="live-preview-content" class="live-preview-paper">
+                <!-- Content Rendered Here via JS -->
+            </div>
+        </div>
+    </form>
+@endsection
+
+@section('scripts')
+    <!-- DOMPurify for XSS protection -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <!-- jQuery (required for Summernote) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Summernote JS -->
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+    <script>
+        let currentSummernote = null;
+
+        function sanitizeHtml(html) {
+            return DOMPurify.sanitize(html, {
+                ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'table', 'tr', 'td', 'th', 'thead', 'tbody', 'img', 'div', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'font', 'hr'],
+                ALLOWED_ATTR: ['style', 'class', 'src', 'alt', 'href', 'title', 'target', 'dir', 'align', 'width', 'height', 'colspan', 'rowspan', 'border', 'cellpadding', 'cellspacing']
+            });
+        }
+
+        $(document).ready(function () {
+            // Init Summernote
+            $('.form-textarea').summernote({
+                height: 200,
+                placeholder: 'اكتب المحتوى هنا...',
+                toolbar: [
+                    ['style', ['style', 'bold', 'underline', 'clear']],
+                    ['para', ['ul', 'ol', 'paragraph']],
+                    ['insert', ['link', 'table']],
+                    ['history', ['undo', 'redo']],
+                    ['view', ['codeview']]
+                ],
+                callbacks: {
+                    onInit: () => renderPreview(),
+                    onChange: function(c) { $(this).val(c); renderPreview(); },
+                    onFocus: function() { currentSummernote = $(this); }
+                }
+            });
+
+            // General input listener
+            $('input, select, textarea').on('input change', renderPreview);
+            
+            // Tab Logic
+            $('.editor-tab-btn').click(function() {
+                $('.editor-tab-btn').removeClass('active');
+                $('.tab-pane').removeClass('active');
+                
+                $(this).addClass('active');
+                $('#tab-' + $(this).data('tab')).addClass('active');
+            });
+            
+            // File Upload Logic
+            $('#builder_logo_file').change(function(e) {
+                const file = e.target.files[0];
+                if(file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        $('#builder_logo_base64').val(e.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+            
+            renderPreview();
+        });
+
+        // Toggle Preview Visibility
+        function togglePreview() {
+            const section = document.getElementById('previewSection');
+            const btn = document.getElementById('previewToggleBtn');
+            
+            section.classList.toggle('hidden-preview');
+            
+            const isHidden = section.classList.contains('hidden-preview');
+            btn.classList.toggle('active', !isHidden);
+            btn.querySelector('span').textContent = isHidden ? 'Show Preview' : 'Hide Preview';
+            btn.querySelector('i').setAttribute('data-feather', isHidden ? 'eye' : 'eye-off');
+            feather.replace();
+            
+            if (!isHidden) {
+                renderPreview();
+            }
+        }
+
+        // Toggle Border Settings
+        function toggleBorderSettings() {
+            const enabled = document.getElementById('input_border_enabled').checked;
+            document.getElementById('border_settings_panel').style.display = enabled ? 'grid' : 'none';
+        }
+
+        // Switch Tab
+        function switchToTab(tabName) {
+            $('.editor-tab-btn[data-tab="' + tabName + '"]').click();
+        }
+
+        // Insert Variable
+        function insertVariable(name) {
+            const tag = '{{' + name + '}}';
+            if(currentSummernote) {
+                currentSummernote.summernote('insertText', tag);
+            } else {
+                switchToTab('body');
+                $('#input_body_content').summernote('insertText', tag);
+            }
+        }
+
+        // Header Generator
+        function generateHeaderHtml() {
+            const logo = $('#builder_logo_base64').val();
+            const left = $('#builder_text_left').val().replace(/\n/g, '<br>');
+            const right = $('#builder_text_right').val().replace(/\n/g, '<br>');
+            
+            let html = `<table style="width:100%; border:none;"><tr>`;
+            html += `<td style="width:33%; text-align:left; vertical-align:top; font-size:0.9rem;">${left}</td>`;
+            html += `<td style="width:34%; text-align:center;">`;
+            if(logo) html += `<img src="${logo}" style="max-height:80px; max-width:100%;">`;
+            html += `</td>`;
+            html += `<td style="width:33%; text-align:right; vertical-align:top; font-size:0.9rem;" dir="rtl">${right}</td>`;
+            html += `</tr></table>`;
+            
+            $('#input_header_content').summernote('code', html);
+        }
+
+        // Preview Render
+        function getValue(id) { return document.getElementById(id) ? document.getElementById(id).value : ''; }
+
+        function renderPreview() {
+            const margins = {
+                top: getValue('input_margin_top'),
+                bottom: getValue('input_margin_bottom'),
+                left: getValue('input_margin_left'),
+                right: getValue('input_margin_right')
+            };
+            
+            const borderEnabled = document.getElementById('input_border_enabled')?.checked;
+            const borderWidth = getValue('input_border_width') || 1;
+            const borderStyleVal = getValue('input_border_style') || 'solid';
+            const borderColor = getValue('input_border_color') || '#000000';
+            const borderStyle = borderEnabled ? `${borderWidth}px ${borderStyleVal} ${borderColor}` : 'none';
+
+            const el = document.getElementById('live-preview-content');
+            if(!el) return;
+
+            el.style.padding = `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`;
+            el.style.fontFamily = getValue('input_fontFamily');
+            el.style.fontSize = getValue('input_fontSize') + 'pt';
+            el.style.border = borderStyle;
+
+            el.innerHTML = `
+                <div class="preview-interactive-zone" onclick="switchToTab('header')" title="Click to edit header">
+                    ${sanitizeHtml(getValue('input_header_content'))}
+                </div>
+                
+                <div class="preview-interactive-zone" onclick="switchToTab('body')" style="min-height: 300px; margin-top: 2rem;" title="Click to edit body">
+                    ${sanitizeHtml(getValue('input_body_content'))}
+                </div>
+                
+                <div class="preview-interactive-zone" onclick="switchToTab('signatory')" style="margin-top: 3rem;" title="Click to edit signature">
+                    <strong>${sanitizeHtml(getValue('input_signature_name'))}</strong><br>
+                    ${sanitizeHtml(getValue('input_signature_title'))}<br>
+                    ${sanitizeHtml(getValue('input_signature_institution'))}
+                    ${getValue('input_signature_image') ? `<br><img src="${sanitizeHtml(getValue('input_signature_image'))}" style="height:60px; margin-top:10px;">` : ''}
+                </div>
+                
+                <div class="preview-interactive-zone" onclick="switchToTab('footer')" style="position: absolute; bottom: ${margins.bottom}mm; left: 0; right: 0; text-align: center;" title="Click to edit footer">
+                    ${sanitizeHtml(getValue('input_footer_content'))}
+                </div>
+            `;
+        }
+
+        // Unsaved Changes Warning
+        let formChanged = false;
+        $(document).on('input change', 'input, select, textarea, .note-editable', function() {
+            formChanged = true;
+            $('#autoSaveIndicator').text('Unsaved changes...');
+        });
+        window.addEventListener('beforeunload', function(e) {
+            if (formChanged) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+        $('#templateForm').on('submit', function() {
+            formChanged = false;
+        });
+
+        // Auto-Save Logic
+        const templateId = "{{ $template->id ?? '' }}";
+        if (templateId) {
+            setInterval(function() {
+                if (formChanged) {
+                    saveDraft();
+                }
+            }, 30000); // Check every 30 seconds
+        } else {
+            $('#autoSaveIndicator').text('Save template to enable auto-save');
+        }
+
+        function saveDraft() {
+            $('#autoSaveIndicator').text('Saving draft...');
+            
+            const formData = new FormData(document.getElementById('templateForm'));
+
+            // Manually append Summernote contents ensuring they are synced
+            $('.form-textarea').each(function() {
+                formData.set($(this).attr('name'), $(this).val());
+            });
+
+            $.ajax({
+                url: `/recom99_php/admin/templates/${templateId}/autosave`,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-TOKEN': $('input[name="_token"]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        $('#autoSaveIndicator').text(`Draft saved at ${time}`);
+                        // We don't reset formChanged completely because we still want the user to properly save to publish
+                        // But for "unsaved warning" purposes, maybe we shouldn't warn if draft is saved? 
+                        // Usually standard behavior is to still warn if "official" save hasn't happened.
+                        // So we keep formChanged = true.
+                    }
+                },
+                error: function() {
+                    $('#autoSaveIndicator').text('Auto-save failed').css('color', 'red');
+                }
+            });
+        }
+    </script>
+@endsection

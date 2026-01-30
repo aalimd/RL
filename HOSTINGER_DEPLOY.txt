@@ -1,0 +1,44 @@
+DEPLOYMENT GUIDE FOR HOSTINGER (v4 - Automation Ready)
+======================================================
+Updated: Jan 29, 2026
+
+1. PREPARATION
+   - Ensure your hosting runs PHP 8.2 or higher.
+   - Database: MySQL or MariaDB.
+
+2. UPLOAD
+   - Zip the entire project folder (exclude node_modules, tests, .git).
+   - Upload to your `public_html` (or subfolder).
+   - Extract the files.
+
+3. WEB INSTALLATION (Recommended)
+   - Go to: `https://your-domain.com/install`
+   - Follow the wizard.
+   - It will set up the database structure automatically (including the new QR Code and Verification features).
+
+4. MANUAL INSTALLATION (If wizard fails)
+   - Create a database in Hostinger.
+   - Import the file: `/install/database/fresh_install.sql` via phpMyAdmin.
+   - Rename `backend/.env.example` to `backend/.env`.
+   - Edit `.env` and fill in DB credentials and URL.
+   - Run `php artisan key:generate` (via SSH) or manually set APP_KEY if you can't access SSH.
+
+5. IMPORTANT PERMISSIONS (Fix 500 Errors)
+   - Go to File Manager.
+   - Right-click `backend/storage` -> Permissions.
+   - Set to **775** (or 777 not recommended but works if 775 fails).
+   - Ensure `backend/bootstrap/cache` is also **775**.
+
+6. SYMLINK (For Images)
+   - If you have SSH access: `cd backend && php artisan storage:link`
+   - If no SSH, you can try creating a PHP file named `link.php` in `public` folder with:
+     <?php symlink(__DIR__.'/../backend/storage/app/public', __DIR__.'/storage'); echo 'Done'; ?>
+     Then visit `your-domain.com/link.php` once.
+
+7. AUTOMATION & QUEUES
+   - The system is designed to work without complex queue workers for basic emails.
+   - If emails are slow, configure a Cron Job for `php artisan schedule:run`.
+
+TROUBLESHOOTING
+- "500 Internal Server Error": Almost always folder permissions (Step 5).
+- "Class not found": Run `composer install --optimize-autoloader --no-dev` if you have SSH.
