@@ -965,6 +965,13 @@
                     <i data-feather="clipboard"></i>
                     <span>Form Settings</span>
                 </a>
+                @if(auth()->user()->role === 'admin')
+                    <a href="{{ route('admin.system-tools') }}"
+                        class="nav-item {{ request()->routeIs('admin.system-tools') ? 'active' : '' }}">
+                        <i data-feather="terminal"></i>
+                        <span>System Tools</span>
+                    </a>
+                @endif
             </div>
 
             <div class="nav-section"

@@ -15,6 +15,8 @@ use App\Mail\RequestStatusUpdated;
 use App\Services\LetterService;
 use App\Services\AiService;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
@@ -1126,5 +1128,154 @@ class AdminController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Template reset to stable default successfully!');
+    }
+
+    // ============================================
+    // System Tools (Admin Only)
+    // ============================================
+
+    /**
+     * Display System Tools page
+     */
+    public function systemTools()
+    {
+        $settings = $this->getSettings();
+
+        // Gather system info
+        $systemInfo = [
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'server_software' => $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown',
+            'database_connection' => $this->checkDatabaseConnection(),
+            'disk_free' => $this->formatBytes(disk_free_space(base_path())),
+            'disk_total' => $this->formatBytes(disk_total_space(base_path())),
+            'pending_migrations' => $this->getPendingMigrations(),
+        ];
+
+        return view('admin.system-tools', compact('settings', 'systemInfo'));
+    }
+
+    /**
+     * Run pending database migrations
+     */
+    public function runMigrations(Request $request)
+    {
+        try {
+            // Extend time limit for shared hosting
+            set_time_limit(300);
+
+            // Check if migrations table exists
+            if (!DB::getSchemaBuilder()->hasTable('migrations')) {
+                Artisan::call('migrate:install');
+            }
+
+            // Run migrations
+            $output = Artisan::call('migrate', ['--force' => true]);
+            $result = Artisan::output();
+
+            // Log the action
+            AuditLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'system_migrate',
+                'target_type' => 'system',
+                'target_id' => null,
+                'details' => ['output' => $result],
+                'ip_address' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Database updated successfully!',
+                'output' => $result ?: 'Nothing to migrate.'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Migration failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Migration failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Clear application caches (without clearing sessions)
+     */
+    public function clearCache(Request $request)
+    {
+        try {
+            // Clear specific caches (NOT session/cache to keep user logged in)
+            Artisan::call('config:clear');
+            Artisan::call('route:clear');
+            Artisan::call('view:clear');
+
+            // Log the action
+            AuditLog::create([
+                'user_id' => Auth::id(),
+                'action' => 'system_cache_clear',
+                'target_type' => 'system',
+                'target_id' => null,
+                'details' => ['cleared' => ['config', 'route', 'view']],
+                'ip_address' => $request->ip(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cache cleared successfully!'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Cache clear failed: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Cache clear failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Check database connection status
+     */
+    private function checkDatabaseConnection(): string
+    {
+        try {
+            DB::connection()->getPdo();
+            return 'Connected';
+        } catch (\Exception $e) {
+            return 'Error: ' . $e->getMessage();
+        }
+    }
+
+    /**
+     * Get count of pending migrations
+     */
+    private function getPendingMigrations(): int
+    {
+        try {
+            if (!DB::getSchemaBuilder()->hasTable('migrations')) {
+                return count(glob(database_path('migrations/*.php')));
+            }
+
+            $ran = DB::table('migrations')->pluck('migration')->toArray();
+            $all = collect(glob(database_path('migrations/*.php')))
+                ->map(fn($path) => pathinfo($path, PATHINFO_FILENAME))
+                ->toArray();
+
+            return count(array_diff($all, $ran));
+        } catch (\Exception $e) {
+            return -1;
+        }
+    }
+
+    /**
+     * Format bytes to human readable
+     */
+    private function formatBytes($bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $i = 0;
+        while ($bytes >= 1024 && $i < count($units) - 1) {
+            $bytes /= 1024;
+            $i++;
+        }
+        return round($bytes, 2) . ' ' . $units[$i];
     }
 }

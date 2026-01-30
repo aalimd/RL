@@ -85,6 +85,11 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::put('/appearance', [AdminController::class, 'updateAppearance'])->name('appearance.update');
         Route::post('/settings/test-email', [AdminController::class, 'sendTestEmail'])->name('settings.test-email');
         Route::put('/form-settings', [AdminController::class, 'updateFormSettings'])->name('form-settings.update');
+
+        // System Tools
+        Route::get('/system-tools', [AdminController::class, 'systemTools'])->name('system-tools');
+        Route::post('/system-tools/migrate', [AdminController::class, 'runMigrations'])->name('system-tools.migrate');
+        Route::post('/system-tools/clear-cache', [AdminController::class, 'clearCache'])->name('system-tools.clear-cache');
     });
 });
 
