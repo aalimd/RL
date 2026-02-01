@@ -43,18 +43,35 @@ jobs:
               \$zip->close();
               echo 'Extraction successful.<br>';
 
-              // Force Clear Views (Critical)
-              array_map('unlink', glob(__DIR__ . '/storage/framework/views/*.php'));
-              echo 'Views cleared.<br>';
-              
-              // Force Clear Bootstrap Cache
-              array_map('unlink', glob(__DIR__ . '/bootstrap/cache/*.php'));
-              echo 'Bootstrap cache cleared.<br>';
+              // Safe Cache Clearing logic
+              try {
+                  // Standard Laravel View Cache
+                  \$viewFiles = glob(__DIR__ . '/storage/framework/views/*.php');
+                  if (\$viewFiles) {
+                      foreach (\$viewFiles as \$file) {
+                          if (is_file(\$file)) @unlink(\$file);
+                      }
+                      echo 'Views cleared.<br>';
+                  }
+
+                  // Bootstrap Cache
+                  \$bootFiles = glob(__DIR__ . '/bootstrap/cache/*.php');
+                  if (\$bootFiles) {
+                      foreach (\$bootFiles as \$file) {
+                          if (is_file(\$file)) @unlink(\$file);
+                      }
+                      echo 'Bootstrap cleared.<br>';
+                  }
+              } catch (Exception \$e) {
+                  echo 'Cache warning: ' . \$e->getMessage();
+                  // Do not fail the deployment
+              }
 
               // Security: Self-destruct artifacts
-              unlink('$ZIP_NAME');
-              unlink(__FILE__);
+              @unlink('$ZIP_NAME');
+              @unlink(__FILE__);
           } else {
+              http_response_code(500);
               echo 'Extraction failed';
           }
           ?>" > "../deploy_package/$SCRIPT_NAME"
