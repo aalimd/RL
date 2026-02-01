@@ -29,8 +29,22 @@ jobs:
           cd backend
           # Zip the contents of backend, excluding .git, .env, and sensitive/large dev files
           zip -r ../deploy_package/release.zip . -x "*.git*" "*.github*" "node_modules/*" "storage/*.key" "storage/logs/*" ".env" "phpunit.xml" ".DS_Store" "tests/*"
-          # Copy the unzip script to the package folder
-          cp unzip.php ../deploy_package/unzip.php
+          
+          # Create unzip.php dynamically
+          echo "<?php
+          \$zip = new ZipArchive;
+          \$res = \$zip->open('release.zip');
+          if (\$res === TRUE) {
+              \$zip->extractTo(__DIR__);
+              \$zip->close();
+              echo 'Extraction successful';
+              // Security: Self-destruct and remove zip
+              unlink('release.zip');
+              unlink(__FILE__);
+          } else {
+              echo 'Extraction failed';
+          }
+          ?>" > ../deploy_package/unzip.php
 
       - name: 📂 Sync files (Upload Zip)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
