@@ -110,36 +110,4 @@ Route::middleware(['auth', 'twofactor'])->prefix('admin')->name('admin.')->group
     Route::get('/2fa/verify', [App\Http\Controllers\TwoFactorController::class, 'verify'])->name('2fa.verify');
     Route::post('/2fa/verify', [App\Http\Controllers\TwoFactorController::class, 'verifyPost'])->middleware('throttle:5,1')->name('2fa.verify.post');
     Route::post('/2fa/resend', [App\Http\Controllers\TwoFactorController::class, 'resend'])->middleware('throttle:3,1')->name('2fa.resend');
-
-    // DEBUG EMAIL ROUTE
-    Route::get('/debug-email', function () {
-        if (Auth::user()->role !== 'admin')
-            abort(403);
-
-        $config = config('mail');
-        // Hide sensitive info
-        if (isset($config['mailers']['smtp']['password']))
-            $config['mailers']['smtp']['password'] = '********';
-        if (isset($config['mailers']['zeptomail']['token']))
-            $config['mailers']['zeptomail']['token'] = '***TOKEN***';
-
-        echo "<h1>Email Debugger (Integrated)</h1><pre>";
-        print_r($config);
-
-        echo "\nUser Env Zepto Token: " . (env('ZEPTOMAIL_TOKEN') ? 'Set' : 'Not Set');
-        echo "\nUser Env Mail Mailer: " . env('MAIL_MAILER');
-
-        echo "\n\nSending Test Email to " . Auth::user()->email . " ...\n";
-        try {
-            Mail::raw('Debug Test Email from Server', function ($msg) {
-                $msg->to(Auth::user()->email)->subject('Debug Test');
-            });
-            echo "✅ Email Sent Successfully!";
-        } catch (\Exception $e) {
-            echo "❌ Failed: " . $e->getMessage();
-        }
-        echo "</pre>";
-    });
 });
-
-
