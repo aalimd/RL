@@ -12,13 +12,13 @@ class EmailTemplateController extends Controller
     public function index()
     {
         $templates = \App\Models\EmailTemplate::all();
-        return view('admin.email_templates.index', compact('templates'));
+        return view('admin.email-templates.index', compact('templates'));
     }
 
     public function edit($id)
     {
         $template = \App\Models\EmailTemplate::findOrFail($id);
-        return view('admin.email_templates.edit', compact('template'));
+        return view('admin.email-templates.edit', compact('template'));
     }
 
     public function update(Request $request, $id)
