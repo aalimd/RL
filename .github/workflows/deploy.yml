@@ -7,7 +7,7 @@ on:
 
 jobs:
   web-deploy:
-    name: 🎉 Deploy
+    name: 🎉 Deploy (Zip Strategy)
     runs-on: ubuntu-latest
     steps:
       - name: 🚚 Get latest code
@@ -17,13 +17,22 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: mbstring, bcmath, intl
+          extensions: mbstring, bcmath, intl, zip
 
       - name: 📦 Install Dependencies
         working-directory: ./backend
         run: composer install --no-dev --optimize-autoloader
 
-      - name: 📂 Sync files (Safe Mode)
+      - name: 📦 Create Deployment Package
+        run: |
+          mkdir deploy_package
+          cd backend
+          # Zip the contents of backend, excluding .git, .env, and sensitive/large dev files
+          zip -r ../deploy_package/release.zip . -x "*.git*" "*.github*" "node_modules/*" "storage/*.key" "storage/logs/*" ".env" "phpunit.xml" ".DS_Store" "tests/*"
+          # Copy the unzip script to the package folder
+          cp unzip.php ../deploy_package/unzip.php
+
+      - name: 📂 Sync files (Upload Zip)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -31,19 +40,10 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           port: 21
-          local-dir: ./backend/
+          local-dir: ./deploy_package/
           server-dir: ./
           state-name: .ftp-deploy-sync-state.json
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/.github*/**
-            backend/node_modules/**
-            backend/vendor/**
-            backend/.env
-            backend/storage/*.keyxample
-            .env.backup
-            phpunit.xml
-            storage/*.key
-            storage/app/public/**
-            storage/logs/*.log
+
+      - name: 🚀 Trigger Unzip on Server
+        run: curl -s https://apps.aamd.sa/RL/unzip.php
+        continue-on-error: true
