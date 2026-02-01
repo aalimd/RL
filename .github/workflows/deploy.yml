@@ -36,10 +36,21 @@ jobs:
           
           # Create Smart Extraction Script check
           echo "<?php
-          // Increase limits for extraction/migration
+          // Increase limits
           ini_set('memory_limit', '512M');
           ini_set('max_execution_time', 300);
 
+          echo '<pre>';
+          echo '🚀 Starting Deployment Process...<br>';
+
+          // 1. Force Delete Critical Files (To prove write access)
+          \$criticalFile = __DIR__ . '/app/Services/TelegramService.php';
+          if (file_exists(\$criticalFile)) {
+              unlink(\$criticalFile);
+              echo '🗑️ Deleted old TelegramService.php<br>';
+          }
+
+          // 2. Extract Files
           \$zip = new ZipArchive;
           \$res = \$zip->open('$ZIP_NAME');
           
@@ -48,40 +59,42 @@ jobs:
               \$zip->close();
               echo '✅ Files Extracted.<br>';
 
+              // 3. Reset PHP Opcache (The likely culprit)
+              if (function_exists('opcache_reset')) {
+                  opcache_reset();
+                  echo '✅ Opcache Reset.<br>';
+              } else {
+                  echo 'ℹ️ Opcache not enabled/accessible.<br>';
+              }
+
               // BOOTSTRAP LARAVEL
-              // This ensures we use the App's native logic to clear cache and migrate
               try {
                   if (file_exists(__DIR__ . '/vendor/autoload.php')) {
                       require __DIR__ . '/vendor/autoload.php';
                       \$app = require_once __DIR__ . '/bootstrap/app.php';
-                      
-                      // Initialize Kernel to load environment/configs
                       \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class);
                       \$kernel->bootstrap();
 
                       echo '✅ Laravel Bootstrapped.<br>';
 
-                      // 1. Clear Views (Fixes missing text)
+                      // Clear Everything
                       Illuminate\Support\Facades\Artisan::call('view:clear');
-                      echo '✅ Views Cleared: ' . Illuminate\Support\Facades\Artisan::output() . '<br>';
-
-                      // 2. Clear Config
+                      Illuminate\Support\Facades\Artisan::call('cache:clear');
                       Illuminate\Support\Facades\Artisan::call('config:clear');
-                      echo '✅ Config Cleared: ' . Illuminate\Support\Facades\Artisan::output() . '<br>';
+                      Illuminate\Support\Facades\Artisan::call('route:clear');
+                      echo '✅ All Artisan Caches Cleared.<br>';
 
-                      // 3. Migrate Database (Fixes missing columns)
-                      Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-                      echo '✅ Database Migrated: ' . Illuminate\Support\Facades\Artisan::output() . '<br>';
+                      // Verify File Update
+                      if (file_exists(\$criticalFile)) {
+                          echo '📄 TelegramService Hash: ' . md5_file(\$criticalFile) . '<br>';
+                      }
                       
-                  } else {
-                      echo '⚠️ Vendor folder missing, cannot bootstrap Laravel.<br>';
                   }
               } catch (Throwable \$e) {
                   echo '⚠️ Post-Install Error: ' . \$e->getMessage() . '<br>';
-                  // Don't fail the whole request, we want to clean up
               }
 
-              // Security: Cleanup
+              // Cleanup
               @unlink('$ZIP_NAME');
               @unlink(__FILE__);
               echo '✅ Cleanup Complete.';
@@ -89,6 +102,7 @@ jobs:
               http_response_code(500);
               echo '❌ Extraction Failed';
           }
+          echo '</pre>';
           ?>" > "../deploy_package/$SCRIPT_NAME"
 
       - name: 📂 Sync files (Upload Zip)
