@@ -422,11 +422,11 @@
                             <span class="result-title">Request Status</span>
                             <span
                                 class="status-badge 
-                                                                                                    @if($request->status === 'Approved') status-approved
-                                                                                                    @elseif($request->status === 'Rejected') status-rejected
-                                                                                                    @elseif($request->status === 'Needs Revision') status-revision
-                                                                                                    @elseif($request->status === 'Under Review') status-review
-                                                                                                    @else status-pending @endif">
+                                                                                                            @if($request->status === 'Approved') status-approved
+                                                                                                            @elseif($request->status === 'Rejected') status-rejected
+                                                                                                            @elseif($request->status === 'Needs Revision') status-revision
+                                                                                                            @elseif($request->status === 'Under Review') status-review
+                                                                                                            @else status-pending @endif">
                                 {{ $request->status }}
                             </span>
                         </div>
@@ -474,6 +474,20 @@
                                 style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
                                 <p style="margin: 0; color: #0369a1; font-size: 0.9rem;">{{ $statusMessage }}</p>
                             </div>
+                        @endif
+
+                        @if(isset($telegramBotUsername) && $telegramBotUsername && !$request->telegram_chat_id)
+                            <a href="https://t.me/{{ $telegramBotUsername }}?start={{ $request->tracking_id }}" target="_blank"
+                                class="view-letter-btn"
+                                style="background: #0088cc; box-shadow: 0 4px 15px -3px rgba(0, 136, 204, 0.4); margin-top: 0; margin-bottom: 1rem;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                    style="margin-right: 8px;">
+                                    <path
+                                        d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-8.609 3.33c-2.068.8-4.133 1.598-5.724 2.21a405.15 405.15 0 0 1-2.849 1.09c-.42.147-.99.332-1.473.901-.728.968.193 1.798.919 2.286 1.61.516 3.275 1.009 3.816 1.177l.176.056c.112.037.162.145.148.25l-.29 3.392a1.867 1.867 0 0 0 1.29 1.9c.706.182 1.98.486 2.502.584.453.085.803-.255 1.026-.52.545-.583 1.258-1.353 1.776-1.93.072-.08.183-.09.261-.023 1.54 1.154 3.352 2.515 4.966 3.722.652.486 1.611.332 1.956-.563.858-2.617 2.458-7.94 3.633-11.996a2.288 2.288 0 0 0-.256-1.897 2.27 2.27 0 0 0-1.246-.994z" />
+                                </svg>
+                                Subscribe to Updates
+                            </a>
                         @endif
 
                         @if($request->status === 'Approved')

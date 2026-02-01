@@ -24,6 +24,8 @@ class Request extends Model
         'custom_content',
         'template_id',
         'status',
+        'status',
+        'telegram_chat_id',
         'admin_message',
         'rejection_reason',
         'document_path',

@@ -56,6 +56,30 @@ class TelegramService
     }
 
     /**
+     * Send a message to a specific chat ID
+     */
+    public function sendMessageToChat($chatId, $message)
+    {
+        if (!$this->botToken) {
+            return false;
+        }
+
+        $data = [
+            'chat_id' => $chatId,
+            'text' => $message,
+            'parse_mode' => 'HTML',
+        ];
+
+        try {
+            $response = Http::post($this->apiUrl . $this->botToken . '/sendMessage', $data);
+            return $response->successful();
+        } catch (\Exception $e) {
+            Log::error('Telegram Exception: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Send a request notification with action buttons
      */
     public function sendRequestNotification($request)
@@ -73,6 +97,10 @@ class TelegramService
                 [
                     ['text' => '✅ Approve', 'callback_data' => "approve_{$request->id}"],
                     ['text' => '❌ Reject', 'callback_data' => "reject_{$request->id}"]
+                ],
+                [
+                    ['text' => '👀 Under Review', 'callback_data' => "under_review_{$request->id}"],
+                    ['text' => '🔄 Needs Revision', 'callback_data' => "needs_revision_{$request->id}"]
                 ]
             ]
         ];
@@ -102,5 +130,42 @@ class TelegramService
         ]);
 
         return $response->json();
+    }
+
+    /**
+     * Get Bot Username (from cache or API)
+     */
+    public function getBotUsername()
+    {
+        // Check DB first
+        $username = Settings::where('key', 'telegram_bot_username')->value('value');
+        if ($username) {
+            return $username;
+        }
+
+        if (!$this->botToken) {
+            return null;
+        }
+
+        // Fetch from API
+        try {
+            $response = Http::get($this->apiUrl . $this->botToken . '/getMe');
+            if ($response->successful()) {
+                $data = $response->json();
+                $username = $data['result']['username'] ?? null;
+
+                if ($username) {
+                    Settings::updateOrCreate(
+                        ['key' => 'telegram_bot_username'],
+                        ['value' => $username]
+                    );
+                    return $username;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to get bot username: ' . $e->getMessage());
+        }
+
+        return null;
     }
 }

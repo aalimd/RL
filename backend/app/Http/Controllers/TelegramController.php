@@ -35,11 +35,10 @@ class TelegramController extends Controller
 
         $update = $request->all();
 
-        // Log incoming update for debug (temporarily)
-        // Log::info('Telegram Webhook: ', $update);
-
         if (isset($update['callback_query'])) {
             $this->handleCallback($update['callback_query']);
+        } elseif (isset($update['message'])) {
+            $this->handleMessage($update['message']);
         }
 
         return response('OK', 200);
@@ -52,7 +51,6 @@ class TelegramController extends Controller
     {
         $data = $callback['data'];
         $callbackId = $callback['id'];
-        $messageId = $callback['message']['message_id'];
         $chatId = $callback['message']['chat']['id'];
 
         // Verify this allows only authorized chat ID
@@ -64,15 +62,111 @@ class TelegramController extends Controller
         }
 
         if (strpos($data, 'approve_') === 0) {
-            $requestId = substr($data, 8);
-            $this->approveRequest($requestId, $chatId);
-            $this->answerCallback($callbackId, '✅ Approved!');
+            $this->updateRequestStatus(substr($data, 8), 'Approved', '✅ Approved!', 'telegram_approve_request');
         } elseif (strpos($data, 'reject_') === 0) {
-            $requestId = substr($data, 7);
-            $this->rejectRequest($requestId, $chatId);
-            $this->answerCallback($callbackId, '❌ Rejected!');
+            $this->updateRequestStatus(substr($data, 7), 'Rejected', '❌ Rejected!', 'telegram_reject_request');
+        } elseif (strpos($data, 'under_review_') === 0) {
+            $this->updateRequestStatus(substr($data, 13), 'Under Review', '👀 Marked Under Review!', 'telegram_review_request');
+        } elseif (strpos($data, 'needs_revision_') === 0) {
+            $this->updateRequestStatus(substr($data, 15), 'Needs Revision', '🔄 Marked Needs Revision!', 'telegram_revision_request');
         } else {
             $this->answerCallback($callbackId);
+        }
+
+        // Always answer callback to stop loading animation
+        $this->answerCallback($callbackId);
+    }
+
+    /**
+     * Unified method to update request status
+     */
+    protected function updateRequestStatus($requestId, $status, $feedbackMessage, $auditAction)
+    {
+        $req = RequestModel::find($requestId);
+        if (!$req)
+            return;
+
+        $req->status = $status;
+
+        // Generate verify_token if missing (for Approved requests mostly, but good integration)
+        if ($status === 'Approved' && !$req->verify_token) {
+            $req->verify_token = \Str::random(32);
+        }
+
+        $req->save();
+
+        // Send email to student
+        try {
+            Mail::to($req->student_email)
+                ->send(new \App\Mail\RequestStatusUpdated($req));
+        } catch (\Exception $e) {
+            Log::error("Telegram $status email failed: " . $e->getMessage());
+        }
+
+        // Audit Log
+        \App\Models\AuditLog::create([
+            'action' => $auditAction,
+            'details' => "$status request #{$req->id} ({$req->tracking_id}) via Telegram",
+        ]);
+
+        // Send feedback to Admin via Telegram
+        $this->telegram->sendMessage("$feedbackMessage\n👤 Student: {$req->student_name}\n📧 Email notification sent.");
+
+        // Send Notification to Student (if subscribed)
+        if ($req->telegram_chat_id) {
+            $studentMsg = "🔔 <b>Update on your Request</b>\n\n";
+            $studentMsg .= "Your request status has been updated to: <b>$status</b>\n";
+            if ($status === 'Approved') {
+                $studentMsg .= "✅ Congratulations! Check your email for the recommendation letter.";
+            } elseif ($status === 'Rejected') {
+                $studentMsg .= "❌ We are sorry, but your request has been declined. Check your email for details.";
+            } elseif ($status === 'Needs Revision') {
+                $studentMsg .= "📝 Additional information is needed. Please check your email.";
+            }
+
+            // Send to student
+            try {
+                // Determine student bot token/chat ID? 
+                // Wait, we use the SAME bot. So we just send to $req->telegram_chat_id
+                // We need to use a clean sendMessage method that accepts chatId
+                $this->telegram->sendMessageToChat($req->telegram_chat_id, $studentMsg);
+            } catch (\Exception $e) {
+                Log::error("Failed to send Telegram update to student: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Handle incoming text messages (e.g. /start TRACKING_ID)
+     */
+    protected function handleMessage($message)
+    {
+        $text = $message['text'] ?? '';
+        $chatId = $message['chat']['id'] ?? null;
+
+        if (!$chatId)
+            return;
+
+        // Check for /start command
+        if (strpos($text, '/start') === 0) {
+            $parts = explode(' ', $text);
+            $trackingId = $parts[1] ?? null;
+
+            if ($trackingId) {
+                // Link Student
+                $req = RequestModel::where('tracking_id', $trackingId)->first();
+                if ($req) {
+                    $req->telegram_chat_id = $chatId;
+                    $req->save();
+
+                    $this->telegram->sendMessageToChat($chatId, "✅ <b>Subscribed!</b>\n\nYou will now receive instant updates for your request <b>#$trackingId</b> right here.");
+                } else {
+                    $this->telegram->sendMessageToChat($chatId, "❌ Request not found. Please check your link.");
+                }
+            } else {
+                // Default welcome or Admin welcome
+                $this->telegram->sendMessageToChat($chatId, "👋 Welcome to the Recommendation Letter Bot.\n\nTo track a request, please use the 'Subscribe to Updates' button from the website.");
+            }
         }
     }
 
@@ -96,65 +190,6 @@ class TelegramController extends Controller
         } catch (\Exception $e) {
             Log::error('answerCallbackQuery failed: ' . $e->getMessage());
         }
-    }
-
-    protected function approveRequest($requestId, $chatId)
-    {
-        $req = RequestModel::find($requestId);
-        if (!$req)
-            return;
-
-        $req->status = 'Approved';
-
-        // Generate verify_token if missing (for QR code)
-        if (!$req->verify_token) {
-            $req->verify_token = \Str::random(32);
-        }
-
-        $req->save();
-
-        // Send email to student
-        try {
-            Mail::to($req->student_email)
-                ->send(new \App\Mail\RequestStatusUpdated($req));
-        } catch (\Exception $e) {
-            Log::error('Telegram approve email failed: ' . $e->getMessage());
-        }
-
-        // Audit Log
-        \App\Models\AuditLog::create([
-            'action' => 'telegram_approve_request',
-            'details' => "Approved request #{$req->id} ({$req->tracking_id}) via Telegram",
-        ]);
-
-        // Send feedback to Telegram
-        $this->telegram->sendMessage("✅ Request for {$req->student_name} has been APPROVED.\n📧 Email sent to student.");
-    }
-
-    protected function rejectRequest($requestId, $chatId)
-    {
-        $req = RequestModel::find($requestId);
-        if (!$req)
-            return;
-
-        $req->status = 'Rejected';
-        $req->save();
-
-        // Send email to student
-        try {
-            Mail::to($req->student_email)
-                ->send(new \App\Mail\RequestStatusUpdated($req));
-        } catch (\Exception $e) {
-            Log::error('Telegram reject email failed: ' . $e->getMessage());
-        }
-
-        // Audit Log
-        \App\Models\AuditLog::create([
-            'action' => 'telegram_reject_request',
-            'details' => "Rejected request #{$req->id} ({$req->tracking_id}) via Telegram",
-        ]);
-
-        $this->telegram->sendMessage("❌ Request for {$req->student_name} has been REJECTED.\n📧 Email sent to student.");
     }
 
     /**

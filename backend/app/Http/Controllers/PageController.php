@@ -204,6 +204,7 @@ class PageController extends Controller
                         'middle_name' => $formData['middle_name'] ?? null,
                         'last_name' => $formData['last_name'] ?? null,
                         'student_email' => $formData['student_email'] ?? '',
+                        'phone' => $formData['phone'] ?? null,
                         'verification_token' => $formData['verification_token'] ?? '',
                         'verify_token' => \Str::random(32), // For QR code verification
                         'university' => $formData['university'] ?? null,
@@ -249,7 +250,8 @@ class PageController extends Controller
 
             return redirect()->route('public.request')->with([
                 'success' => true,
-                'tracking_id' => $trackingId
+                'tracking_id' => $trackingId,
+                'telegram_bot_username' => $this->telegramService->getBotUsername()
             ]);
         }
 
@@ -301,7 +303,8 @@ class PageController extends Controller
         return view('public.tracking', [
             'settings' => $settings,
             'request' => $result,
-            'id' => $request->trackingId
+            'id' => $request->trackingId,
+            'telegramBotUsername' => $this->telegramService->getBotUsername()
         ]);
     }
     /**
@@ -440,11 +443,16 @@ class PageController extends Controller
         if (!isset($data['layout']['direction']))
             $data['layout']['direction'] = 'ltr';
 
-        $pdf = Pdf::setOptions(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => true])->loadView('pdf.letter', $data);
-        $pdf->setPaper('a4', 'portrait');
+        try {
+            $pdf = Pdf::setOptions(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => true])->loadView('pdf.letter', $data);
+            $pdf->setPaper('a4', 'portrait');
 
-        $filename = 'Recommendation_Letter_' . $request->tracking_id . '.pdf';
+            $filename = 'Recommendation_Letter_' . $request->tracking_id . '.pdf';
 
-        return $pdf->download($filename);
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('PDF Generation Failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to generate PDF. Please try again later.');
+        }
     }
 }

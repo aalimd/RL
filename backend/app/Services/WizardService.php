@@ -56,7 +56,7 @@ class WizardService
             'university' => ['display' => 'University', 'rule' => 'string|max:255'],
             'verification_token' => ['display' => 'ID number', 'rule' => 'string|max:100'],
             'training_period' => ['display' => 'Training period', 'rule' => 'string'],
-            'phone' => ['display' => 'Phone number', 'rule' => 'string|max:50'],
+            'phone' => ['display' => 'Phone number', 'rule' => 'regex:/^([0-9\s\-\+\(\)]*)$/|min:10|max:20'],
             'major' => ['display' => 'Major', 'rule' => 'string|max:255'],
         ];
 
