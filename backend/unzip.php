@@ -12,30 +12,35 @@ echo "<pre>";
 
 // 1. Check for Zip File
 if (!file_exists($zipFile)) {
-    die("❌ Error: '$zipFile' not found in " . getcwd());
-}
-echo "✅ Found '$zipFile'.\n";
-
-// 2. Prepare Extraction Directory
-if (!is_dir($extractPath)) {
-    echo "⚠️ '$extractPath' does not exist. Creating it...\n";
-    if (!mkdir($extractPath, 0755, true)) {
-        die("❌ Error: Failed to create '$extractPath'. Check permissions.");
-    }
-}
-
-// 3. Extract Zip
-$zip = new ZipArchive;
-if ($zip->open($zipFile) === TRUE) {
-    echo "⏳ Extracting to '$extractPath'...\n";
-    if ($zip->extractTo($extractPath)) {
-        echo "✅ Extraction successful.\n";
-    } else {
-        die("❌ Error: Extraction failed.");
-    }
-    $zip->close();
+    echo "⚠️ Warning: '$zipFile' not found. Skipping extraction and proceeding to directory repair...\n";
 } else {
-    die("❌ Error: Could not open zip file.");
+    echo "✅ Found '$zipFile'.\n";
+
+    // 2. Prepare Extraction Directory
+    if (!is_dir($extractPath)) {
+        echo "⚠️ '$extractPath' does not exist. Creating it...\n";
+        if (!mkdir($extractPath, 0755, true)) {
+            die("❌ Error: Failed to create '$extractPath'. Check permissions.");
+        }
+    }
+
+    // 3. Extract Zip
+    $zip = new ZipArchive;
+    if ($zip->open($zipFile) === TRUE) {
+        echo "⏳ Extracting to '$extractPath'...\n";
+        if ($zip->extractTo($extractPath)) {
+            echo "✅ Extraction successful.\n";
+            $zip->close();
+            // Cleanup Zip
+            unlink($zipFile);
+            echo "🗑 Deleted '$zipFile'.\n";
+        } else {
+            echo "❌ Error: Extraction failed.\n";
+            $zip->close();
+        }
+    } else {
+        echo "❌ Error: Could not open zip file.\n";
+    }
 }
 
 // 4. Create Critical Laravel Directories & Set Permissions
