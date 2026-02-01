@@ -29,7 +29,7 @@ Route::get('/letter/{tracking_id}/pdf', [PageController::class, 'downloadPdf'])-
 Route::get('/verify/{token}', [App\Http\Controllers\VerificationController::class, 'verify'])->name('public.verify');
 
 // Admin Panel (protected by auth)
-Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'twofactor'])->prefix('admin')->name('admin.')->group(function () {
 
     // ============================================
     // Routes accessible by ALL authenticated users (admin, editor, viewer)
@@ -108,8 +108,8 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
     // 2FA Verification (Accessible even if 2fa_verified is false)
     Route::get('/2fa/verify', [App\Http\Controllers\TwoFactorController::class, 'verify'])->name('2fa.verify');
-    Route::post('/2fa/verify', [App\Http\Controllers\TwoFactorController::class, 'verifyPost'])->name('2fa.verify.post');
-    Route::post('/2fa/resend', [App\Http\Controllers\TwoFactorController::class, 'resend'])->name('2fa.resend');
+    Route::post('/2fa/verify', [App\Http\Controllers\TwoFactorController::class, 'verifyPost'])->middleware('throttle:5,1')->name('2fa.verify.post');
+    Route::post('/2fa/resend', [App\Http\Controllers\TwoFactorController::class, 'resend'])->middleware('throttle:3,1')->name('2fa.resend');
 });
 
 

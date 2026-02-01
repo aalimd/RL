@@ -117,8 +117,8 @@
                         document.getElementById('qrImage').innerHTML = "";
                         new QRCode(document.getElementById("qrImage"), {
                             text: data.qr_code_url,
-                            width: 128,
-                            height: 128
+                            width: 256,
+                            height: 256
                         });
                     } else {
                         document.getElementById('emailMsg').style.display = 'block';
@@ -126,5 +126,42 @@
                 })
                 .catch(err => alert('Error starting setup'));
         }
+
+        // Handle Confirmation
+        document.getElementById('confirmForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const form = this;
+            const btn = form.querySelector('button');
+            const originalText = btn.innerText;
+
+            btn.disabled = true;
+            btn.innerText = 'Verifying...';
+
+            fetch(form.action, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": "{{ csrf_token() }}"
+                },
+                body: JSON.stringify({
+                    code: form.querySelector('input[name="code"]').value
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert(data.message || 'Invalid code');
+                        btn.disabled = false;
+                        btn.innerText = originalText;
+                    }
+                })
+                .catch(err => {
+                    alert('Verification failed. Use the code sent to you.');
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                });
+        });
     </script>
 @endsection

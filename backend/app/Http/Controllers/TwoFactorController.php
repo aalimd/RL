@@ -41,7 +41,7 @@ class TwoFactorController extends Controller
             $request->session()->put('2fa_setup_method', 'app');
 
             $qrCodeUrl = $google2fa->getQRCodeUrl(
-                config('app.name'),
+                'RecommendationSystem',
                 $user->email,
                 $secret
             );
@@ -52,7 +52,7 @@ class TwoFactorController extends Controller
             ]);
         } else {
             // Email Logic
-            $code = (string) rand(100000, 999999);
+            $code = (string) random_int(100000, 999999);
             $request->session()->put('2fa_setup_code', $code);
             $request->session()->put('2fa_setup_method', 'email');
 
@@ -164,7 +164,7 @@ class TwoFactorController extends Controller
         // If email method, send code automatically on load? Or ask user to click send?
         // Let's send automatically if method is email
         if ($user->two_factor_method === 'email' && !session('2fa_email_sent')) {
-            $code = (string) rand(100000, 999999);
+            $code = (string) random_int(100000, 999999);
             // Store encrypted code in DB or session. DB is better for persistence across requests if session driver is weak
             // But session is fine.
             $user->forceFill([
@@ -234,7 +234,7 @@ class TwoFactorController extends Controller
         $user = auth()->user();
 
         if ($user->two_factor_method === 'email') {
-            $code = (string) rand(100000, 999999);
+            $code = (string) random_int(100000, 999999);
             $user->two_factor_email_code = $code;
             $user->save();
 

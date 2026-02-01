@@ -23,7 +23,7 @@ jobs:
         working-directory: ./backend
         run: composer install --no-dev --optimize-autoloader
 
-      - name: 📂 Sync files
+      - name: 📂 Sync files (Safe Mode)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -31,20 +31,20 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           port: 21
+          local-dir: ./backend/
+          server-dir: ./
+          state-name: .ftp-deploy-sync-state.json
+          # CRITICAL: Do not delete files on server that are missing locally (protects storage/uploads)
+          delete: false 
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
             **/tests/**
-            **/install/**
-            README.md
-            README_*.md
-            HOSTINGER_DEPLOY.txt
-            *_UPDATE.zip
-            *_FINAL_*.zip
-            *.sql
-            .editorconfig
-            .styleci.yml
-            backend/.env.example
-            backend/phpunit.xml
-            backend/tests/**
+            .env
+            .env.example
+            .env.backup
+            phpunit.xml
+            storage/*.key
+            storage/app/public/**
+            storage/logs/*.log
