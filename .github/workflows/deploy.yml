@@ -34,8 +34,6 @@ jobs:
           local-dir: ./backend/
           server-dir: ./
           state-name: .ftp-deploy-sync-state.json
-          # CRITICAL: Do not delete files on server that are missing locally (protects storage/uploads)
-          delete: false 
           exclude: |
             **/.git*
             **/.git*/**
