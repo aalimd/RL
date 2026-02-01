@@ -15,24 +15,39 @@ class RequestSubmittedToStudent extends Mailable
 
     public RequestModel $request;
     public string $trackingUrl;
+    protected $template;
 
     public function __construct(RequestModel $request)
     {
         $this->request = $request;
         $this->trackingUrl = url('/track/' . $request->tracking_id);
+        $this->template = \App\Models\EmailTemplate::where('name', 'request_submitted_student')->first();
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Your Recommendation Request Has Been Received',
+            subject: $this->template ? $this->replaceVariables($this->template->subject) : 'Your Recommendation Request Has Been Received',
         );
     }
 
     public function content(): Content
     {
+        $body = $this->template ? $this->replaceVariables($this->template->body) : "Dear {$this->request->student_name},<br>We received your request.";
+
         return new Content(
-            view: 'emails.request-submitted-student',
+            view: 'emails.generic',
+            with: ['body' => $body, 'subject' => $this->envelope()->subject],
         );
+    }
+
+    protected function replaceVariables($content)
+    {
+        $vars = [
+            '{student_name}' => $this->request->student_name,
+            '{tracking_id}' => $this->request->tracking_id,
+            '{university}' => $this->request->university ?? 'Our University',
+        ];
+        return str_replace(array_keys($vars), array_values($vars), $content);
     }
 }

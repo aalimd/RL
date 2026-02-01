@@ -8,11 +8,22 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('requests', function (Blueprint $table) {
-            $table->index('status');
-            $table->index('student_email');
-            $table->index('created_at');
-            // Composite index for dashboard filtering + sorting
-            $table->index(['status', 'created_at']);
+            // Check for existing indexes to avoid duplicates
+            $indexes = collect(\Illuminate\Support\Facades\DB::select("SHOW INDEX FROM requests"))->pluck('Key_name')->all();
+
+            if (!in_array('requests_status_index', $indexes)) {
+                $table->index('status');
+            }
+            if (!in_array('requests_student_email_index', $indexes)) {
+                $table->index('student_email');
+            }
+            if (!in_array('requests_created_at_index', $indexes)) {
+                $table->index('created_at');
+            }
+            // Composite index check (Laravel names it table_col1_col2_index by default)
+            if (!in_array('requests_status_created_at_index', $indexes)) {
+                $table->index(['status', 'created_at']);
+            }
         });
     }
 

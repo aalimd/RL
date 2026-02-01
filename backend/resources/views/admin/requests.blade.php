@@ -342,9 +342,16 @@
         </form>
     </div>
 
-    <!-- Results Info -->
-    <div class="results-info">
-        Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }} requests
+    <!-- Actions Bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div class="results-info" style="margin-bottom: 0;">
+            Showing {{ $requests->firstItem() ?? 0 }} to {{ $requests->lastItem() ?? 0 }} of {{ $requests->total() }}
+            requests
+        </div>
+        <a href="{{ route('admin.requests.export', request()->query()) }}" class="btn btn-primary" style="gap: 0.5rem;">
+            <i data-feather="download" style="width: 16px; height: 16px;"></i>
+            Export to Excel
+        </a>
     </div>
 
     <!-- Requests Table -->

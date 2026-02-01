@@ -34,69 +34,71 @@
                     <p>No users found</p>
                 </div>
             @else
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Username</th>
-                            <th>Role</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($users as $user)
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <table class="table" style="width: 100%; min-width: 600px;">
+                        <thead>
                             <tr>
-                                <td>
-                                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                        <div
-                                            style="width: 40px; height: 40px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">
-                                            {{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}
-                                        </div>
-                                        <div>
-                                            <div style="font-weight: 500;">{{ $user->name ?? 'No Name' }}</div>
-                                            <div style="font-size: 0.75rem; color: #6b7280;">{{ $user->email }}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>{{ $user->username ?? '-' }}</td>
-                                <td>
-                                    <span class="badge {{ $user->role === 'admin' ? 'badge-approved' : 'badge-pending' }}">
-                                        {{ ucfirst($user->role ?? 'user') }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge {{ $user->is_active ? 'badge-approved' : 'badge-rejected' }}">
-                                        {{ $user->is_active ? 'Active' : 'Inactive' }}
-                                    </span>
-                                </td>
-                                <td>{{ $user->created_at->format('M d, Y') }}</td>
-                                <td>
-                                    <div style="display: flex; gap: 0.5rem;">
-                                        <button type="button" class="btn btn-ghost" style="padding: 0.5rem;"
-                                            onclick="editUser({{ $user->id }}, '{{ $user->name }}', '{{ $user->email }}', '{{ $user->username }}', '{{ $user->role ?? 'user' }}', {{ $user->is_active ? 'true' : 'false' }})"
-                                            title="Edit">
-                                            <i data-feather="edit" style="width: 16px; height: 16px;"></i>
-                                        </button>
-                                        @if($user->id !== auth()->id())
-                                            <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}"
-                                                style="display: inline;"
-                                                onsubmit="return confirm('Are you sure you want to delete this user?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-ghost" style="padding: 0.5rem; color: #dc2626;"
-                                                    title="Delete">
-                                                    <i data-feather="trash-2" style="width: 16px; height: 16px;"></i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
+                                <th>User</th>
+                                <th>Username</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach($users as $user)
+                                <tr>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                            <div
+                                                style="width: 40px; height: 40px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">
+                                                {{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}
+                                            </div>
+                                            <div>
+                                                <div style="font-weight: 500;">{{ $user->name ?? 'No Name' }}</div>
+                                                <div style="font-size: 0.75rem; color: #6b7280;">{{ $user->email }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ $user->username ?? '-' }}</td>
+                                    <td>
+                                        <span class="badge {{ $user->role === 'admin' ? 'badge-approved' : 'badge-pending' }}">
+                                            {{ ucfirst($user->role ?? 'user') }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {{ $user->is_active ? 'badge-approved' : 'badge-rejected' }}">
+                                            {{ $user->is_active ? 'Active' : 'Inactive' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ $user->created_at->format('M d, Y') }}</td>
+                                    <td>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button type="button" class="btn btn-ghost" style="padding: 0.5rem;"
+                                                onclick="editUser({{ $user->id }}, '{{ $user->name }}', '{{ $user->email }}', '{{ $user->username }}', '{{ $user->role ?? 'user' }}', {{ $user->is_active ? 'true' : 'false' }})"
+                                                title="Edit">
+                                                <i data-feather="edit" style="width: 16px; height: 16px;"></i>
+                                            </button>
+                                            @if($user->id !== auth()->id())
+                                                <form method="POST" action="{{ route('admin.users.destroy', $user->id) }}"
+                                                    style="display: inline;"
+                                                    onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-ghost" style="padding: 0.5rem; color: #dc2626;"
+                                                        title="Delete">
+                                                        <i data-feather="trash-2" style="width: 16px; height: 16px;"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
 
                 @if($users->hasPages())
                     <div style="padding: 1rem; border-top: 1px solid #e5e7eb;">

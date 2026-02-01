@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="ltr">
+<html lang="en" dir="ltr">
 
 <head>
     <meta charset="UTF-8">
@@ -21,6 +21,28 @@
         /* ========================================
            MODERN DESIGN SYSTEM 2024
            ======================================== */
+
+        /* RTL Overrides */
+        [dir="rtl"] {
+            text-align: right;
+        }
+
+        [dir="rtl"] .logo-icon {
+            margin-right: 0;
+            margin-left: 0.875rem;
+        }
+
+        [dir="rtl"] .btn {
+            gap: 0.5rem;
+        }
+
+        [dir="rtl"] .mobile-menu a {
+            text-align: right;
+        }
+
+        [dir="rtl"] .nav-links {
+            /* gap is standard */
+        }
 
         /* Light Mode (Default) */
         :root {

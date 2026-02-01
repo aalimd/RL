@@ -7,24 +7,28 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('email_templates', function (Blueprint $table) {
-            $table->id();
-            $table->string('name')->unique();
-            $table->string('subject');
-            $table->text('body');
-            $table->json('variables')->nullable(); // description of vars
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('email_templates')) {
+            Schema::create('email_templates', function (Blueprint $table) {
+                $table->id();
+                $table->string('name')->unique();
+                $table->string('subject');
+                $table->text('body');
+                $table->json('variables')->nullable(); // description of vars
+                $table->timestamps();
+            });
+        }
 
-        Schema::create('audit_logs', function (Blueprint $table) {
-            $table->id();
-            $table->string('action');
-            $table->text('details')->nullable();
-            $table->string('ip_address')->nullable();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('request_id')->nullable()->constrained()->nullOnDelete();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('audit_logs')) {
+            Schema::create('audit_logs', function (Blueprint $table) {
+                $table->id();
+                $table->string('action');
+                $table->text('details')->nullable();
+                $table->string('ip_address')->nullable();
+                $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+                $table->foreignId('request_id')->nullable()->constrained()->nullOnDelete();
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void

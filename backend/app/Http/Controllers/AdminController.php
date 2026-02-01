@@ -240,25 +240,160 @@ class AdminController extends Controller
     }
 
     /**
-     * Analytics dashboard
+     * Analytics dashboard - Enhanced
      */
-    public function analytics()
+    public function analytics(Request $request)
     {
         $settings = $this->getSettings();
 
+        // Date range filter
+        $dateFrom = $request->input('date_from', now()->subDays(30)->format('Y-m-d'));
+        $dateTo = $request->input('date_to', now()->format('Y-m-d'));
+
+        $baseQuery = RequestModel::whereDate('created_at', '>=', $dateFrom)
+            ->whereDate('created_at', '<=', $dateTo);
+
+        // Status breakdown
+        $byStatus = (clone $baseQuery)->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        // Daily trend for chart
+        $dailyTrend = (clone $baseQuery)->selectRaw('DATE(created_at) as date, count(*) as count')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('count', 'date')
+            ->toArray();
+
+        // Top universities
+        $topUniversities = (clone $baseQuery)->selectRaw('university, count(*) as count')
+            ->whereNotNull('university')
+            ->where('university', '!=', '')
+            ->groupBy('university')
+            ->orderByDesc('count')
+            ->limit(5)
+            ->pluck('count', 'university')
+            ->toArray();
+
+        // Top purposes
+        $topPurposes = (clone $baseQuery)->selectRaw('purpose, count(*) as count')
+            ->whereNotNull('purpose')
+            ->where('purpose', '!=', '')
+            ->groupBy('purpose')
+            ->orderByDesc('count')
+            ->limit(5)
+            ->pluck('count', 'purpose')
+            ->toArray();
+
+        // Processing time stats
+        $avgProcessingDays = RequestModel::whereIn('status', ['Approved', 'Rejected'])
+            ->whereNotNull('updated_at')
+            ->selectRaw('AVG(DATEDIFF(updated_at, created_at)) as avg_days')
+            ->value('avg_days');
+
         $analytics = [
-            'total' => RequestModel::count(),
-            'byStatus' => RequestModel::selectRaw('status, count(*) as count')
-                ->groupBy('status')
-                ->pluck('count', 'status')
-                ->toArray(),
-            'byMonth' => RequestModel::selectRaw('MONTH(created_at) as month, count(*) as count')
-                ->groupBy('month')
-                ->pluck('count', 'month')
-                ->toArray(),
+            'total' => (clone $baseQuery)->count(),
+            'byStatus' => $byStatus,
+            'dailyTrend' => $dailyTrend,
+            'topUniversities' => $topUniversities,
+            'topPurposes' => $topPurposes,
+            'avgProcessingDays' => round($avgProcessingDays ?? 0, 1),
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
         ];
 
         return view('admin.analytics', compact('settings', 'analytics'));
+    }
+
+    /**
+     * Export requests to CSV
+     */
+    public function exportRequests(Request $request)
+    {
+        $query = RequestModel::orderBy('created_at', 'desc');
+
+        // Apply same filters as requests page
+        $status = $request->input('status', 'All');
+        if ($status && $status !== 'All') {
+            $query->where('status', $status);
+        }
+
+        $search = $request->input('search');
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('student_name', 'like', "%{$search}%")
+                    ->orWhere('student_email', 'like', "%{$search}%")
+                    ->orWhere('tracking_id', 'like', "%{$search}%");
+            });
+        }
+
+        $dateFrom = $request->input('date_from');
+        if ($dateFrom) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+
+        $dateTo = $request->input('date_to');
+        if ($dateTo) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $requests = $query->get();
+
+        // Generate CSV
+        $filename = 'requests_' . date('Y-m-d_His') . '.csv';
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($requests) {
+            $file = fopen('php://output', 'w');
+            // UTF-8 BOM for Excel compatibility
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // Header row
+            fputcsv($file, [
+                'Tracking ID',
+                'Student Name',
+                'Email',
+                'University',
+                'Purpose',
+                'Status',
+                'Deadline',
+                'Created At',
+                'Updated At'
+            ]);
+
+            // Data rows
+            foreach ($requests as $req) {
+                fputcsv($file, [
+                    $req->tracking_id,
+                    $req->student_name,
+                    $req->student_email,
+                    $req->university ?? '',
+                    $req->purpose ?? '',
+                    $req->status,
+                    $req->deadline ? date('Y-m-d', strtotime($req->deadline)) : '',
+                    $req->created_at->format('Y-m-d H:i'),
+                    $req->updated_at->format('Y-m-d H:i')
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        // Log the export
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'export_requests',
+            'target_type' => 'requests',
+            'target_id' => null,
+            'details' => json_encode(['count' => $requests->count(), 'filters' => $request->all()]),
+            'ip_address' => $request->ip(),
+        ]);
+
+        return response()->stream($callback, 200, $headers);
     }
 
     /**
@@ -1179,7 +1314,7 @@ class AdminController extends Controller
                 'action' => 'system_migrate',
                 'target_type' => 'system',
                 'target_id' => null,
-                'details' => ['output' => $result],
+                'details' => json_encode(['output' => $result]),
                 'ip_address' => $request->ip(),
             ]);
 
@@ -1188,7 +1323,7 @@ class AdminController extends Controller
                 'message' => 'Database updated successfully!',
                 'output' => $result ?: 'Nothing to migrate.'
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Migration failed: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
@@ -1214,7 +1349,7 @@ class AdminController extends Controller
                 'action' => 'system_cache_clear',
                 'target_type' => 'system',
                 'target_id' => null,
-                'details' => ['cleared' => ['config', 'route', 'view']],
+                'details' => json_encode(['cleared' => ['config', 'route', 'view']]),
                 'ip_address' => $request->ip(),
             ]);
 
@@ -1222,7 +1357,7 @@ class AdminController extends Controller
                 'success' => true,
                 'message' => 'Cache cleared successfully!'
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Cache clear failed: ' . $e->getMessage());
             return response()->json([
                 'success' => false,

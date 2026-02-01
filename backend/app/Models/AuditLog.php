@@ -12,7 +12,6 @@ class AuditLog extends Model
     protected $guarded = ['id'];
 
     protected $casts = [
-        'ip_address' => 'encrypted',
         'details' => 'encrypted',
     ];
 

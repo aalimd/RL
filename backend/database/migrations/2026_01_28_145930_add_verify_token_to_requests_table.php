@@ -11,7 +11,9 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('requests', function (Blueprint $table) {
-            $table->string('verify_token', 64)->nullable()->unique()->after('status');
+            if (!Schema::hasColumn('requests', 'verify_token')) {
+                $table->string('verify_token', 64)->nullable()->unique()->after('status');
+            }
         });
     }
 

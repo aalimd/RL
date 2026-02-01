@@ -11,9 +11,15 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('requests', function (Blueprint $table) {
-            $table->string('middle_name')->nullable()->after('student_name');
-            $table->string('last_name')->nullable()->after('middle_name');
-            $table->string('training_period')->nullable()->after('deadline');
+            if (!Schema::hasColumn('requests', 'middle_name')) {
+                $table->string('middle_name')->nullable()->after('student_name');
+            }
+            if (!Schema::hasColumn('requests', 'last_name')) {
+                $table->string('last_name')->nullable()->after('middle_name');
+            }
+            if (!Schema::hasColumn('requests', 'training_period')) {
+                $table->string('training_period')->nullable()->after('deadline');
+            }
         });
     }
 

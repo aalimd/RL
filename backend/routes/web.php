@@ -69,6 +69,9 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::post('/templates/{id}/reset', [AdminController::class, 'resetTemplate'])->name('templates.reset');
         Route::post('/templates/{id}/autosave', [AdminController::class, 'autoSaveTemplate'])->name('templates.autosave');
         Route::delete('/templates/{id}', [AdminController::class, 'deleteTemplate'])->name('templates.destroy');
+
+        // Export
+        Route::get('/requests/export', [AdminController::class, 'exportRequests'])->name('requests.export');
     });
 
     // ============================================
@@ -86,11 +89,27 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::post('/settings/test-email', [AdminController::class, 'sendTestEmail'])->name('settings.test-email');
         Route::put('/form-settings', [AdminController::class, 'updateFormSettings'])->name('form-settings.update');
 
+        // Email Templates
+        // Email Templates
+        Route::get('/email-templates', [App\Http\Controllers\Admin\EmailTemplateController::class, 'index'])->name('email-templates.index');
+        Route::get('/email-templates/{id}/edit', [App\Http\Controllers\Admin\EmailTemplateController::class, 'edit'])->name('email-templates.edit');
+        Route::put('/email-templates/{id}', [App\Http\Controllers\Admin\EmailTemplateController::class, 'update'])->name('email-templates.update');
+
         // System Tools
         Route::get('/system-tools', [AdminController::class, 'systemTools'])->name('system-tools');
         Route::post('/system-tools/migrate', [AdminController::class, 'runMigrations'])->name('system-tools.migrate');
         Route::post('/system-tools/clear-cache', [AdminController::class, 'clearCache'])->name('system-tools.clear-cache');
     });
+    // 2FA Settings
+    Route::get('/settings/security', [App\Http\Controllers\TwoFactorController::class, 'index'])->name('settings.security');
+    Route::post('/settings/security/enable', [App\Http\Controllers\TwoFactorController::class, 'enable'])->name('settings.security.enable');
+    Route::post('/settings/security/confirm', [App\Http\Controllers\TwoFactorController::class, 'confirm'])->name('settings.security.confirm');
+    Route::delete('/settings/security', [App\Http\Controllers\TwoFactorController::class, 'disable'])->name('settings.security.disable');
+
+    // 2FA Verification (Accessible even if 2fa_verified is false)
+    Route::get('/2fa/verify', [App\Http\Controllers\TwoFactorController::class, 'verify'])->name('2fa.verify');
+    Route::post('/2fa/verify', [App\Http\Controllers\TwoFactorController::class, 'verifyPost'])->name('2fa.verify.post');
+    Route::post('/2fa/resend', [App\Http\Controllers\TwoFactorController::class, 'resend'])->name('2fa.resend');
 });
 
 

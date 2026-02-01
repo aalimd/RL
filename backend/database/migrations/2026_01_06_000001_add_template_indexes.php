@@ -8,10 +8,21 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('templates', function (Blueprint $table) {
-            $table->index('is_active');
-            $table->index('language');
-            $table->index('name');
-            $table->index('created_at');
+            // Check for existing indexes to avoid duplicates
+            $indexes = collect(\Illuminate\Support\Facades\DB::select("SHOW INDEX FROM templates"))->pluck('Key_name')->all();
+
+            if (!in_array('templates_is_active_index', $indexes)) {
+                $table->index('is_active');
+            }
+            if (!in_array('templates_language_index', $indexes)) {
+                $table->index('language');
+            }
+            if (!in_array('templates_name_index', $indexes)) {
+                $table->index('name');
+            }
+            if (!in_array('templates_created_at_index', $indexes)) {
+                $table->index('created_at');
+            }
         });
     }
 

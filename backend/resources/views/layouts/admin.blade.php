@@ -1,5 +1,9 @@
+@php
+    $locale = app()->getLocale();
+    $dir = $locale === 'ar' || ($settings['siteLanguage'] ?? 'en') === 'ar' ? 'rtl' : 'ltr';
+@endphp
 <!DOCTYPE html>
-<html lang="ar" dir="ltr">
+<html lang="{{ $locale }}" dir="{{ $dir }}">
 
 <head>
     <meta charset="UTF-8">
@@ -13,6 +17,60 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* RTL Support */
+        [dir="rtl"] .sidebar {
+            left: auto;
+            right: 0;
+            border-right: none;
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        [dir="rtl"] .main-content {
+            margin-left: 0;
+            margin-right: var(--sidebar-width);
+        }
+
+        [dir="rtl"] .admin-header {
+            left: auto;
+            right: var(--sidebar-width);
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        [dir="rtl"] .user-menu-wrapper {
+            margin-left: 0;
+            margin-right: auto;
+            /* Push to left in RTL flex */
+        }
+
+        @media (max-width: 1024px) {
+            [dir="rtl"] .sidebar {
+                transform: translateX(100%);
+            }
+
+            [dir="rtl"] .sidebar.open {
+                transform: translateX(0);
+            }
+
+            [dir="rtl"] .main-content {
+                margin-right: 0;
+            }
+
+            [dir="rtl"] .admin-header {
+                right: 0;
+                width: 100%;
+            }
+        }
+
+        [dir="rtl"] .nav-item {
+            border-left: none;
+            border-right: 3px solid transparent;
+        }
+
+        [dir="rtl"] .nav-item.active {
+            border-right-color: var(--primary);
+            background: linear-gradient(270deg, rgba(79, 70, 229, 0.1) 0%, transparent 100%);
+        }
+
         :root {
             --primary:
                 {{ $settings['primaryColor'] ?? '#4F46E5' }}
@@ -25,6 +83,231 @@
             --card-bg: #ffffff;
             --text-main: #111827;
             --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --input-bg: #f9fafb;
+        }
+
+        /* Dark Mode */
+        body.dark-mode {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --input-bg: #1e293b;
+        }
+
+        body.dark-mode .admin-header {
+            background: rgba(30, 41, 59, 0.9);
+            border-bottom-color: var(--border-color);
+        }
+
+        body.dark-mode .admin-header h1 {
+            color: var(--text-main);
+        }
+
+        body.dark-mode .user-menu,
+        body.dark-mode .user-menu-wrapper button {
+            background: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        body.dark-mode .user-menu-wrapper button span {
+            color: var(--text-main) !important;
+        }
+
+        body.dark-mode .card,
+        body.dark-mode .stat-card,
+        body.dark-mode .chart-card,
+        body.dark-mode .mini-stat {
+            background: var(--card-bg);
+            border-color: var(--border-color);
+        }
+
+        body.dark-mode .card-header {
+            background: var(--card-bg);
+            border-bottom-color: var(--border-color);
+        }
+
+        body.dark-mode .card-header h3 {
+            color: var(--text-main);
+        }
+
+        body.dark-mode .table th {
+            background: #1e293b;
+            color: var(--text-muted);
+            border-bottom-color: var(--border-color);
+        }
+
+        body.dark-mode .table td {
+            color: var(--text-muted);
+            border-bottom-color: var(--border-color);
+        }
+
+        body.dark-mode .table tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        body.dark-mode .form-input,
+        body.dark-mode .form-select,
+        body.dark-mode .form-textarea {
+            background: var(--input-bg);
+            border-color: var(--border-color);
+            color: var(--text-main);
+        }
+
+        body.dark-mode .btn-ghost {
+            color: var(--text-muted);
+        }
+
+        body.dark-mode .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        body.dark-mode .user-dropdown {
+            background: var(--card-bg);
+            border-color: var(--border-color);
+        }
+
+        body.dark-mode .dropdown-item {
+            color: var(--text-main);
+        }
+
+        body.dark-mode .dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Dark mode for filters and inputs */
+        body.dark-mode .search-box input,
+        body.dark-mode .filter-input,
+        body.dark-mode .date-filter input {
+            background: var(--input-bg);
+            border-color: var(--border-color);
+            color: var(--text-main);
+        }
+
+        body.dark-mode .search-box input::placeholder {
+            color: var(--text-muted);
+        }
+
+        body.dark-mode .status-btn {
+            background: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-muted);
+        }
+
+        body.dark-mode .status-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+        }
+
+        body.dark-mode .btn-reset {
+            background: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-muted);
+        }
+
+        body.dark-mode .badge {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        body.dark-mode .badge-pending {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        body.dark-mode .badge-approved {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+        }
+
+        body.dark-mode .badge-rejected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        body.dark-mode .badge-revision {
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+        }
+
+        body.dark-mode .pagination {
+            background: var(--card-bg);
+            border-top-color: var(--border-color);
+        }
+
+        body.dark-mode .pagination-buttons a,
+        body.dark-mode .pagination-buttons span {
+            background: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-muted);
+        }
+
+        body.dark-mode .pagination-info,
+        body.dark-mode .results-info {
+            color: var(--text-muted);
+        }
+
+        body.dark-mode .tracking-id {
+            background: rgba(79, 70, 229, 0.2);
+            color: #a5b4fc;
+        }
+
+        body.dark-mode .data-table th {
+            background: var(--card-bg);
+            color: var(--text-muted);
+            border-bottom-color: var(--border-color);
+        }
+
+        body.dark-mode .data-table td {
+            color: var(--text-muted);
+            border-bottom-color: var(--border-color);
+        }
+
+        body.dark-mode .data-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        body.dark-mode .student-info .name {
+            color: var(--text-main);
+        }
+
+        body.dark-mode .empty-state,
+        body.dark-mode .empty-message {
+            color: var(--text-muted);
+        }
+
+        /* Dark mode toggle button */
+        .dark-mode-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 0.5rem;
+            background: transparent;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            color: #6b7280;
+            transition: all 0.2s;
+            margin-right: 0.5rem;
+        }
+
+        .dark-mode-toggle:hover {
+            background: #f3f4f6;
+            color: #111827;
+        }
+
+        body.dark-mode .dark-mode-toggle {
+            border-color: var(--border-color);
+            color: var(--text-muted);
+        }
+
+        body.dark-mode .dark-mode-toggle:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
         }
 
         * {
@@ -38,6 +321,7 @@
             background: var(--bg-color);
             min-height: 100vh;
             color: var(--text-main);
+            transition: background-color 0.3s, color 0.3s;
         }
 
         /* Sidebar Polish */
@@ -895,13 +1179,61 @@
             background: #fef2f2;
             color: #dc2626;
         }
+
+        /* Mobile Sidebar Overlay */
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            display: none;
+            backdrop-filter: blur(4px);
+            transition: opacity 0.3s;
+        }
+
+        .sidebar-overlay.show {
+            display: block;
+        }
+
+        /* Close Button */
+        .sidebar-close {
+            display: none;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .sidebar-close {
+                display: block;
+                position: absolute;
+                right: 1rem;
+                top: 1rem;
+            }
+
+            [dir="rtl"] .sidebar-close {
+                right: auto;
+                left: 1rem;
+            }
+        }
     </style>
     @yield('styles')
 </head>
 
 <body>
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
+        <button class="sidebar-close" onclick="toggleSidebar()">
+            <i data-feather="x"></i>
+        </button>
         <div class="sidebar-brand">
             <h2>
                 <div class="logo-icon">R</div>
@@ -965,6 +1297,11 @@
                     <i data-feather="clipboard"></i>
                     <span>Form Settings</span>
                 </a>
+                <a href="{{ route('admin.settings.security') }}"
+                    class="nav-item {{ request()->routeIs('admin.settings.security') ? 'active' : '' }}">
+                    <i data-feather="shield"></i>
+                    <span>Security</span>
+                </a>
                 @if(auth()->user()->role === 'admin')
                     <a href="{{ route('admin.system-tools') }}"
                         class="nav-item {{ request()->routeIs('admin.system-tools') ? 'active' : '' }}">
@@ -972,6 +1309,11 @@
                         <span>System Tools</span>
                     </a>
                 @endif
+                <a href="{{ route('admin.email-templates.index') }}"
+                    class="nav-item {{ request()->routeIs('admin.email-templates.*') ? 'active' : '' }}">
+                    <i data-feather="mail"></i>
+                    <span>Email Templates</span>
+                </a>
             </div>
 
             <div class="nav-section"
@@ -999,37 +1341,48 @@
                 <h1>@yield('page-title', 'Dashboard')</h1>
             </div>
 
-            <div class="user-menu-wrapper">
-                <button class="user-menu" onclick="toggleUserMenu()"
-                    style="background: white; display: flex; align-items: center; gap: 0.75rem; padding: 0.25rem 0.5rem 0.25rem 0.25rem; border-radius: 9999px; border: 1px solid #e5e7eb; cursor: pointer;">
-                    <div class="user-avatar"
-                        style="width: 2rem; height: 2rem; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white;">
-                        {{ substr(auth()->user()->name ?? 'A', 0, 1) }}
-                    </div>
-                    <span
-                        style="font-weight: 500; color: #374151; font-size: 0.875rem;">{{ auth()->user()->name ?? 'Admin' }}</span>
-                    <i data-feather="chevron-down" style="width: 16px; height: 16px; color: #9ca3af;"></i>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <!-- Dark Mode Toggle -->
+                <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+                    <i data-feather="moon" id="darkModeIcon"></i>
                 </button>
 
-                <!-- Dropdown -->
-                <div id="userDropdown" class="user-dropdown">
-                    <div class="dropdown-header">
-                        <strong>{{ auth()->user()->name ?? 'Admin' }}</strong>
-                        <span>{{ auth()->user()->email ?? '' }}</span>
+                <div class="user-menu-wrapper">
+                    <button class="user-menu" onclick="toggleUserMenu()"
+                        style="background: white; display: flex; align-items: center; gap: 0.75rem; padding: 0.25rem 0.5rem 0.25rem 0.25rem; border-radius: 9999px; border: 1px solid #e5e7eb; cursor: pointer;">
+                        <div class="user-avatar"
+                            style="width: 2rem; height: 2rem; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white;">
+                            {{ substr(auth()->user()->name ?? 'A', 0, 1) }}
+                        </div>
+                        <span
+                            style="font-weight: 500; color: #374151; font-size: 0.875rem;">{{ auth()->user()->name ?? 'Admin' }}</span>
+                        <i data-feather="chevron-down" style="width: 16px; height: 16px; color: #9ca3af;"></i>
+                    </button>
+
+                    <!-- Dropdown -->
+                    <div id="userDropdown" class="user-dropdown">
+                        <div class="dropdown-header">
+                            <strong>{{ auth()->user()->name ?? 'Admin' }}</strong>
+                            <span>{{ auth()->user()->email ?? '' }}</span>
+                        </div>
+
+                        <a href="{{ route('admin.settings') }}" class="dropdown-item">
+                            <i data-feather="settings"></i>
+                            <span>Settings</span>
+                        </a>
+                        <a href="{{ route('admin.settings.security') }}" class="dropdown-item">
+                            <i data-feather="shield"></i>
+                            <span>Security (2FA)</span>
+                        </a>
+
+                        <form method="POST" action="{{ route('logout') }}" style="margin: 0;">
+                            @csrf
+                            <button type="submit" class="dropdown-item text-red">
+                                <i data-feather="log-out"></i>
+                                <span>Logout</span>
+                            </button>
+                        </form>
                     </div>
-
-                    <a href="{{ route('admin.settings') }}" class="dropdown-item">
-                        <i data-feather="settings"></i>
-                        <span>Settings</span>
-                    </a>
-
-                    <form method="POST" action="{{ route('logout') }}" style="margin: 0;">
-                        @csrf
-                        <button type="submit" class="dropdown-item text-red">
-                            <i data-feather="log-out"></i>
-                            <span>Logout</span>
-                        </button>
-                    </form>
                 </div>
             </div>
         </header>
@@ -1045,10 +1398,51 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
+        // Initialize dark mode from localStorage
+        (function () {
+            if (localStorage.getItem('darkMode') === 'true') {
+                document.body.classList.add('dark-mode');
+            }
+        })();
+
         feather.replace();
+
+        // Dark Mode Toggle
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+
+            // Update icon
+            const icon = document.getElementById('darkModeIcon');
+            if (icon) {
+                icon.setAttribute('data-feather', isDark ? 'sun' : 'moon');
+                feather.replace();
+            }
+        }
+
+        // Set correct icon on load
+        document.addEventListener('DOMContentLoaded', function () {
+            const isDark = document.body.classList.contains('dark-mode');
+            const icon = document.getElementById('darkModeIcon');
+            if (icon && isDark) {
+                icon.setAttribute('data-feather', 'sun');
+                feather.replace();
+            }
+
+            // Close sidebar when clicking nav items on mobile
+            document.querySelectorAll('.sidebar-nav .nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    if (window.innerWidth <= 1024) {
+                        toggleSidebar();
+                    }
+                });
+            });
+        });
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('show');
         }
 
         function toggleUserMenu() {
