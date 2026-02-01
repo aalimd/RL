@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Request as RequestModel;
 
-class RequestStatusUpdated extends Mailable implements ShouldQueue
+class RequestStatusUpdated extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -34,11 +34,12 @@ class RequestStatusUpdated extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
-        $body = $this->template ? $this->replaceVariables($this->template->body) : "Status updated to {$this->request->status}.";
-
         return new Content(
-            view: 'emails.generic',
-            with: ['body' => $body, 'subject' => $this->envelope()->subject],
+            view: 'emails.request-status-updated',
+            with: [
+                'request' => $this->request,
+                'trackingUrl' => $this->trackingUrl,
+            ],
         );
     }
 

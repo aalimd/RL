@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Request as RequestModel;
 
-class RequestSubmittedToStudent extends Mailable implements ShouldQueue
+class RequestSubmittedToStudent extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -34,11 +34,12 @@ class RequestSubmittedToStudent extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
-        $body = $this->template ? $this->replaceVariables($this->template->body) : "Dear {$this->request->student_name},<br>We received your request.";
-
         return new Content(
-            view: 'emails.generic',
-            with: ['body' => $body, 'subject' => $this->envelope()->subject],
+            view: 'emails.request-submitted-student',
+            with: [
+                'request' => $this->request,
+                'trackingUrl' => $this->trackingUrl,
+            ],
         );
     }
 
