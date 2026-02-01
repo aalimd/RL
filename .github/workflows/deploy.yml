@@ -17,7 +17,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
-          extensions: mbstring, bcmath, intl, zip
+          extensions: mbstring, bcmath, intl, zip, pdo_mysql
 
       - name: 📦 Install Dependencies
         working-directory: ./backend
@@ -34,45 +34,60 @@ jobs:
           # Zip the contents
           zip -r "../deploy_package/$ZIP_NAME" . -x "*.git*" "*.github*" "node_modules/*" "storage/*.key" "storage/logs/*" ".env" "phpunit.xml" ".DS_Store" "tests/*"
           
-          # Create extraction script dynamically
+          # Create Smart Extraction Script check
           echo "<?php
+          // Increase limits for extraction/migration
+          ini_set('memory_limit', '512M');
+          ini_set('max_execution_time', 300);
+
           \$zip = new ZipArchive;
           \$res = \$zip->open('$ZIP_NAME');
+          
           if (\$res === TRUE) {
               \$zip->extractTo(__DIR__);
               \$zip->close();
-              echo 'Extraction successful.<br>';
+              echo '✅ Files Extracted.<br>';
 
-              // Safe Cache Clearing logic
+              // BOOTSTRAP LARAVEL
+              // This ensures we use the App's native logic to clear cache and migrate
               try {
-                  // Standard Laravel View Cache
-                  \$viewFiles = glob(__DIR__ . '/storage/framework/views/*.php');
-                  if (\$viewFiles) {
-                      foreach (\$viewFiles as \$file) {
-                          if (is_file(\$file)) @unlink(\$file);
-                      }
-                      echo 'Views cleared.<br>';
-                  }
+                  if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+                      require __DIR__ . '/vendor/autoload.php';
+                      \$app = require_once __DIR__ . '/bootstrap/app.php';
+                      
+                      // Initialize Kernel to load environment/configs
+                      \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class);
+                      \$kernel->bootstrap();
 
-                  // Bootstrap Cache
-                  \$bootFiles = glob(__DIR__ . '/bootstrap/cache/*.php');
-                  if (\$bootFiles) {
-                      foreach (\$bootFiles as \$file) {
-                          if (is_file(\$file)) @unlink(\$file);
-                      }
-                      echo 'Bootstrap cleared.<br>';
+                      echo '✅ Laravel Bootstrapped.<br>';
+
+                      // 1. Clear Views (Fixes missing text)
+                      Illuminate\Support\Facades\Artisan::call('view:clear');
+                      echo '✅ Views Cleared: ' . Illuminate\Support\Facades\Artisan::output() . '<br>';
+
+                      // 2. Clear Config
+                      Illuminate\Support\Facades\Artisan::call('config:clear');
+                      echo '✅ Config Cleared: ' . Illuminate\Support\Facades\Artisan::output() . '<br>';
+
+                      // 3. Migrate Database (Fixes missing columns)
+                      Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+                      echo '✅ Database Migrated: ' . Illuminate\Support\Facades\Artisan::output() . '<br>';
+                      
+                  } else {
+                      echo '⚠️ Vendor folder missing, cannot bootstrap Laravel.<br>';
                   }
-              } catch (Exception \$e) {
-                  echo 'Cache warning: ' . \$e->getMessage();
-                  // Do not fail the deployment
+              } catch (Throwable \$e) {
+                  echo '⚠️ Post-Install Error: ' . \$e->getMessage() . '<br>';
+                  // Don't fail the whole request, we want to clean up
               }
 
-              // Security: Self-destruct artifacts
+              // Security: Cleanup
               @unlink('$ZIP_NAME');
               @unlink(__FILE__);
+              echo '✅ Cleanup Complete.';
           } else {
               http_response_code(500);
-              echo 'Extraction failed';
+              echo '❌ Extraction Failed';
           }
           ?>" > "../deploy_package/$SCRIPT_NAME"
 
