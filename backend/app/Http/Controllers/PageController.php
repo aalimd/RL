@@ -300,10 +300,83 @@ class PageController extends Controller
             return back()->with('error', 'Tracking details not found. Please check your inputs.');
         }
 
+        // 2FA Check: If Telegram is linked, enforce OTP
+        if ($result->telegram_chat_id) {
+            // Generate 6-digit OTP
+            $otp = rand(100000, 999999);
+
+            // Store in session with expiry (5 mins)
+            session([
+                '2fa_otp' => $otp,
+                '2fa_expires' => now()->addMinutes(5),
+                '2fa_request_id' => $result->id,
+                '2fa_tracking_id' => $result->tracking_id // For display/context
+            ]);
+
+            // Send via Telegram
+            $this->telegramService->sendMessageToChat(
+                $result->telegram_chat_id,
+                "🔐 <b>Verification Code</b>\n\nYour code to access request details is: <code>$otp</code>\n\nDo not share this code with anyone."
+            );
+
+            // Redirect to Verify Page
+            return redirect()->route('public.tracking.verify');
+        }
+
+        // No 2FA -> Show details directly
         return view('public.tracking', [
             'settings' => $settings,
             'request' => $result,
             'id' => $request->trackingId,
+            'telegramBotUsername' => $this->telegramService->getBotUsername()
+        ]);
+    }
+
+    /**
+     * Show 2FA Verification Form
+     */
+    public function show2FAVerify()
+    {
+        if (!session('2fa_otp')) {
+            return redirect()->route('public.tracking');
+        }
+
+        $settings = $this->getPublicSettings();
+        return view('public.2fa_verify', compact('settings'));
+    }
+
+    /**
+     * Handle 2FA Submission
+     */
+    public function handle2FAVerify(Request $request)
+    {
+        $request->validate(['otp' => 'required|numeric']);
+
+        $sessionOtp = session('2fa_otp');
+        $expires = session('2fa_expires');
+        $requestId = session('2fa_request_id');
+
+        if (!$sessionOtp || !$requestId || now()->greaterThan($expires)) {
+            return back()->with('error', 'Session expired. Please try tracking again.');
+        }
+
+        if ($request->otp != $sessionOtp) {
+            return back()->with('error', 'Invalid verification code.');
+        }
+
+        // OTP Valid - Clear session 2FA data but keep request context? 
+        // Or just load the view directly.
+
+        $result = \App\Models\Request::find($requestId);
+
+        // Clear OTP session to prevent replay (optional, or keep for refresh?)
+        // Better to clear
+        session()->forget(['2fa_otp', '2fa_expires']);
+
+        return view('public.tracking', [
+            'settings' => $this->getPublicSettings(),
+            'request' => $result,
+            'id' => $result->tracking_id,
             'telegramBotUsername' => $this->telegramService->getBotUsername()
         ]);
     }

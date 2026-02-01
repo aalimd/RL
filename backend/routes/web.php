@@ -27,6 +27,8 @@ Route::post('/track', [PageController::class, 'doTracking'])->middleware('thrott
 Route::get('/letter/{tracking_id}', [PageController::class, 'viewLetter'])->name('public.letter');
 Route::get('/letter/{tracking_id}/pdf', [PageController::class, 'downloadPdf'])->middleware('throttle:10,1')->name('public.letter.pdf');
 Route::get('/verify/{token}', [App\Http\Controllers\VerificationController::class, 'verify'])->name('public.verify');
+Route::get('/tracking/verify', [PageController::class, 'show2FAVerify'])->name('public.tracking.verify');
+Route::post('/tracking/verify', [PageController::class, 'handle2FAVerify'])->middleware('throttle:5,1')->name('public.tracking.verify.post');
 
 // Admin Panel (protected by auth)
 Route::middleware(['auth', 'twofactor'])->prefix('admin')->name('admin.')->group(function () {
