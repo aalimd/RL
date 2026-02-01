@@ -37,10 +37,11 @@ jobs:
           exclude: |
             **/.git*
             **/.git*/**
-            **/node_modules/**
-            **/tests/**
-            .env
-            .env.example
+            **/.github*/**
+            backend/node_modules/**
+            backend/vendor/**
+            backend/.env
+            backend/storage/*.keyxample
             .env.backup
             phpunit.xml
             storage/*.key
