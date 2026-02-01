@@ -1,167 +1,315 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('layouts.app')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Two-Factor Authentication</title>
+@section('title', 'Two-Factor Authentication')
+
+@section('styles')
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #f3f4f6;
+        .auth-page {
+            min-height: 100vh;
             display: flex;
-            justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            justify-content: center;
+            padding: 2rem 1rem;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
         }
 
-        .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
+        /* Particles */
+        .particles {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
         }
 
-        .icon {
-            width: 3rem;
-            height: 3rem;
-            background: #ecfdf5;
-            color: #10b981;
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: var(--primary);
             border-radius: 50%;
+            opacity: 0.3;
+            animation: float-particle 15s infinite;
+        }
+
+        .particle:nth-child(1) {
+            left: 10%;
+            animation-delay: 0s;
+        }
+
+        .particle:nth-child(2) {
+            left: 30%;
+            animation-delay: 2s;
+            background: var(--secondary);
+        }
+
+        .particle:nth-child(3) {
+            left: 50%;
+            animation-delay: 4s;
+        }
+
+        .particle:nth-child(4) {
+            left: 70%;
+            animation-delay: 6s;
+            background: var(--accent);
+        }
+
+        .particle:nth-child(5) {
+            left: 90%;
+            animation-delay: 8s;
+            background: var(--secondary);
+        }
+
+        @keyframes float-particle {
+            0% {
+                transform: translateY(100vh) scale(0);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 0.4;
+            }
+
+            90% {
+                opacity: 0.4;
+            }
+
+            100% {
+                transform: translateY(-100vh) scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* Glass Card */
+        .auth-card {
+            max-width: 420px;
+            width: 100%;
+            position: relative;
+            z-index: 10;
+            border-radius: 1.5rem;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            padding: 2.5rem 2rem;
+            text-align: center;
+        }
+
+        [data-theme="dark"] .auth-card,
+        body.dark-mode .auth-card {
+            background: rgba(30, 41, 59, 0.7);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Icon */
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1rem;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
+            color: var(--primary);
+            position: relative;
         }
 
-        h2 {
-            margin: 0 0 0.5rem;
-            color: #111827;
+        .icon-wrapper::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid currentColor;
+            opacity: 0;
+            animation: ring-pulse 2s infinite;
         }
 
-        p {
-            margin: 0 0 1.5rem;
-            color: #6b7280;
-            font-size: 0.875rem;
+        @keyframes ring-pulse {
+            0% {
+                transform: scale(0.9);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
         }
 
-        input {
+        /* Headings */
+        .auth-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+            line-height: 1.5;
+        }
+
+        /* Input */
+        .code-input {
             width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            font-size: 1.25rem;
-            text-align: center;
+            padding: 1rem;
+            font-size: 1.5rem;
+            font-weight: 700;
             letter-spacing: 0.5rem;
-            box-sizing: border-box;
+            text-align: center;
+            border: 2px solid var(--border-color);
+            border-radius: 0.75rem;
+            background: var(--bg-input, rgba(255, 255, 255, 0.5));
+            transition: all 0.3s ease;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
         }
 
-        button {
+        .code-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+            transform: scale(1.02);
+        }
+
+        /* Button */
+        .btn-verify {
             width: 100%;
-            padding: 0.75rem;
-            background: #2563eb;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
+            font-weight: 600;
+            font-size: 1rem;
             border: none;
-            border-radius: 0.5rem;
-            font-weight: 500;
             cursor: pointer;
-            transition: background 0.2s;
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+            transition: all 0.3s ease;
         }
 
-        button:hover {
-            background: #1d4ed8;
+        .btn-verify:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.5);
         }
 
-        .resend {
-            display: block;
-            margin-top: 1rem;
-            color: #4b5563;
-            text-decoration: underline;
-            font-size: 0.875rem;
+        /* Links */
+        .link-action {
             background: none;
             border: none;
-            width: auto;
-            margin-left: auto;
-            margin-right: auto;
+            color: var(--text-muted);
+            font-size: 0.9rem;
             cursor: pointer;
+            margin-top: 1.5rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s;
             padding: 0;
         }
 
+        .link-action:hover {
+            color: var(--primary);
+        }
+
+        /* Alerts */
         .alert {
             padding: 0.75rem;
             border-radius: 0.5rem;
-            margin-bottom: 1rem;
-            font-size: 0.875rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-align: left;
         }
 
         .alert-error {
-            background: #fef2f2;
-            color: #b91c1c;
+            background: rgba(239, 68, 68, 0.1);
+            color: #EF4444;
+            border: 1px solid rgba(239, 68, 68, 0.2);
         }
 
         .alert-success {
-            background: #ecfdf5;
-            color: #047857;
+            background: rgba(16, 185, 129, 0.1);
+            color: #10B981;
+            border: 1px solid rgba(16, 185, 129, 0.2);
         }
     </style>
-</head>
+@endsection
 
-<body>
-    <div class="container">
-        <div class="icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
+@section('content')
+    <div class="auth-page">
+        <div class="particles">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
         </div>
-        <h2>Two-Factor Verification</h2>
-        <p>
-            @if($method === 'app')
-                Please enter the code from your authenticator app.
-            @else
-                Please enter the verification code sent to your email.
+
+        <div class="auth-card">
+            <div class="icon-wrapper">
+                <i data-lucide="lock" style="width: 32px; height: 32px;"></i>
+            </div>
+
+            <h1 class="auth-title">Two-Factor Authentication</h1>
+            <p class="auth-desc">
+                @if($method === 'app')
+                    Enter the 6-digit code from your authenticator app to continue.
+                @else
+                    We sent a verification code to your email address. Please enter it below.
+                @endif
+            </p>
+
+            @if(session('error') || $errors->any())
+                <div class="alert alert-error">
+                    <i data-lucide="alert-circle" style="width: 18px; height: 18px;"></i>
+                    <span>{{ session('error') ?? $errors->first() }}</span>
+                </div>
             @endif
-        </p>
 
-        @if(session('error') || $errors->any())
-            <div class="alert alert-error">
-                {{ session('error') ?? $errors->first() }}
-            </div>
-        @endif
+            @if(session('success'))
+                <div class="alert alert-success">
+                    <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i>
+                    <span>{{ session('success') }}</span>
+                </div>
+            @endif
 
-        @if(session('success'))
-            <div class="alert alert-success">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        <form action="{{ route('admin.2fa.verify.post') }}" method="POST">
-            @csrf
-            <input type="text" name="code" placeholder="123456" required autofocus maxlength="6" pattern="[0-9]*"
-                inputmode="numeric">
-            <button type="submit">Verify</button>
-        </form>
-
-        @if($method === 'email')
-            <form action="{{ route('admin.2fa.resend') }}" method="POST">
+            <form action="{{ route('admin.2fa.verify.post') }}" method="POST">
                 @csrf
-                <button type="submit" class="resend">Resend Code</button>
+                <input type="text" name="code" class="code-input" placeholder="000000" required autofocus maxlength="6"
+                    pattern="[0-9]*" inputmode="numeric" autocomplete="one-time-code">
+
+                <button type="submit" class="btn-verify">
+                    Verify Securely
+                </button>
             </form>
-        @endif
 
-        <form action="{{ route('logout') }}" method="POST" style="margin-top: 1rem;">
-            @csrf
-            <button type="submit"
-                style="background: none; color: #9ca3af; padding: 0; font-weight: normal; font-size: 0.875rem;">Cancel &
-                Logout</button>
-        </form>
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+                @if($method === 'email')
+                    <form action="{{ route('admin.2fa.resend') }}" method="POST" style="display: inline;">
+                        @csrf
+                        <button type="submit" class="link-action">
+                            <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+                            Resend Code
+                        </button>
+                    </form>
+                @endif
+
+                <form action="{{ route('logout') }}" method="POST" style="display: inline;">
+                    @csrf
+                    <button type="submit" class="link-action" style="color: var(--text-muted); opacity: 0.8;">
+                        <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
+                        Cancel & Logout
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
-</body>
-
-</html>
+@endsection
