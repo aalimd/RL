@@ -9,7 +9,17 @@ use Mews\Purifier\Facades\Purifier;
 
 class EmailTemplateController extends Controller
 {
-    // ... (index and edit methods unchanged)
+    public function index()
+    {
+        $templates = \App\Models\EmailTemplate::all();
+        return view('admin.email_templates.index', compact('templates'));
+    }
+
+    public function edit($id)
+    {
+        $template = \App\Models\EmailTemplate::findOrFail($id);
+        return view('admin.email_templates.edit', compact('template'));
+    }
 
     public function update(Request $request, $id)
     {
