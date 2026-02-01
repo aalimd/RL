@@ -7,6 +7,7 @@ backend/storage/framework/cache/data/*
 backend/storage/framework/sessions/*
 backend/storage/framework/views/*
 backend/bootstrap/cache/*
+!backend/bootstrap/cache/.gitkeep
 !backend/storage/logs/.gitkeep
 !backend/storage/framework/cache/.gitkeep
 !backend/storage/framework/sessions/.gitkeep
