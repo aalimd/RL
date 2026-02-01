@@ -42,7 +42,6 @@ jobs:
           port: 21
           local-dir: ./deploy_package/
           server-dir: ./
-          state-name: .ftp-deploy-sync-state.json
 
       - name: 🚀 Trigger Unzip on Server
         run: curl -s https://apps.aamd.sa/RL/unzip.php
