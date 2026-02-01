@@ -65,10 +65,18 @@ try {
     $settings = \App\Models\Settings::all()->pluck('value', 'key')->toArray();
     echo "<p>✅ Settings fetched (" . count($settings) . ").</p>";
 
-    echo "<p>Attempting Review Render...</p>";
-    // Attempt to render with dummy data
+    echo "<p>Fetching Templates...</p>";
+    $templates = \App\Models\EmailTemplate::all();
+    echo "<p>✅ Templates fetched (" . $templates->count() . ").</p>";
+
+    foreach ($templates as $inv) {
+        echo "Template: " . ($inv->name ?? 'NULL NAME') . "<br>";
+    }
+
+    echo "<p>Attempting Review Render (WITH DATA)...</p>";
+    // Attempt to render with REAL data
     $view = view('admin.email-templates.index', [
-        'templates' => [],
+        'templates' => $templates,
         'settings' => $settings
     ]);
     $html = $view->render();
