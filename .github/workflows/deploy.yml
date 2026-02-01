@@ -23,28 +23,32 @@ jobs:
         working-directory: ./backend
         run: composer install --no-dev --optimize-autoloader
 
-      - name: 📦 Create Deployment Package
+       - name: 📦 Create Deployment Package
         run: |
           mkdir deploy_package
           cd backend
-          # Zip the contents of backend, excluding .git, .env, and sensitive/large dev files
-          zip -r ../deploy_package/release.zip . -x "*.git*" "*.github*" "node_modules/*" "storage/*.key" "storage/logs/*" ".env" "phpunit.xml" ".DS_Store" "tests/*"
+          # Define unique names
+          ZIP_NAME="release_${{ github.sha }}.zip"
+          SCRIPT_NAME="unzip_${{ github.sha }}.php"
           
-          # Create unzip.php dynamically
+          # Zip the contents
+          zip -r "../deploy_package/$ZIP_NAME" . -x "*.git*" "*.github*" "node_modules/*" "storage/*.key" "storage/logs/*" ".env" "phpunit.xml" ".DS_Store" "tests/*"
+          
+          # Create extraction script dynamically
           echo "<?php
           \$zip = new ZipArchive;
-          \$res = \$zip->open('release.zip');
+          \$res = \$zip->open('$ZIP_NAME');
           if (\$res === TRUE) {
               \$zip->extractTo(__DIR__);
               \$zip->close();
               echo 'Extraction successful';
-              // Security: Self-destruct and remove zip
-              unlink('release.zip');
+              // Security: Self-destruct artifacts
+              unlink('$ZIP_NAME');
               unlink(__FILE__);
           } else {
               echo 'Extraction failed';
           }
-          ?>" > ../deploy_package/unzip.php
+          ?>" > "../deploy_package/$SCRIPT_NAME"
 
       - name: 📂 Sync files (Upload Zip)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -58,5 +62,5 @@ jobs:
           server-dir: ./
 
       - name: 🚀 Trigger Unzip on Server
-        run: curl -s https://apps.aamd.sa/RL/unzip.php
+        run: curl -s "https://apps.aamd.sa/RL/unzip_${{ github.sha }}.php"
         continue-on-error: true
