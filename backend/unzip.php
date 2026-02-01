@@ -8,7 +8,10 @@ if (!file_exists($file)) {
 
 $zip = new ZipArchive;
 if ($zip->open($file) === TRUE) {
-    $zip->extractTo('./');
+    if (!is_dir('./backend')) {
+        mkdir('./backend', 0755, true);
+    }
+    $zip->extractTo('./backend/');
     $zip->close();
 
     // Delete the zip file after successful extraction
