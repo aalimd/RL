@@ -6,16 +6,19 @@
     <style>
         .verify-page {
             min-height: 100vh;
-            background: var(--bg-primary);
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 2rem 1rem;
             position: relative;
             overflow: hidden;
+            /* Gradient Background matching Landing */
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
         }
 
-        /* Floating Particles (Consistent with other pages) */
+        /* ========================================
+               PARTICLES (Shared with Landing)
+               ======================================== */
         .particles {
             position: absolute;
             inset: 0;
@@ -81,65 +84,139 @@
             }
         }
 
+        /* ========================================
+               GLASS CARD
+               ======================================== */
         .verify-card {
-            max-width: 480px;
+            max-width: 500px;
             width: 100%;
-            background: var(--bg-secondary);
-            border-radius: 1.5rem;
-            box-shadow: 0 10px 40px var(--shadow-color);
-            border: 1px solid var(--border-color);
-            overflow: hidden;
             position: relative;
             z-index: 10;
+            border-radius: 1.5rem;
+            overflow: hidden;
+
+            /* Glassmorphism */
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
+        /* Dark Mode Glass Support (Assumes theme toggler sets generic CSS variables or class) */
+        [data-theme="dark"] .verify-card,
+        body.dark-mode .verify-card {
+            background: rgba(30, 41, 59, 0.7);
+            /* Darker semi-transparent */
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .verify-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* ========================================
+               GLOW EFFECTS
+               ======================================== */
+        .glow-bg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+            opacity: 0.6;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .status-valid .glow-bg {
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.25) 0%, transparent 70%);
+        }
+
+        .status-invalid .glow-bg {
+            background: radial-gradient(circle, rgba(239, 68, 68, 0.25) 0%, transparent 70%);
+        }
+
+        /* ========================================
+               HEADER & ICON
+               ======================================== */
         .verify-header {
-            padding: 2rem 1.5rem;
+            padding: 2.5rem 2rem 1.5rem;
             text-align: center;
-            border-bottom: 1px solid var(--border-light);
-            background: linear-gradient(to bottom, var(--bg-secondary), var(--bg-primary));
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
         }
 
-        .verify-body {
-            padding: 2rem;
+        [data-theme="dark"] .verify-header,
+        body.dark-mode .verify-header {
+            border-bottom-color: rgba(255, 255, 255, 0.05);
         }
 
         .status-icon-wrapper {
-            width: 80px;
-            height: 80px;
+            width: 96px;
+            height: 96px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 1.5rem;
             position: relative;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
         }
 
-        .status-valid {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
-            color: #10B981;
-        }
-
-        .status-invalid {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
-            color: #EF4444;
+        [data-theme="dark"] .status-icon-wrapper,
+        body.dark-mode .status-icon-wrapper {
+            background: #1e293b;
         }
 
         .status-icon-wrapper svg {
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
+            stroke-width: 2px;
+        }
+
+        /* Valid State Styles */
+        .is-valid .status-icon-wrapper {
+            color: #10B981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+        }
+
+        .is-valid .status-title {
+            color: #059669;
+        }
+
+        /* Invalid State Styles */
+        .is-invalid .status-icon-wrapper {
+            color: #EF4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+        }
+
+        .is-invalid .status-title {
+            color: #DC2626;
         }
 
         .status-title {
-            font-size: 1.5rem;
+            font-size: 1.75rem;
             font-weight: 800;
-            color: var(--text-primary);
             margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
         }
 
         .status-desc {
             color: var(--text-secondary);
-            font-size: 0.95rem;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        /* ========================================
+               BODY & CONTENT
+               ======================================== */
+        .verify-body {
+            padding: 2rem;
         }
 
         .info-row {
@@ -147,7 +224,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 1rem 0;
-            border-bottom: 1px solid var(--border-light);
+            border-bottom: 1px dashed var(--border-light);
         }
 
         .info-row:last-child {
@@ -156,63 +233,76 @@
 
         .info-label {
             color: var(--text-muted);
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             font-weight: 500;
         }
 
         .info-value {
             color: var(--text-primary);
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 1rem;
             text-align: right;
         }
 
-        .badge {
+        .badge-verified {
             display: inline-flex;
             align-items: center;
-            padding: 0.25rem 0.75rem;
+            gap: 0.375rem;
+            padding: 0.375rem 0.75rem;
             border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .badge-success {
+            font-size: 0.825rem;
+            font-weight: 700;
             background: rgba(16, 185, 129, 0.15);
             color: #10B981;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-
-        .verified-badge {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            background: rgba(16, 185, 129, 0.1);
             border: 1px solid rgba(16, 185, 129, 0.2);
-            border-radius: 0.75rem;
-            color: #10B981;
-            font-size: 0.75rem;
-            font-weight: 700;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+            animation: pulse-green 2s infinite;
         }
 
-        .return-link {
+        @keyframes pulse-green {
+
+            0%,
+            100% {
+                box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(16, 185, 129, 0.3);
+            }
+        }
+
+        /* ========================================
+               BUTTONS
+               ======================================== */
+        .btn-return {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-top: 1.5rem;
-            color: var(--text-muted);
-            font-weight: 500;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 0.875rem 2rem;
+            width: 100%;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            font-size: 1rem;
             text-decoration: none;
-            transition: color 0.2s;
+            transition: all 0.3s ease;
+            margin-top: 2rem;
+            cursor: pointer;
+
+            /* Primary Button Style from Landing */
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+            border: none;
         }
 
-        .return-link:hover {
-            color: var(--primary);
+        .btn-return:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.5);
+            color: white;
         }
 
+        /* Pulse Ring Animation */
         .pulse-ring {
             position: absolute;
             inset: -4px;
@@ -237,9 +327,10 @@
 @endsection
 
 @section('content')
-    <div class="verify-page">
-        <!-- Background Elements -->
-        <div class="hero-bg"></div>
+    <div class="verify-page {{ $status === 'valid' ? 'status-valid' : 'status-invalid' }}">
+        <!-- Animated Background Elements -->
+        <div class="glow-bg"></div>
+
         <div class="particles">
             <div class="particle"></div>
             <div class="particle"></div>
@@ -248,86 +339,90 @@
             <div class="particle"></div>
         </div>
 
-        <!-- Theme Toggle -->
+        <!-- Theme Toggle (Fixed Position) -->
         <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme"
-            style="position: fixed; top: 1.5rem; right: 1.5rem; z-index: 50;">
-            <i data-lucide="moon" class="moon-icon"></i>
-            <i data-lucide="sun" class="sun-icon"></i>
+            style="position: fixed; top: 1.5rem; right: 1.5rem; z-index: 50; background: var(--bg-card); padding: 0.5rem; border-radius: 99px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            <i data-lucide="moon" class="moon-icon" style="width: 20px; height: 20px;"></i>
+            <i data-lucide="sun" class="sun-icon" style="width: 20px; height: 20px;"></i>
         </button>
 
-        <div class="verify-card animate-fade-in-up">
+        <!-- Main Card -->
+        <div class="verify-card {{ $status === 'valid' ? 'is-valid' : 'is-invalid' }}">
+
             @if($status === 'valid')
-                <!-- Valid State -->
+                <!-- VALID STATE -->
                 <div class="verify-header">
-                    <div class="status-icon-wrapper status-valid">
+                    <div class="status-icon-wrapper">
                         <i data-lucide="shield-check"></i>
                         <div class="pulse-ring"></div>
                     </div>
-                    <h1 class="status-title">Verified Document</h1>
-                    <p class="status-desc">This recommendation letter is authentic and valid.</p>
+                    <h1 class="status-title">Official Document</h1>
+                    <p class="status-desc">This recommendation letter has been successfully verified.</p>
                 </div>
 
                 <div class="verify-body">
                     <div class="space-y-4">
                         <div class="info-row">
-                            <span class="info-label">Student Name</span>
+                            <span class="info-label">Candidate Name</span>
                             <span class="info-value">{{ $request->student_name }} {{ $request->last_name }}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Issue Date</span>
+                            <span class="info-label">Issued Date</span>
                             <span class="info-value">{{ $request->updated_at->format('d M, Y') }}</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Tracking ID</span>
-                            <span class="info-value" style="font-family: monospace;">{{ $request->tracking_id }}</span>
+                            <span class="info-label">Reference ID</span>
+                            <span class="info-value"
+                                style="font-family: monospace; letter-spacing: 0.5px;">{{ $request->tracking_id }}</span>
                         </div>
-                        <div class="info-row">
-                            <span class="info-label">Verification Status</span>
-                            <span class="badge badge-success">
-                                <i data-lucide="check" style="width: 12px; height: 12px; margin-right: 4px;"></i>
-                                Verified
+                        <div class="info-row" style="border-bottom: none;">
+                            <span class="info-label">Verification</span>
+                            <span class="badge-verified">
+                                <i data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i>
+                                Authenticated
                             </span>
                         </div>
                     </div>
 
                     <div
-                        style="text-align: center; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-light);">
-                        <p style="font-size: 0.75rem; color: var(--text-muted);">
-                            Verified by {{ $settings['siteName'] ?? 'Academic System' }}<br>
-                            Official Digital Verification
+                        style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-light); text-align: center;">
+                        <p style="font-size: 0.8rem; color: var(--text-muted);">
+                            Digitally signed and verified by<br>
+                            <strong>{{ $settings['siteName'] ?? 'Academic Recommendation System' }}</strong>
                         </p>
                     </div>
 
-                    <div class="text-center">
-                        <a href="{{ route('home') }}" class="return-link">
-                            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
-                            Return to Home
-                        </a>
-                    </div>
+                    <a href="{{ route('home') }}" class="btn-return">
+                        <i data-lucide="home" style="width: 18px; height: 18px;"></i>
+                        Return to Dashboard
+                    </a>
                 </div>
 
             @else
-                <!-- Invalid State -->
+                <!-- INVALID STATE -->
                 <div class="verify-header">
-                    <div class="status-icon-wrapper status-invalid">
+                    <div class="status-icon-wrapper">
                         <i data-lucide="shield-alert"></i>
                     </div>
                     <h1 class="status-title">Invalid Document</h1>
-                    <p class="status-desc">The verification link you used is invalid or has expired.</p>
+                    <p class="status-desc">Verification failed. This document does not exist or has expired.</p>
                 </div>
 
                 <div class="verify-body">
-                    <p style="text-align: center; color: var(--text-secondary); line-height: 1.6;">
-                        We could not verify the authenticity of this document. It may have been modified, expired, or does not
-                        exist in our records.
-                    </p>
-
-                    <div class="text-center" style="margin-top: 2rem;">
-                        <a href="{{ route('home') }}" class="return-link">
-                            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
-                            Return to Home
-                        </a>
+                    <div
+                        style="background: rgba(239, 68, 68, 0.05); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(239, 68, 68, 0.1); margin-bottom: 2rem;">
+                        <p
+                            style="text-align: center; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin: 0;">
+                            We could not match the provided token to a valid recommendation letter in our records. Please ensure
+                            you scanned the correct QR code or contact the administration.
+                        </p>
                     </div>
+
+                    <a href="{{ route('home') }}" class="btn-return"
+                        style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color); box-shadow: none;">
+                        <i data-lucide="arrow-left" style="width: 18px; height: 18px;"></i>
+                        Back to Home
+                    </a>
                 </div>
             @endif
         </div>
