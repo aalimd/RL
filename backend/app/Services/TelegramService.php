@@ -105,13 +105,15 @@ class TelegramService
             ]
         ];
 
-        // Only add View Details button if URL is HTTPS (production)
+        // Always add View Details button, ensuring HTTPS manually if needed
         $detailsUrl = url("/admin/requests/{$request->id}");
-        if (strpos($detailsUrl, 'https://') === 0) {
-            $keyboard['inline_keyboard'][] = [
-                ['text' => '👁️ View Details', 'url' => $detailsUrl]
-            ];
+        if (strpos($detailsUrl, 'http://') === 0) {
+            $detailsUrl = str_replace('http://', 'https://', $detailsUrl);
         }
+
+        $keyboard['inline_keyboard'][] = [
+            ['text' => '👁️ View Details', 'url' => $detailsUrl]
+        ];
 
         return $this->sendMessage($message, $keyboard);
     }
