@@ -23,7 +23,7 @@ jobs:
         working-directory: ./backend
         run: composer install --no-dev --optimize-autoloader
 
-       - name: 📦 Create Deployment Package
+      - name: 📦 Create Deployment Package
         run: |
           mkdir deploy_package
           cd backend
