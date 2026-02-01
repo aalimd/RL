@@ -1,42 +1,82 @@
 <?php
-// unzip.php
-$file = 'release.zip';
+// unzip.php - Robust Deployment Script
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-// Ensure required directories exist with correct permissions
-$dirs = [
-    './backend/storage/app/public',
-    './backend/storage/framework/cache/data',
-    './backend/storage/framework/sessions',
-    './backend/storage/framework/views',
-    './backend/storage/logs',
-    './backend/bootstrap/cache',
+$zipFile = 'release.zip';
+$extractPath = './backend/';
+
+echo "<h1>Deployment Log</h1>";
+echo "<pre>";
+
+// 1. Check for Zip File
+if (!file_exists($zipFile)) {
+    die("❌ Error: '$zipFile' not found in " . getcwd());
+}
+echo "✅ Found '$zipFile'.\n";
+
+// 2. Prepare Extraction Directory
+if (!is_dir($extractPath)) {
+    echo "⚠️ '$extractPath' does not exist. Creating it...\n";
+    if (!mkdir($extractPath, 0755, true)) {
+        die("❌ Error: Failed to create '$extractPath'. Check permissions.");
+    }
+}
+
+// 3. Extract Zip
+$zip = new ZipArchive;
+if ($zip->open($zipFile) === TRUE) {
+    echo "⏳ Extracting to '$extractPath'...\n";
+    if ($zip->extractTo($extractPath)) {
+        echo "✅ Extraction successful.\n";
+    } else {
+        die("❌ Error: Extraction failed.");
+    }
+    $zip->close();
+} else {
+    die("❌ Error: Could not open zip file.");
+}
+
+// 4. Create Critical Laravel Directories & Set Permissions
+$requiredDirs = [
+    'storage/app/public',
+    'storage/framework/cache/data',
+    'storage/framework/sessions',
+    'storage/framework/views',
+    'storage/logs',
+    'bootstrap/cache'
 ];
 
-foreach ($dirs as $dir) {
-    if (!is_dir($dir)) {
-        mkdir($dir, 0755, true);
+echo "\n🛠 Checking critical directories...\n";
+
+foreach ($requiredDirs as $relDir) {
+    $fullPath = $extractPath . $relDir;
+
+    // Create if missing
+    if (!is_dir($fullPath)) {
+        echo "   Creating '$relDir'...\n";
+        if (!mkdir($fullPath, 0775, true)) {
+            echo "   ❌ Failed to create '$fullPath'.\n";
+            continue;
+        }
+    }
+
+    // Fix Permissions (Try to set to 775 or 777 usually needed for shared hosting)
+    if (chmod($fullPath, 0775)) {
+        echo "   ✅ Permissions set for '$relDir'.\n";
+    } else {
+        echo "   ⚠️ Warning: Could not chmod '$relDir'.\n";
     }
 }
-if (!file_exists($file)) {
-    die('Error: release.zip not found!');
-}
 
-$zip = new ZipArchive;
-if ($zip->open($file) === TRUE) {
-    if (!is_dir('./backend')) {
-        mkdir('./backend', 0755, true);
-    }
-    $zip->extractTo('./backend/');
-    $zip->close();
-
-    // Delete the zip file after successful extraction
-    unlink($file);
-
-    // Optional: Delete this script as well for security
-    // unlink(__FILE__);
-
-    echo "Success: Files extracted and zip deleted.";
+// 5. Cleanup
+if (unlink($zipFile)) {
+    echo "\n🗑 Deleted '$zipFile'.\n";
 } else {
-    echo "Error: Failed to unzip file.";
+    echo "\n⚠️ Warning: Could not delete '$zipFile'.\n";
 }
+
+echo "\n🎉 Deployment Complete! <a href='/RL/'>Go to Site</a>";
+echo "</pre>";
 ?>
