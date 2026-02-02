@@ -5,8 +5,8 @@
 @section('styles')
     <style>
         /* ========================================
-                           HERO SECTION
-                           ======================================== */
+                               HERO SECTION
+                               ======================================== */
         .hero-section {
             min-height: calc(100vh - 4.5rem);
             display: flex;
@@ -19,8 +19,8 @@
         }
 
         /* ========================================
-                           FLOATING PARTICLES
-                           ======================================== */
+                               FLOATING PARTICLES
+                               ======================================== */
         .particles {
             position: absolute;
             inset: 0;
@@ -98,15 +98,15 @@
         }
 
         /* ========================================
-                           CARD DESIGN
-                           ======================================== */
+                               CARD DESIGN
+                               ======================================== */
         .landing-card {
             background: var(--glass-bg);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border);
             border-radius: 1.5rem;
-            padding: 3rem;
+            padding: 2.5rem 2rem;
             max-width: 800px;
             width: 100%;
             text-align: center;
@@ -117,8 +117,8 @@
         }
 
         /* ========================================
-                           ANIMATED BADGE
-                           ======================================== */
+                               ANIMATED BADGE
+                               ======================================== */
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -127,7 +127,7 @@
             border: 1px solid rgba(99, 102, 241, 0.2);
             padding: 0.5rem 1rem;
             border-radius: 9999px;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             font-size: 0.875rem;
             font-weight: 500;
             color: var(--primary);
@@ -135,13 +135,13 @@
         }
 
         /* ========================================
-                           HERO TITLE
-                           ======================================== */
+                               HERO TITLE
+                               ======================================== */
         .hero-title {
             font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 800;
-            line-height: 1.2;
-            margin-bottom: 1.5rem;
+            line-height: 1.1;
+            margin-bottom: 1rem;
             letter-spacing: -0.02em;
         }
 
@@ -155,21 +155,21 @@
         .hero-description {
             font-size: 1.125rem;
             color: var(--text-secondary);
-            line-height: 1.7;
-            margin-bottom: 3rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
             max-width: 600px;
             margin-left: auto;
             margin-right: auto;
         }
 
         /* ========================================
-                           ACTION BUTTONS
-                           ======================================== */
+                               ACTION BUTTONS
+                               ======================================== */
         .action-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 3rem;
+            gap: 1.25rem;
+            margin-bottom: 2rem;
         }
 
         .action-card {
@@ -233,8 +233,8 @@
         }
 
         /* ========================================
-                           RESPONSIVE
-                           ======================================== */
+                               RESPONSIVE
+                               ======================================== */
         @media (max-width: 640px) {
             .landing-card {
                 padding: 2rem 1.5rem;
