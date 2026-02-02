@@ -79,12 +79,23 @@
                 {{ $settings['secondaryColor'] ?? '#9333EA' }}
             ;
             --sidebar-width: 260px;
-            --bg-color: #f3f4f6;
+            --bg-color: #f8fafc;
             --card-bg: #ffffff;
-            --text-main: #111827;
-            --text-muted: #6b7280;
-            --border-color: #e5e7eb;
-            --input-bg: #f9fafb;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --input-bg: #ffffff;
+
+            /* Status Colors - Light Mode */
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --success-text: #059669;
+            --success-border: rgba(16, 185, 129, 0.2);
+            --error-bg: rgba(239, 68, 68, 0.1);
+            --error-text: #dc2626;
+            --error-border: rgba(239, 68, 68, 0.2);
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --warning-text: #d97706;
+            --warning-border: rgba(245, 158, 11, 0.2);
         }
 
         /* Dark Mode */
@@ -95,6 +106,17 @@
             --text-muted: #94a3b8;
             --border-color: #334155;
             --input-bg: #1e293b;
+
+            /* Status Colors - Dark Mode */
+            --success-bg: rgba(16, 185, 129, 0.2);
+            --success-text: #34d399;
+            --success-border: rgba(16, 185, 129, 0.3);
+            --error-bg: rgba(239, 68, 68, 0.2);
+            --error-text: #f87171;
+            --error-border: rgba(239, 68, 68, 0.3);
+            --warning-bg: rgba(245, 158, 11, 0.2);
+            --warning-text: #fbbf24;
+            --warning-border: rgba(245, 158, 11, 0.3);
         }
 
         body.dark-mode .admin-header {
@@ -112,7 +134,11 @@
             border-color: var(--border-color) !important;
         }
 
-        body.dark-mode .user-menu-wrapper button:hover {
+        .user-menu:hover {
+            background: #f1f5f9 !important;
+        }
+
+        body.dark-mode .user-menu:hover {
             background: rgba(255, 255, 255, 0.05) !important;
         }
 
@@ -460,9 +486,9 @@
 
         /* Header Polish */
         .admin-header {
-            background: rgba(255, 255, 255, 0.8);
+            background: var(--card-bg);
             backdrop-filter: blur(12px);
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-color);
             padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
@@ -475,7 +501,7 @@
         .admin-header h1 {
             font-size: 1.5rem;
             font-weight: 700;
-            color: #111827;
+            color: var(--text-main);
             letter-spacing: -0.025em;
         }
 
@@ -483,10 +509,10 @@
             display: flex;
             align-items: center;
             gap: 1rem;
-            background: white;
+            background: var(--card-bg);
             padding: 0.25rem 0.25rem 0.25rem 1rem;
             border-radius: 9999px;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border-color);
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         }
 
@@ -780,11 +806,8 @@
 
         .form-label {
             font-size: 1rem;
-            /* SIGNIFICANTLY LARGER */
             font-weight: 600;
-            /* Bolder */
-            color: #111827;
-            /* Darker text */
+            color: var(--text-main);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -796,15 +819,12 @@
         .form-textarea {
             width: 100%;
             padding: 0.875rem 1.25rem;
-            /* Taller, more comfortable inputs */
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border-color);
             border-radius: 0.75rem;
-            /* More rounded */
             font-size: 1rem;
-            /* Larger input text */
-            background-color: #f9fafb;
+            background-color: var(--input-bg);
             transition: all 0.2s ease-in-out;
-            color: #111827;
+            color: var(--text-main);
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         }
 
@@ -813,7 +833,7 @@
         .form-textarea:focus {
             outline: none;
             border-color: var(--primary);
-            background-color: #ffffff;
+            background-color: var(--card-bg);
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
         }
 

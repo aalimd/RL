@@ -81,10 +81,10 @@
                                     </td>
                                     <td>
                                         <span class="badge 
-                                                                    @if($request->status === 'Approved') badge-approved
-                                                                    @elseif($request->status === 'Rejected') badge-rejected
-                                                                    @elseif($request->status === 'Under Review') badge-revision
-                                                                    @else badge-pending @endif">
+                                                                                    @if($request->status === 'Approved') badge-approved
+                                                                                    @elseif($request->status === 'Rejected') badge-rejected
+                                                                                    @elseif($request->status === 'Under Review') badge-revision
+                                                                                    @else badge-pending @endif">
                                             {{ $request->status }}
                                         </span>
                                     </td>
@@ -168,22 +168,22 @@
                             <i data-feather="activity" style="width: 16px; height: 16px; color: #6b7280;"></i>
                         </div>
                         <div>
-                            <div style="font-size: 0.875rem; color: #111827; font-weight: 500;">
+                            <div style="font-size: 0.875rem; color: var(--text-main); font-weight: 500;">
                                 {{ $log->user->name ?? 'System' }}
-                                <span style="font-weight: normal; color: #6b7280; font-size: 0.8rem;">
+                                <span style="font-weight: normal; color: var(--text-muted); font-size: 0.8rem;">
                                     {{ str_replace(['_', 'api'], [' ', ''], $log->action) }}
                                 </span>
                             </div>
                             <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
                                 {{ $isJson ? $details : Str::limit($details, 60) }}
                             </div>
-                            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
                                 {{ $log->created_at->diffForHumans() }}
                             </div>
                         </div>
                     </div>
                 @empty
-                    <div style="padding: 2rem; text-align: center; color: #9ca3af;">
+                    <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
                         No recent activity
                     </div>
                 @endforelse
@@ -228,7 +228,7 @@
                                         usePointStyle: true,
                                         padding: 20,
                                         font: { family: "'Inter', sans-serif", size: 11 },
-                                        color: isDarkMode ? '#f1f5f9' : '#111827'
+                                        color: isDarkMode ? '#f1f5f9' : '#475569'
                                     }
                                 }
                             },

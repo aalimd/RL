@@ -47,11 +47,13 @@
                             </td>
                         </tr>
                     @empty
-                        <td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-muted);">
-                            <i data-feather="activity"
-                                style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
-                            <p>No activity logs yet</p>
-                        </td>
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                                <i data-feather="activity"
+                                    style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
+                                <p>No activity logs yet</p>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
