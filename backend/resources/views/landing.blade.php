@@ -341,24 +341,130 @@
             transform: translateY(-5px) scale(1.05);
             box-shadow: 0 12px 30px -8px rgba(99, 102, 241, 0.6);
         }
+        /* ========================================
+           RESPONSIVE HEADER & MOBILE MENU
+           ======================================== */
+        .nav-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 4.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .logo-img {
+            height: 2.5rem;
+            width: auto;
+            border-radius: 0.5rem;
+            margin-right: 0.75rem;
+        }
+
+        /* Desktop Nav Links */
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        /* Mobile Menu Button */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            padding: 0.5rem;
+            z-index: 1001; /* Above menu overlay */
+        }
+
+        /* Mobile Menu Overlay */
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .mobile-menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Mobile Menu Container */
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            right: -280px; /* Hidden by default */
+            width: 280px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            z-index: 1000;
+            padding: 5rem 2rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .mobile-menu.active {
+            right: 0;
+        }
+
+        /* Mobile Menu Items */
+        .mobile-nav-link {
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            transition: background 0.2s;
+        }
+
+        .mobile-nav-link:hover {
+            background: var(--bg-primary);
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none; /* Hide desktop nav */
+            }
+            .mobile-menu-btn {
+                display: block; /* Show hamburger */
+            }
+        }
     </style>
 @endsection
 
 @section('content')
     <div style="min-height: 100vh; display: flex; flex-direction: column;">
         <!-- Navigation -->
-        <nav class="nav">
+        <nav class="nav" style="position: sticky; top: 0; z-index: 999; background: var(--bg-nav); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-color);">
             <div class="nav-inner">
                 <a href="{{ url('/') }}" class="logo">
                     @if(!empty($settings['logoUrl']))
-                        <img src="{{ $settings['logoUrl'] }}" alt="Logo"
-                            style="height: 2.5rem; margin-right: 0.75rem; border-radius: 0.5rem;">
+                        <img src="{{ $settings['logoUrl'] }}" alt="Logo" class="logo-img">
                     @else
                         <div class="logo-icon">R</div>
                     @endif
                     <span class="logo-text">{{ $settings['siteName'] ?? 'AAMD' }}</span>
                 </a>
 
+                <!-- Desktop Links -->
                 <div class="nav-links">
                     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme">
                         <i data-lucide="moon" class="moon-icon"></i>
@@ -369,8 +475,41 @@
                         Admin
                     </a>
                 </div>
+
+                <!-- Mobile Menu Button -->
+                <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+                    <i data-lucide="menu" class="menu-icon" style="width: 24px; height: 24px;"></i>
+                    <i data-lucide="x" class="close-icon" style="width: 24px; height: 24px; display: none;"></i>
+                </button>
             </div>
         </nav>
+
+        <!-- Mobile Menu Overlay -->
+        <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="toggleMobileMenu()"></div>
+
+        <!-- Mobile Menu Config -->
+        <div class="mobile-menu" id="mobileMenu">
+            <a href="{{ url('/request') }}" class="mobile-nav-link">
+                <i data-lucide="file-plus"></i> New Request
+            </a>
+            <a href="{{ url('/track') }}" class="mobile-nav-link">
+                <i data-lucide="search"></i> Track Request
+            </a>
+            <a href="/RL/login" class="mobile-nav-link">
+                <i data-lucide="shield"></i> Admin Panel
+            </a>
+            
+            <div style="border-top: 1px solid var(--border-color); margin-top: auto; padding-top: 1.5rem;">
+                <button class="mobile-nav-link" onclick="toggleTheme()" style="width: 100%; border: none; background: none; cursor: pointer;">
+                    <span class="theme-text-light" style="display: flex; gap: 0.75rem; align-items: center;">
+                        <i data-lucide="sun"></i> Light Mode
+                    </span>
+                    <span class="theme-text-dark" style="display: none; gap: 0.75rem; align-items: center;">
+                         <i data-lucide="moon"></i> Dark Mode
+                    </span>
+                </button>
+            </div>
+        </div>
 
         <!-- Hero Section -->
         <section class="hero-section">
@@ -487,19 +626,26 @@
         // Mobile menu toggle
         function toggleMobileMenu() {
             const menu = document.getElementById('mobileMenu');
+            const overlay = document.getElementById('mobileMenuOverlay');
             const menuBtn = document.querySelector('.mobile-menu-btn');
             const menuIcon = menuBtn.querySelector('.menu-icon');
             const closeIcon = menuBtn.querySelector('.close-icon');
 
             menu.classList.toggle('active');
+            overlay.classList.toggle('active');
 
-            if (menu.classList.contains('active')) {
-                menuIcon.style.display = 'none';
-                closeIcon.style.display = 'block';
-            } else {
-                menuIcon.style.display = 'block';
-                closeIcon.style.display = 'none';
-            }
+            // Handle Icon Toggle
+            const isActive = menu.classList.contains('active');
+            menuIcon.style.display = isActive ? 'none' : 'block';
+            closeIcon.style.display = isActive ? 'block' : 'none';
+            
+            // Re-render icons for new elements
+            lucide.createIcons();
+            
+            // Handle Theme Text Toggle
+            const isDark = document.documentElement.classList.contains('dark');
+            document.querySelector('.theme-text-light').style.display = isDark ? 'none' : 'flex';
+            document.querySelector('.theme-text-dark').style.display = isDark ? 'flex' : 'none';
         }
     </script>
 @endsection
