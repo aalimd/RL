@@ -76,3 +76,18 @@ try {
     echo "<h3>Stack Trace:</h3>";
     echo "<pre>" . $e->getTraceAsString() . "</pre>";
 }
+
+// 5. Read Latest Logs
+echo "<h3>4. Latest Log Entries (storage/logs/laravel.log)</h3>";
+$logFile = $baseDir . '/storage/logs/laravel.log';
+if (file_exists($logFile)) {
+    echo "<textarea style='width:100%; height:300px; font-family:monospace; background:#f0f0f0; padding:10px;'>";
+    $lines = file($logFile);
+    $lastLines = array_slice($lines, -50); // Get last 50 lines
+    foreach ($lastLines as $line) {
+        echo htmlspecialchars($line);
+    }
+    echo "</textarea>";
+} else {
+    echo "Log file not found at: $logFile";
+}
