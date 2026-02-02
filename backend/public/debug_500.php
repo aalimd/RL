@@ -20,8 +20,17 @@ echo "<h3>2. Critical Paths Permissions & Files</h3>";
 $baseDir = dirname(__DIR__); // Up one level from public
 echo "Backend Root: " . $baseDir . "<br>";
 
+$envFile = $baseDir . '/.env'; // Restoring the missing variable!
 if (file_exists($envFile)) {
     echo "<b>.env File:</b> <span style='color:green'>FOUND</span> (Perms: " . substr(sprintf('%o', fileperms($envFile)), -4) . ")<br>";
+
+    // Content Check (Safe)
+    $envContent = file_get_contents($envFile);
+    if (strpos($envContent, 'APP_KEY=') !== false) {
+        echo "<b>APP_KEY:</b> <span style='color:green'>FOUND in .env</span><br>";
+    } else {
+        echo "<b>APP_KEY:</b> <span style='color:red'>MISSING in .env content</span> (Check file content!)<br>";
+    }
 } else {
     echo "<b>.env File:</b> <span style='color:red; font-size:1.2em; font-weight:bold'>MISSING (CRITICAL)</span><br>";
 }
