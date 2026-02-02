@@ -46,7 +46,6 @@ Route::middleware(['auth', 'twofactor'])->prefix('admin')->name('admin.')->group
     Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
     Route::get('/appearance', [AdminController::class, 'appearance'])->name('appearance');
     Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs');
-    Route::get('/users', [AdminController::class, 'users'])->name('users');
     Route::get('/form-settings', [AdminController::class, 'formSettings'])->name('form-settings');
 
     // Telegram Admin Actions
@@ -81,6 +80,7 @@ Route::middleware(['auth', 'twofactor'])->prefix('admin')->name('admin.')->group
     // ============================================
     Route::middleware('role:admin')->group(function () {
         // User management
+        Route::get('/users', [AdminController::class, 'users'])->name('users');
         Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
         Route::put('/users/{id}', [AdminController::class, 'updateUser'])->name('users.update');
         Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('users.destroy');

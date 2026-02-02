@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Request extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'tracking_id',
@@ -16,16 +17,9 @@ class Request extends Model
         'last_name',
         'student_email',
         'phone',
-        'verification_token', // This might be an old column name from previous devs? The new one is verify_token
-        'verify_token',
-        'university',
-        'purpose',
-        'deadline',
-        'training_period',
-        'custom_content',
-        'template_id',
         'status',
-        'status',
+        'verify_token', // QR Verification Token (generated on approval)
+        'verification_token', // Student Tracking ID Number (used for public tracking)
         'telegram_chat_id',
         'admin_message',
         'rejection_reason',
