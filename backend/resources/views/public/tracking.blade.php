@@ -609,6 +609,34 @@
             line-height: 1.5;
         }
 
+        .view-letter-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            width: 100%;
+            padding: 1.125rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 1rem;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.125rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+            margin-top: 1.5rem;
+        }
+
+        .view-letter-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 20px 35px -8px rgba(99, 102, 241, 0.5);
+            filter: brightness(1.05);
+        }
+
+        .view-letter-btn:active {
+            transform: translateY(-1px);
+        }
+
         /* Responsive */
         @media (max-width: 480px) {
             .tracking-card {
@@ -682,7 +710,7 @@
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">Verification Code</label>
+                        <label class="form-label">ID Number</label>
                         <input type="text" name="verificationToken" class="form-input" placeholder="Student ID / Last Name"
                             value="{{ old('verificationToken') }}" required>
                     </div>
@@ -699,11 +727,11 @@
                             <span class="result-title">Request Status</span>
                             <span
                                 class="status-badge 
-                                                                                                                                    @if($request->status === 'Approved') status-approved
-                                                                                                                                    @elseif($request->status === 'Rejected') status-rejected
-                                                                                                                                    @elseif($request->status === 'Needs Revision') status-revision
-                                                                                                                                    @elseif($request->status === 'Under Review') status-review
-                                                                                                                                    @else status-pending @endif">
+                                                                                                                                            @if($request->status === 'Approved') status-approved
+                                                                                                                                            @elseif($request->status === 'Rejected') status-rejected
+                                                                                                                                            @elseif($request->status === 'Needs Revision') status-revision
+                                                                                                                                            @elseif($request->status === 'Under Review') status-review
+                                                                                                                                            @else status-pending @endif">
                                 {{ $request->status }}
                             </span>
                             </span>
@@ -814,7 +842,8 @@
 
                         @if($statusMessage)
                             <div class="status-info-box">
-                                <i data-lucide="info" style="width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; margin-top: 2px;"></i>
+                                <i data-lucide="info"
+                                    style="width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; margin-top: 2px;"></i>
                                 <p class="status-info-text">{{ $statusMessage }}</p>
                             </div>
                         @endif
