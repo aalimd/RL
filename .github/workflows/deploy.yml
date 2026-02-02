@@ -75,7 +75,7 @@ jobs:
               echo '✅ Files Extracted Successfully.'.PHP_EOL;
 
               // 3.5 FIX PERMISSIONS
-              $dirsToFix = [
+              \$dirsToFix = [
                   '/storage',
                   '/storage/app',
                   '/storage/framework',
@@ -85,12 +85,12 @@ jobs:
                   '/storage/logs',
                   '/bootstrap/cache'
               ];
-              foreach ($dirsToFix as $subdir) {
-                  $path = $extractPath . $subdir;
-                  if (file_exists($path)) {
-                      @chmod($path, 0775); // Try 775 first
-                      if (!is_writable($path)) {
-                          @chmod($path, 0777); // Fallback to 777
+              foreach (\$dirsToFix as \$subdir) {
+                  \$path = \$extractPath . \$subdir;
+                  if (file_exists(\$path)) {
+                      @chmod(\$path, 0775); // Try 775 first
+                      if (!is_writable(\$path)) {
+                          @chmod(\$path, 0777); // Fallback to 777
                       }
                   }
               }
