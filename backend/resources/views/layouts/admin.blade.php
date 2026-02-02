@@ -1249,6 +1249,10 @@
                     <i data-feather="home"></i>
                     <span>Dashboard</span>
                 </a>
+                <a href="{{ route('home') }}" target="_blank" class="nav-item">
+                    <i data-feather="external-link"></i>
+                    <span>Visit Site</span>
+                </a>
                 <a href="{{ route('admin.requests') }}"
                     class="nav-item {{ request()->routeIs('admin.requests*') ? 'active' : '' }}">
                     <i data-feather="file-text"></i>
