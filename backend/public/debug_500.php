@@ -35,7 +35,7 @@ foreach ($pathsToCheck as $path) {
         $writable = is_writable($path) ? '<span style="color:green">YES</span>' : '<span style="color:red">NO</span>';
         echo "Path: <b>$path</b> | Perms: $perms | Writable: $writable<br>";
     } else {
-         echo "Path: $path (<span style="color:red">NOT FOUND</span>)<br>";
+        echo "Path: $path (<span style='color:red'>NOT FOUND</span>)<br>";
     }
 }
 
@@ -45,29 +45,29 @@ try {
     if (!file_exists($baseDir . '/vendor/autoload.php')) {
         throw new Exception("Vendor autoload not found. Did 'composer install' run?");
     }
-    
+
     require $baseDir . '/vendor/autoload.php';
     echo "✅ Vendor Autoloaded<br>";
-    
+
     if (!file_exists($baseDir . '/bootstrap/app.php')) {
-         throw new Exception("bootstrap/app.php not found.");
+        throw new Exception("bootstrap/app.php not found.");
     }
-    
+
     $app = require_once $baseDir . '/bootstrap/app.php';
     echo "✅ App Required<br>";
-    
+
     $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
     echo "✅ Kernel Made<br>";
-    
+
     echo "Attempting to handle request...<br>";
-    
+
     // Simulate a request to the failing route (Admin)
     $request = Illuminate\Http\Request::create('/admin/dashboard', 'GET');
     $response = $kernel->handle($request);
-    
+
     echo "<h2>🎉 SUCCESS: Response Generated</h2>";
     echo "Status Code: " . $response->getStatusCode() . "<br>";
-    
+
 } catch (Throwable $e) {
     echo "<h2 style='color:red'>🔥 CRASH DETECTED</h2>";
     echo "<b>Exception:</b> " . get_class($e) . "<br>";
