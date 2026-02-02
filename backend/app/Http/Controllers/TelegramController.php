@@ -201,7 +201,7 @@ class TelegramController extends Controller
                     'one_time_keyboard' => true
                 ];
 
-                $this->telegram->sendMessage($chatId, "🔒 <b>Security Verification</b>\n\nTo subscribe to updates for <b>#$trackingId</b>, please verify your identity by sharing your phone number.\n\nClick the button below to verify.", $keyboard);
+                $this->telegram->sendMessageToChat($chatId, "🔒 <b>Security Verification</b>\n\nTo subscribe to updates for <b>#$trackingId</b>, please verify your identity by sharing your phone number.\n\nClick the button below to verify.", $keyboard);
 
             } else {
                 // Default welcome
@@ -263,7 +263,7 @@ class TelegramController extends Controller
             // Improve UX: Remove the keyboard
             $removeKeyboard = ['remove_keyboard' => true];
 
-            $this->telegram->sendMessage($chatId, "✅ <b>Verification Successful!</b>\n\nYou are now subscribed to updates for request <b>#$trackingId</b>.", $removeKeyboard);
+            $this->telegram->sendMessageToChat($chatId, "✅ <b>Verification Successful!</b>\n\nYou are now subscribed to updates for request <b>#$trackingId</b>.", $removeKeyboard);
         } else {
             $this->telegram->sendMessageToChat($chatId, "❌ <b>Verification Failed</b>\n\nThe number you shared ($telegramPhone) does not match the number registered in the request.\n\nPlease ensure you are using the same Telegram account.");
         }

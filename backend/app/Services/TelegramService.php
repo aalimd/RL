@@ -58,7 +58,7 @@ class TelegramService
     /**
      * Send a message to a specific chat ID
      */
-    public function sendMessageToChat($chatId, $message)
+    public function sendMessageToChat($chatId, $message, $keyboard = null)
     {
         if (!$this->botToken) {
             return false;
@@ -69,6 +69,10 @@ class TelegramService
             'text' => $message,
             'parse_mode' => 'HTML',
         ];
+
+        if ($keyboard) {
+            $data['reply_markup'] = json_encode($keyboard);
+        }
 
         try {
             $response = Http::post($this->apiUrl . $this->botToken . '/sendMessage', $data);
