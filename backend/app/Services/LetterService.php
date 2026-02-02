@@ -23,9 +23,11 @@ class LetterService
         // Use Purifier if available, with custom config to allow common styling
         try {
             return Purifier::clean($html, [
-                'HTML.Allowed' => 'p,br,strong,b,em,i,u,ul,ol,li,a[href],span[style],div[style],h1,h2,h3,h4,h5,h6,img[src|alt|style],table,tr,td,th,thead,tbody',
-                'CSS.AllowedProperties' => 'font-size,font-family,font-weight,text-align,color,background-color,margin,padding,border,border-radius,width,height,display,text-decoration,line-height',
-                'AutoFormat.RemoveEmpty' => true,
+                // Allow classes and IDs for layout
+                'HTML.Allowed' => 'p[style|class|id],br,strong,b,em,i,u,ul,ol,li,a[href|target],span[style|class|id],div[style|class|id],h1[style|class|id],h2[style|class|id],h3[style|class|id],h4[style|class|id],h5[style|class|id],h6[style|class|id],img[src|alt|style|width|height|class],table[style|class|border|width|cellpadding|cellspacing],tr[style|class],td[style|class|colspan|rowspan|width|height|align|valign],th[style|class|colspan|rowspan|width|height|align|valign],thead,tbody,tfoot,hr[style|class],font[color|size|face],center,blockquote',
+                // Allow more CSS for positioning and layout
+                'CSS.AllowedProperties' => 'font-size,font-family,font-weight,font-style,text-align,text-decoration,line-height,color,background-color,background,border,border-radius,border-collapse,border-spacing,width,height,min-width,max-width,min-height,max-height,display,padding,margin,float,clear,overflow,position,top,bottom,left,right,z-index,vertical-align,white-space,list-style-type',
+                'AutoFormat.RemoveEmpty' => false, // Don't remove empty spacing divs/spans
             ]);
         } catch (\Exception $e) {
             // Fallback: strip dangerous tags but keep basic HTML
