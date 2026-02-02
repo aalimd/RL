@@ -220,7 +220,12 @@
             </div>
         @endif
 
-        {{-- QR Code is now controlled via {{qrCode}} variable in template - automatic section disabled --}}
+        {{-- QR Code Automatic Display --}}
+        @if(!empty($qrCode))
+            <div class="letter-qrcode" style="margin-top: 15px;">
+                {!! $qrCode !!}
+            </div>
+        @endif
 
         {{-- Digital Footer Verification Strip --}}
         @if($layout['footer']['enabled'] ?? true)
