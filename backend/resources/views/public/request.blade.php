@@ -613,6 +613,30 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css">
     <style>
         .iti { width: 100%; }
+        /* Fix for Country List Visibility */
+        .iti__country-list {
+            z-index: 100 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        /* Ensure specific countries are hidden and only shown on click */
+        .iti__country-list.iti__hide {
+            display: none !important;
+        }
+
+        /* Styling for list items */
+        .iti__country {
+            padding: 10px 10px;
+            outline: none;
+        }
+        
+        .iti__country:hover, .iti__country.iti__highlight {
+            background-color: var(--primary);
+            color: white;
+        }
     </style>
 @endsection
 
