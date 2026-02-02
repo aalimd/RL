@@ -25,9 +25,10 @@
             background: white;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             width: 210mm;
-            height: 297mm;
+            min-height: 297mm;
+            height: auto;
             position: relative;
-            overflow: hidden;
+            /* overflow: hidden; Removed to prevent text cutting */
             display: flex;
             flex-direction: column;
         }
@@ -177,8 +178,11 @@
             .letter-page {
                 box-shadow: none;
                 width: 210mm !important;
-                height: 297mm !important;
+                min-height: 297mm !important;
+                height: auto !important;
                 margin: 0;
+                overflow: visible !important;
+                page-break-after: always;
             }
 
             .no-print {
@@ -234,10 +238,10 @@
             {!! $header !!}
         </div>
 
-        <!-- Title Banner -->
-        <div class="title-banner">
+        <!-- Title Banner Removed (User-Controlled via Template) -->
+        {{-- <div class="title-banner">
             RECOMMENDATION LETTER
-        </div>
+        </div> --}}
 
         <!-- Body -->
         <div class="letter-body">
