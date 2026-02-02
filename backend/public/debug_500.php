@@ -67,86 +67,44 @@ foreach ($pathsToCheck as $path) {
     }
 }
 
-// 4. Laravel Boot Test & DB Auto-Fix
-echo "<h3>3. Laravel Boot Test & Database Repair</h3>";
-try {
-    if (!file_exists($baseDir . '/vendor/autoload.php')) {
-        throw new Exception("Vendor autoload not found.");
-    }
-    require $baseDir . '/vendor/autoload.php';
-    if (!file_exists($baseDir . '/bootstrap/app.php')) {
-        throw new Exception("bootstrap/app.php not found.");
-    }
-
-    // Bootstrap the application (Standard Way)
-    $app = require_once $baseDir . '/bootstrap/app.php';
-
-    // Resolve Console Kernel to run Artisan commands
-    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
-    $kernel->bootstrap();
-
-    echo "✅ Application Bootstrapped.<br>";
-
-    // Attempt Database Connection
-    try {
-        Illuminate\Support\Facades\DB::connection()->getPdo();
-        echo "✅ Database Connection: SUCCESS<br>";
-
-        // AUTO-FIX: Run Migrations FORCEFULLY
-        echo "<div style='background:#e0f2fe; padding:15px; border:2px solid #0ea5e9; margin:10px 0;'>";
-        echo "<h3 style='color:#0284c7; margin-top:0'>🚀 Attempting Full Database Migration...</h3>";
-
-        try {
-            // Check if we need to migrate
-            echo "Running: <code>php artisan migrate --force</code>...<br>";
-
-            // Capture output
-            Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-            $output = Illuminate\Support\Facades\Artisan::output();
-
-            echo "<b>Result:</b><pre style='background:#fff; padding:10px; border:1px solid #ccc;'>" . ($output ?: 'Migration command ran (no output). Check if errors exist below.') . "</pre>";
-            echo "<h3 style='color:green'>✅ Operations Completed.</h3>";
-            echo "Please refresh the Admin Panel now to check if it works!";
-
-        } catch (Throwable $artisanEx) {
-            echo "<h3 style='color:red'>❌ Migration Failed:</h3>";
-            echo $artisanEx->getMessage() . "<br>";
-        }
-        echo "</div>";
-
-    } catch (Throwable $dbEx) {
-        echo "❌ Database Connection Failed: " . $dbEx->getMessage() . "<br>";
-        echo "Ensure .env has correct DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD.<br>";
-    }
-
-    // Simulate a request to the failing route (Admin)
-    echo "Attempting to handle request...<br>";
-    $request = Illuminate\Http\Request::create('/admin/dashboard', 'GET');
-    $response = $kernel->handle($request);
-
-    echo "<h2>🎉 SUCCESS: Response Generated</h2>";
-    echo "Status Code: " . $response->getStatusCode() . "<br>";
-
-} catch (Throwable $e) {
-    echo "<h2 style='color:red'>🔥 CRASH DETECTED</h2>";
-    echo "<b>Exception:</b> " . get_class($e) . "<br>";
-    echo "<b>Message:</b> " . $e->getMessage() . "<br>";
-    echo "<b>File:</b> " . $e->getFile() . " on line " . $e->getLine() . "<br>";
-    echo "<h3>Stack Trace:</h3>";
-    echo "<pre>" . $e->getTraceAsString() . "</pre>";
-}
-
-// 5. Read Latest Logs
-echo "<h3>4. Latest Log Entries (storage/logs/laravel.log)</h3>";
+// 4. Read Logs (CRITICAL)
+echo "<h3>3. Latest Log Entries</h3>";
 $logFile = $baseDir . '/storage/logs/laravel.log';
+
 if (file_exists($logFile)) {
-    echo "<textarea style='width:100%; height:500px; font-family:monospace; background:#f0f0f0; padding:10px;'>";
+    echo "Reading: " . $logFile . "<br>";
     $lines = file($logFile);
-    $lastLines = array_slice($lines, -400); // Increased to 400 to see the TOP of the error
-    foreach ($lastLines as $line) {
-        echo htmlspecialchars($line);
+    $lines = array_slice($lines, -50); // Show last 50 lines
+
+    echo "<div style='background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; overflow-x: auto; font-family: monospace; font-size: 13px;'>";
+    foreach ($lines as $line) {
+        $line = htmlspecialchars($line);
+        // Highlight errors
+        if (strpos($line, 'ERROR') !== false || strpos($line, 'Exception') !== false) {
+            echo "<span style='color: #f87171; font-weight: bold;'>" . $line . "</span>";
+        } elseif (strpos($line, 'Stack trace') !== false || strpos($line, '#') !== false) {
+            echo "<span style='color: #a3a3a3;'>" . $line . "</span>";
+        } else {
+            echo $line;
+        }
+        echo "<br>";
     }
-    echo "</textarea>";
+    echo "</div>";
 } else {
-    echo "Log file not found at: $logFile";
+    echo "❌ Log file not found at: " . $logFile;
 }
+
+// 5. Check Environment File
+echo "<h3>4. Environment File Check</h3>";
+if (file_exists($envFile)) {
+    echo "✅ .env found.<br>";
+    $envContent = file_get_contents($envFile);
+    if (strpos($envContent, 'APP_KEY=') !== false && strlen($envContent) > 50) {
+        echo "✅ APP_KEY appears to be set.<br>";
+    } else {
+        echo "❌ APP_KEY might be missing or empty.<br>";
+    }
+} else {
+    echo "❌ .env file NOT FOUND.<br>";
+}
+?>
