@@ -525,6 +525,71 @@
         .back-link:hover {
             opacity: 1;
         }
+
+        /* Premium Stepper Icons */
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 2;
+        }
+
+        .step-circle.active {
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+            transform: scale(1.1);
+        }
+        
+        /* Pulse Animation for Active Step */
+        .step-circle.active::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        /* Copy Button */
+        .copy-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 4px;
+            transition: color 0.2s;
+        }
+        .copy-btn:hover {
+            color: var(--primary);
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .btn-loading .btn-text {
+            display: none;
+        }
+        .btn-loading .spinner {
+            display: inline-block;
+        }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css">
     <style>
@@ -574,10 +639,15 @@
                         <h2 class="success-title">Request Submitted Successfully!</h2>
                         <p class="success-subtitle">Your recommendation request has been received.</p>
 
-                        <div class="tracking-box">
-                            <p class="tracking-label">Your Tracking ID:</p>
-                            <p class="tracking-id">{{ session('tracking_id') }}</p>
-                        </div>
+                            <div class="tracking-box" style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
+                                <div>
+                                    <p class="tracking-label">Your Tracking ID:</p>
+                                    <p class="tracking-id" id="trackingIdDisplay">{{ session('tracking_id') }}</p>
+                                </div>
+                                <button class="copy-btn" onclick="copyTrackingId()" title="Copy ID">
+                                    <i data-lucide="copy" style="width: 20px; height: 20px;"></i>
+                                </button>
+                            </div>
 
                         <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 300px; margin: 0 auto;">
                             @if(session('telegram_bot_username'))
@@ -599,22 +669,24 @@
             @else
                 <!-- Progress Steps -->
                 <div class="steps-indicator">
-                    <div class="step-item">
+                    <div class="step-item {{ $step >= 1 ? 'active' : '' }}">
                         <div class="step-circle {{ $step >= 1 ? ($step > 1 ? 'completed' : 'active') : 'inactive' }}">
-                            @if($step > 1) ✓ @else 1 @endif
+                             @if($step > 1) <i data-lucide="check" style="width: 20px;"></i> @else <i data-lucide="user" style="width: 18px;"></i> @endif
                         </div>
                         <span class="step-label">Details</span>
                     </div>
                     <div class="step-connector {{ $step > 1 ? 'completed' : '' }}"></div>
-                    <div class="step-item">
+                    <div class="step-item {{ $step >= 2 ? 'active' : '' }}">
                         <div class="step-circle {{ $step >= 2 ? ($step > 2 ? 'completed' : 'active') : 'inactive' }}">
-                            @if($step > 2) ✓ @else 2 @endif
+                             @if($step > 2) <i data-lucide="check" style="width: 20px;"></i> @else <i data-lucide="file-text" style="width: 18px;"></i> @endif
                         </div>
                         <span class="step-label">Content</span>
                     </div>
                     <div class="step-connector {{ $step > 2 ? 'completed' : '' }}"></div>
-                    <div class="step-item">
-                        <div class="step-circle {{ $step >= 3 ? 'active' : 'inactive' }}">3</div>
+                    <div class="step-item {{ $step >= 3 ? 'active' : '' }}">
+                        <div class="step-circle {{ $step >= 3 ? 'active' : 'inactive' }}">
+                            <i data-lucide="check-circle" style="width: 18px;"></i>
+                        </div>
                         <span class="step-label">Review</span>
                     </div>
                 </div>
@@ -980,6 +1052,12 @@
                     utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js",
                 });
 
+                // Set initial phone number if available
+                const phoneInput = document.querySelector('input[name="data[phone]"]');
+                if (phoneInput && phoneInput.value) {
+                    iti.setNumber(phoneInput.value);
+                }
+
                 // Update input value with full number on form submit
                 const form = document.querySelector("#wizardForm");
                 if (form) {
@@ -1017,5 +1095,34 @@
             document.querySelectorAll('.template-option').forEach(el => el.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
         }
+
+        // Copy Tracking ID
+        function copyTrackingId() {
+            const id = document.getElementById('trackingIdDisplay').innerText;
+            navigator.clipboard.writeText(id).then(() => {
+                // Ideally show a toast here, but for now we can change the icon or color temporarily
+                const btn = document.querySelector('.copy-btn');
+                const originalColor = btn.style.color;
+                btn.style.color = '#10b981'; // Green
+                setTimeout(() => btn.style.color = originalColor, 2000);
+                
+                // If you have a toast function:
+                // showToast('Tracking ID copied!', 'success');
+            });
+        }
+
+        // Loading State for Buttons
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function() {
+                const btn = this.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.classList.add('btn-loading');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<span class="spinner"></span> <span class="btn-text">' + originalText + '</span>';
+                    btn.disabled = true;
+                }
+            });
+        });
     </script>
 @endsection
