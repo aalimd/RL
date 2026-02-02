@@ -711,7 +711,7 @@
 
                     <div class="form-group">
                         <label class="form-label">ID Number</label>
-                        <input type="text" name="verificationToken" class="form-input" placeholder="Student ID / Last Name"
+                        <input type="text" name="verificationToken" class="form-input" placeholder="Enter your ID Number"
                             value="{{ old('verificationToken') }}" required>
                     </div>
 
@@ -727,11 +727,11 @@
                             <span class="result-title">Request Status</span>
                             <span
                                 class="status-badge 
-                                                                                                                                            @if($request->status === 'Approved') status-approved
-                                                                                                                                            @elseif($request->status === 'Rejected') status-rejected
-                                                                                                                                            @elseif($request->status === 'Needs Revision') status-revision
-                                                                                                                                            @elseif($request->status === 'Under Review') status-review
-                                                                                                                                            @else status-pending @endif">
+                                                                                                                                                    @if($request->status === 'Approved') status-approved
+                                                                                                                                                    @elseif($request->status === 'Rejected') status-rejected
+                                                                                                                                                    @elseif($request->status === 'Needs Revision') status-revision
+                                                                                                                                                    @elseif($request->status === 'Under Review') status-review
+                                                                                                                                                    @else status-pending @endif">
                                 {{ $request->status }}
                             </span>
                             </span>
