@@ -75,46 +75,56 @@ try {
     }
     require $baseDir . '/vendor/autoload.php';
     if (!file_exists($baseDir . '/bootstrap/app.php')) {
-        throw new Exception("bootstrap/app.php not found.");
+         throw new Exception("bootstrap/app.php not found.");
     }
+    
+    // Bootstrap the application (Standard Way)
     $app = require_once $baseDir . '/bootstrap/app.php';
-    $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+    
+    // Resolve Console Kernel to run Artisan commands
+    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+    $kernel->bootstrap();
+    
+    echo "✅ Application Bootstrapped.<br>";
 
     // Attempt Database Connection
     try {
         Illuminate\Support\Facades\DB::connection()->getPdo();
         echo "✅ Database Connection: SUCCESS<br>";
-
-        // AUTO-FIX: Check for missing columns
-        if (Illuminate\Support\Facades\Schema::hasTable('users')) {
-            if (!Illuminate\Support\Facades\Schema::hasColumn('users', 'deleted_at')) {
-                echo "<div style='background:#fee2e2; padding:15px; border:2px solid red; margin:10px 0;'>";
-                echo "<h3 style='color:red; margin-top:0'>🚨 CRITICAL: Missing Database Column Detected</h3>";
-                echo "Column <b>'deleted_at'</b> is missing from <b>'users'</b> table.<br>";
-                echo "This is causing the 500 Error!<br><br>";
-
-                echo "<b>Attempting Auto-Fix...</b><br>";
-                try {
-                    Illuminate\Support\Facades\Schema::table('users', function ($table) {
-                        $table->softDeletes();
-                    });
-                    echo "<h3 style='color:green'>✅ AUTO-FIX SUCCESSFUL! Column added.</h3>";
-                    echo "Please refresh the Admin Panel now.";
-                } catch (Throwable $ex) {
-                    echo "<b>Auto-Fix Failed:</b> " . $ex->getMessage() . "<br><br>";
-                    echo "<b>MANUAL FIX (Run in phpMyAdmin):</b><br>";
-                    echo "<code style='background:#333; color:#fff; padding:5px; display:block; margin-top:5px'>ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL;</code>";
-                }
-                echo "</div>";
-            } else {
-                echo "✅ Column 'deleted_at' exists in 'users' table.<br>";
-            }
+        
+        // AUTO-FIX: Run Migrations FORCEFULLY
+        echo "<div style='background:#e0f2fe; padding:15px; border:2px solid #0ea5e9; margin:10px 0;'>";
+        echo "<h3 style='color:#0284c7; margin-top:0'>🚀 Attempting Full Database Migration...</h3>";
+        
+        try {
+            // Check if we need to migrate
+            echo "Running: <code>php artisan migrate --force</code>...<br>";
+            
+            // Capture output
+            Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            $output = Illuminate\Support\Facades\Artisan::output();
+            
+            echo "<b>Result:</b><pre style='background:#fff; padding:10px; border:1px solid #ccc;'>" . ($output ?: 'Migration command ran (no output). Check if errors exist below.') . "</pre>";
+            echo "<h3 style='color:green'>✅ Operations Completed.</h3>";
+            echo "Please refresh the Admin Panel now to check if it works!";
+            
+        } catch (Throwable $artisanEx) {
+            echo "<h3 style='color:red'>❌ Migration Failed:</h3>";
+            echo $artisanEx->getMessage() . "<br>";
         }
+        echo "</div>";
+
     } catch (Throwable $dbEx) {
         echo "❌ Database Connection Failed: " . $dbEx->getMessage() . "<br>";
+        echo "Ensure .env has correct DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD.<br>";
     }
-
-    echo "Attempting to handle request...<br>";
+    
+} catch (Throwable $e) {
+    echo "<h2 style='color:red'>🔥 CRITICAL BOOT ERROR</h2>";
+    echo "<b>Exception:</b> " . get_class($e) . "<br>";
+    echo "<b>Message:</b> " . $e->getMessage() . "<br>";
+    echo "<pre>" . $e->getTraceAsString() . "</pre>";
+}
 
     // Simulate a request to the failing route (Admin)
     $request = Illuminate\Http\Request::create('/admin/dashboard', 'GET');
