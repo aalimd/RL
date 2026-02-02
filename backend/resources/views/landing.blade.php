@@ -5,8 +5,8 @@
 @section('styles')
     <style>
         /* ========================================
-               HERO SECTION
-               ======================================== */
+                   HERO SECTION
+                   ======================================== */
         .hero-section {
             min-height: calc(100vh - 4.5rem);
             display: flex;
@@ -19,8 +19,8 @@
         }
 
         /* ========================================
-               FLOATING PARTICLES
-               ======================================== */
+                   FLOATING PARTICLES
+                   ======================================== */
         .particles {
             position: absolute;
             inset: 0;
@@ -98,8 +98,8 @@
         }
 
         /* ========================================
-               CARD DESIGN
-               ======================================== */
+                   CARD DESIGN
+                   ======================================== */
         .landing-card {
             background: var(--glass-bg);
             backdrop-filter: blur(16px);
@@ -117,8 +117,8 @@
         }
 
         /* ========================================
-               ANIMATED BADGE
-               ======================================== */
+                   ANIMATED BADGE
+                   ======================================== */
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -135,8 +135,8 @@
         }
 
         /* ========================================
-               HERO TITLE
-               ======================================== */
+                   HERO TITLE
+                   ======================================== */
         .hero-title {
             font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 800;
@@ -163,8 +163,8 @@
         }
 
         /* ========================================
-               ACTION BUTTONS
-               ======================================== */
+                   ACTION BUTTONS
+                   ======================================== */
         .action-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -233,8 +233,8 @@
         }
 
         /* ========================================
-               RESPONSIVE
-               ======================================== */
+                   RESPONSIVE
+                   ======================================== */
         @media (max-width: 640px) {
             .landing-card {
                 padding: 2rem 1.5rem;
@@ -243,6 +243,39 @@
             .hero-title {
                 font-size: 2rem;
             }
+        }
+
+        /* Developer Credit */
+        .developer-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            text-decoration: none;
+            padding: 0.35rem 0.75rem;
+            border-radius: 9999px;
+            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .developer-link:hover {
+            background: var(--bg-secondary);
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+        }
+
+        html.dark .developer-link {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        html.dark .developer-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
         }
     </style>
 @endsection
@@ -326,12 +359,35 @@
                     </a>
                 </div>
 
-                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem;">
-                    &copy; {{ date('Y') }} {{ $settings['siteName'] ?? 'AAMD' }}. All rights reserved.
-                </p>
+                <footer class="landing-footer"
+                    style="border-top: 1px solid var(--border-light); padding-top: 2rem; margin-top: 2rem;">
+                    @php
+                        $footerText = $settings['footerText'] ?? '© {year} {siteName}';
+                        $footerText = str_replace('{year}', date('Y'), $footerText);
+                        $footerText = str_replace('{siteName}', $settings['siteName'] ?? 'AAMD Recommendations', $footerText);
+                    @endphp
+
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                        <p style="margin: 0; font-size: 0.875rem; color: var(--text-muted);">{{ $footerText }}</p>
+
+                        <div
+                            style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--text-muted);">
+                            <span>Made By</span>
+                            <a href="https://x.com/I_am_Doctor" target="_blank" rel="noopener noreferrer"
+                                class="developer-link">
+                                AAliMD <span style="font-size: 1.25em; line-height: 1;">🇸🇦</span>
+                            </a>
+                        </div>
+                    </div>
+                </footer>
             </div>
         </section>
     </div>
+
+    <!-- Scroll to Top Button -->
+    <button class="scroll-to-top" id="scrollToTop" onclick="scrollToTop()" aria-label="Scroll to top">
+        <i data-lucide="arrow-up" style="width: 20px; height: 20px;"></i>
+    </button>
 @endsection
 
 @section('scripts')
