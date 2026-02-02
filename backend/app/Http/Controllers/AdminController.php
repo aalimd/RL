@@ -455,7 +455,7 @@ class AdminController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'username' => $validated['username'],
-            'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+            'password' => Hash::make($validated['password']),
             'role' => $validated['role'],
             'is_active' => $request->has('is_active'),
         ]);
@@ -490,7 +490,7 @@ class AdminController extends Controller
         $user->is_active = $request->has('is_active');
 
         if (!empty($validated['password'])) {
-            $user->password = \Illuminate\Support\Facades\Hash::make($validated['password']);
+            $user->password = Hash::make($validated['password']);
         }
 
         $user->save();

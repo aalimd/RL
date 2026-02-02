@@ -13,23 +13,56 @@
             position: relative;
             overflow: hidden;
             /* Gradient Background matching Landing */
-            background: linear-gradient(135deg, var(--bg-primary 100%), var(--bg-secondary 100%));
+            background: var(--bg-primary);
         }
 
-        /* Force dark mode background if variable not set */
-        [data-theme="dark"] .verify-page,
-        body.dark-mode .verify-page {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        /* Ambient Background Effect */
+        .ambient-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+            z-index: 0;
         }
 
-        /* ========================================
-                   PARTICLES (Shared with Landing)
-                   ======================================== */
+        .ambient-bg::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120%;
+            height: 120%;
+            background: radial-gradient(ellipse at center, var(--primary) 0%, var(--secondary) 30%, transparent 70%);
+            opacity: 0.08;
+            animation: float-ambient 15s infinite ease-in-out;
+        }
+
+        html.dark .ambient-bg::before {
+            opacity: 0.15;
+        }
+
+        @keyframes float-ambient {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            50% {
+                transform: translate(-48%, -52%) scale(1.1);
+            }
+        }
+
+        /* Particles */
         .particles {
             position: absolute;
             inset: 0;
             overflow: hidden;
             pointer-events: none;
+            z-index: 1;
         }
 
         .particle {
@@ -39,35 +72,7 @@
             background: var(--primary);
             border-radius: 50%;
             opacity: 0.3;
-            animation: float-particle 15s infinite;
-        }
-
-        .particle:nth-child(1) {
-            left: 10%;
-            animation-delay: 0s;
-        }
-
-        .particle:nth-child(2) {
-            left: 30%;
-            animation-delay: 2s;
-            background: var(--secondary);
-        }
-
-        .particle:nth-child(3) {
-            left: 50%;
-            animation-delay: 4s;
-        }
-
-        .particle:nth-child(4) {
-            left: 70%;
-            animation-delay: 6s;
-            background: var(--accent);
-        }
-
-        .particle:nth-child(5) {
-            left: 90%;
-            animation-delay: 8s;
-            background: var(--secondary);
+            animation: float-particle 20s infinite linear;
         }
 
         @keyframes float-particle {
@@ -85,29 +90,47 @@
             }
 
             100% {
-                transform: translateY(-100vh) scale(1);
+                transform: translateY(-10vh) scale(1);
                 opacity: 0;
             }
         }
 
         /* ========================================
-                   GLASS CARD
-                   ======================================== */
+                                       GLASS CARD
+                                       ======================================== */
         .verify-card {
             max-width: 500px;
             width: 100%;
             position: relative;
             z-index: 10;
-            border-radius: 1.5rem;
+            border-radius: 2rem;
             overflow: hidden;
 
-            /* Enhanced Glassmorphism for Light Mode */
-            background: rgba(255, 255, 255, 0.85);
+            /* Standardized Glassmorphism */
+            background: var(--glass-bg);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 25px 50px -12px var(--shadow-color);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: slide-up 0.6s ease-out;
+        }
+
+        @keyframes slide-up {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .verify-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 35px 60px -15px var(--shadow-color);
         }
 
         /* Dark Mode Glass Support */
@@ -148,8 +171,8 @@
         }
 
         /* ========================================
-                   GLOW EFFECTS
-                   ======================================== */
+                                       GLOW EFFECTS
+                                       ======================================== */
         .glow-bg {
             position: absolute;
             top: 50%;
@@ -172,8 +195,8 @@
         }
 
         /* ========================================
-                   HEADER & ICON
-                   ======================================== */
+                                       HEADER & ICON
+                                       ======================================== */
         .verify-header {
             padding: 2.5rem 2rem 1.5rem;
             text-align: center;
@@ -243,8 +266,8 @@
         }
 
         /* ========================================
-                   BODY & CONTENT
-                   ======================================== */
+                                       BODY & CONTENT
+                                       ======================================== */
         .verify-body {
             padding: 2rem;
         }
@@ -302,8 +325,8 @@
         }
 
         /* ========================================
-                   BUTTONS
-                   ======================================== */
+                                       BUTTONS
+                                       ======================================== */
         .btn-return {
             display: inline-flex;
             align-items: center;
@@ -358,15 +381,16 @@
 
 @section('content')
     <div class="verify-page {{ $status === 'valid' ? 'status-valid' : 'status-invalid' }}">
-        <!-- Animated Background Elements -->
-        <div class="glow-bg"></div>
+        <!-- Ambient Background -->
+        <div class="ambient-bg"></div>
 
+        <!-- Particles -->
         <div class="particles">
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
+            @for($i = 0; $i < 10; $i++)
+                <div class="particle"
+                    style="left: {{ rand(0, 100) }}%; animation-delay: {{ rand(0, 10) }}s; animation-duration: {{ rand(15, 30) }}s;">
+                </div>
+            @endfor
         </div>
 
         <!-- Theme Toggle (Fixed Position) -->
@@ -439,10 +463,9 @@
                 </div>
 
                 <div class="verify-body">
-                    <div
-                        style="background: rgba(239, 68, 68, 0.05); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid rgba(239, 68, 68, 0.1); margin-bottom: 2rem;">
-                        <p
-                            style="text-align: center; color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin: 0;">
+                    <div class="status-info-box"
+                        style="background: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.2); color: #ef4444; flex-direction: column;">
+                        <p style="margin: 0; line-height: 1.6; text-align: center;">
                             We could not match the provided token to a valid recommendation letter in our records. Please ensure
                             you scanned the correct QR code or contact the administration.
                         </p>

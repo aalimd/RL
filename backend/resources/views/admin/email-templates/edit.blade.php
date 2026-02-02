@@ -43,15 +43,46 @@
         </div>
     </div>
 
+    <script src="https://cdn.tiny.cloud/1/djjpb8qqw9cskwcb9wz6j9y4qdx8fbkno7ccret2axmq61mw/tinymce/6/tinymce.min.js"
+        referrerpolicy="origin"></script>
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            tinymce.init({
+                selector: '#bodyEditor',
+                height: 500,
+                menubar: false,
+                plugins: [
+                    'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                    'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                    'insertdatetime', 'media', 'table', 'help', 'wordcount', 'directionality'
+                ],
+                toolbar: 'undo redo | blocks | bold italic underline | alignleft aligncenter alignright alignjustify | ltr rtl | bullist numlist outdent indent | table link image | code',
+                content_style: 'body { font-family: Arial, sans-serif; font-size: 12pt; line-height: 1.6; }',
+                directionality: '{{ ($settings['siteLanguage'] ?? 'en') === 'ar' ? 'rtl' : 'ltr' }}',
+                promotion: false,
+                branding: false,
+                verify_html: false,
+                valid_elements: '*[*]',
+                setup: function (editor) {
+                    editor.on('change', function () {
+                        editor.save();
+                    });
+                }
+            });
+        });
+
         function insertVar(text) {
-            const textarea = document.getElementById('bodyEditor');
-            const start = textarea.selectionStart;
-            const end = textarea.selectionEnd;
-            const value = textarea.value;
-            textarea.value = value.substring(0, start) + text + value.substring(end);
-            textarea.selectionStart = textarea.selectionEnd = start + text.length;
-            textarea.focus();
+            if (tinymce.get('bodyEditor')) {
+                tinymce.get('bodyEditor').execCommand('mceInsertContent', false, text);
+            } else {
+                const textarea = document.getElementById('bodyEditor');
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const value = textarea.value;
+                textarea.value = value.substring(0, start) + text + value.substring(end);
+                textarea.selectionStart = textarea.selectionEnd = start + text.length;
+                textarea.focus();
+            }
         }
     </script>
 @endsection

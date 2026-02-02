@@ -15,35 +15,44 @@
             overflow: hidden;
         }
         
-        /* Floating Particles */
-        .particles {
+        /* Ambient Background Effect */
+        .ambient-bg {
             position: absolute;
-            inset: 0;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
             overflow: hidden;
-            pointer-events: none;
+            z-index: 0;
         }
-        
-        .particle {
+
+        .ambient-bg::before {
+            content: '';
             position: absolute;
-            width: 6px;
-            height: 6px;
-            background: var(--primary);
-            border-radius: 50%;
-            opacity: 0.3;
-            animation: float-particle 15s infinite;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 120%;
+            height: 120%;
+            background: radial-gradient(ellipse at center, var(--primary) 0%, var(--secondary) 30%, transparent 70%);
+            opacity: 0.08;
+            animation: float-ambient 15s infinite ease-in-out;
         }
-        
-        .particle:nth-child(1) { left: 10%; animation-delay: 0s; }
-        .particle:nth-child(2) { left: 30%; animation-delay: 2s; background: var(--secondary); }
-        .particle:nth-child(3) { left: 50%; animation-delay: 4s; }
-        .particle:nth-child(4) { left: 70%; animation-delay: 6s; background: var(--accent); }
-        .particle:nth-child(5) { left: 90%; animation-delay: 8s; background: var(--secondary); }
-        
+
+        html.dark .ambient-bg::before {
+            opacity: 0.15;
+        }
+
+        @keyframes float-ambient {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-48%, -52%) scale(1.1); }
+        }
+
         @keyframes float-particle {
             0% { transform: translateY(100vh) scale(0); opacity: 0; }
             10% { opacity: 0.4; }
             90% { opacity: 0.4; }
-            100% { transform: translateY(-100vh) scale(1); opacity: 0; }
+            100% { transform: translateY(-10vh) scale(1); opacity: 0; }
         }
 
         .wizard-container {
@@ -587,13 +596,6 @@
         .btn-loading .btn-text {
             display: none;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .btn-loading .btn-text {
-            display: none;
-        }
         .btn-loading .spinner {
             display: inline-block;
         }
@@ -647,15 +649,14 @@
 
 @section('content')
     <div class="request-page">
-        <div class="hero-bg"></div>
+        <!-- Ambient Background -->
+        <div class="ambient-bg"></div>
         
         <!-- Floating Particles -->
         <div class="particles">
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
-            <div class="particle"></div>
+            @for($i = 0; $i < 10; $i++)
+                <div class="particle" style="left: {{ rand(0, 100) }}%; animation-delay: {{ rand(0, 10) }}s; animation-duration: {{ rand(15, 30) }}s;"></div>
+            @endfor
         </div>
         
         <!-- Theme Toggle Button - Fixed Position -->

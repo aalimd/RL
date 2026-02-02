@@ -16,6 +16,8 @@ class TrackingVerificationCode extends Mailable
 
     public $requestModel;
     public $otp;
+    public $renderedBody;
+    protected $template;
 
     /**
      * Create a new message instance.
@@ -24,6 +26,8 @@ class TrackingVerificationCode extends Mailable
     {
         $this->requestModel = $requestModel;
         $this->otp = $otp;
+        $this->template = \App\Models\EmailTemplate::where('name', 'tracking_verification')->first();
+        $this->renderedBody = $this->template ? $this->replaceVariables($this->template->body) : null;
     }
 
     /**
@@ -31,8 +35,13 @@ class TrackingVerificationCode extends Mailable
      */
     public function envelope(): Envelope
     {
+        $subject = 'Verification Code - ' . $this->requestModel->tracking_id;
+        if ($this->template) {
+            $subject = $this->replaceVariables($this->template->subject);
+        }
+
         return new Envelope(
-            subject: 'Verification Code - ' . $this->requestModel->tracking_id,
+            subject: $subject,
         );
     }
 
@@ -43,7 +52,20 @@ class TrackingVerificationCode extends Mailable
     {
         return new Content(
             view: 'emails.tracking_verification',
+            with: [
+                'body' => $this->renderedBody,
+            ],
         );
+    }
+
+    protected function replaceVariables($content)
+    {
+        $vars = [
+            '{student_name}' => $this->requestModel->student_name,
+            '{tracking_id}' => $this->requestModel->tracking_id,
+            '{otp}' => $this->otp,
+        ];
+        return str_replace(array_keys($vars), array_values($vars), $content);
     }
 
     /**

@@ -47,20 +47,24 @@
 
 <body>
     <div class="container">
-        <div class="header">
-            <h2>🔐 Security Verification</h2>
-        </div>
+        @if(isset($body) && $body)
+            {!! $body !!}
+        @else
+            <div class="header">
+                <h2>🔐 Security Verification</h2>
+            </div>
 
-        <p>Hello <strong>{{ $requestModel->student_name }}</strong>,</p>
+            <p>Hello <strong>{{ $requestModel->student_name }}</strong>,</p>
 
-        <p>To access the details of your request <strong>#{{ $requestModel->tracking_id }}</strong>, please use the
-            verification code below:</p>
+            <p>To access the details of your request <strong>#{{ $requestModel->tracking_id }}</strong>, please use the
+                verification code below:</p>
 
-        <div class="code-box">
-            {{ $otp }}
-        </div>
+            <div class="code-box">
+                {{ $otp }}
+            </div>
 
-        <p>This code will expire in 10 minutes. If you did not request this code, please ignore this email.</p>
+            <p>This code will expire in 10 minutes. If you did not request this code, please ignore this email.</p>
+        @endif
 
         <div class="footer">
             <p>&copy; {{ date('Y') }} Recommendation Letter System. All rights reserved.</p>
