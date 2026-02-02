@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Track Your Request')
+@section('title', $settings['trackingTitle'] ?? 'Track Your Request')
 
 @section('styles')
     <style>
@@ -164,8 +164,8 @@
             background: var(--glass-bg);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border-radius: 2rem;
-            box-shadow: 0 25px 50px -12px var(--shadow-color);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
             padding: 2.5rem;
             border: 1px solid var(--glass-border);
             animation: slide-up 0.6s ease-out 0.1s backwards;
@@ -688,8 +688,9 @@
             </div>
 
             <div class="tracking-header">
-                <h1>Track Your Request</h1>
-                <p>View the real-time status and progress of your academic recommendation letter.</p>
+                <h1>{{ $settings['trackingTitle'] ?? 'Track Your Request' }}</h1>
+                <p>{{ $settings['trackingSubtitle'] ?? 'View the real-time status and progress of your academic recommendation letter.' }}
+                </p>
             </div>
 
             <div class="tracking-card">
@@ -716,7 +717,7 @@
                     </div>
 
                     <button type="submit" class="track-btn">
-                        <span>Track Request</span>
+                        <span>{{ $settings['trackingSearchBtn'] ?? 'Track Request' }}</span>
                         <i data-lucide="arrow-right" style="width: 20px; height: 20px;"></i>
                     </button>
                 </form>
@@ -727,11 +728,11 @@
                             <span class="result-title">Request Status</span>
                             <span
                                 class="status-badge 
-                                                                                                                                                    @if($request->status === 'Approved') status-approved
-                                                                                                                                                    @elseif($request->status === 'Rejected') status-rejected
-                                                                                                                                                    @elseif($request->status === 'Needs Revision') status-revision
-                                                                                                                                                    @elseif($request->status === 'Under Review') status-review
-                                                                                                                                                    @else status-pending @endif">
+                                                                                                                                                                            @if($request->status === 'Approved') status-approved
+                                                                                                                                                                            @elseif($request->status === 'Rejected') status-rejected
+                                                                                                                                                                            @elseif($request->status === 'Needs Revision') status-revision
+                                                                                                                                                                            @elseif($request->status === 'Under Review') status-review
+                                                                                                                                                                            @else status-pending @endif">
                                 {{ $request->status }}
                             </span>
                             </span>

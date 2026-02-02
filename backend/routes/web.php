@@ -88,6 +88,7 @@ Route::middleware(['auth', 'twofactor'])->prefix('admin')->name('admin.')->group
         // System settings
         Route::put('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
         Route::put('/appearance', [AdminController::class, 'updateAppearance'])->name('appearance.update');
+        Route::post('/appearance/reset', [AdminController::class, 'resetAppearance'])->name('appearance.reset');
         Route::post('/settings/test-email', [AdminController::class, 'sendTestEmail'])->name('settings.test-email');
         Route::put('/form-settings', [AdminController::class, 'updateFormSettings'])->name('form-settings.update');
         Route::post('/settings/backup', [AdminController::class, 'downloadDatabaseBackup'])->name('settings.backup');

@@ -1039,6 +1039,11 @@ class AdminController extends Controller
                     'primaryColor',
                     'secondaryColor',
                     'fontFamily',
+                    'headingFont',
+                    'borderRadius',
+                    'shadowIntensity',
+                    'buttonGradient',
+                    'glassEffect',
                     'loginTitle',
                     'loginSubtitle',
                     'loginBackgroundImage',
@@ -1074,6 +1079,17 @@ class AdminController extends Controller
                     'trackingApprovedMessage',
                     'trackingRejectedMessage',
                     'trackingRevisionMessage',
+                    'trackingTitle',
+                    'trackingSubtitle',
+                    'trackingSearchBtn',
+                ];
+                break;
+
+            case 'request_page':
+                $settingsToUpdate = [
+                    'requestTitle',
+                    'requestSubtitle',
+                    'requestSubmitBtn',
                 ];
                 break;
 
@@ -1106,6 +1122,75 @@ class AdminController extends Controller
         }
 
         return redirect()->route('admin.appearance')->with('success', 'Appearance updated successfully!');
+    }
+
+    /**
+     * Reset appearance to factory defaults
+     */
+    public function resetAppearance()
+    {
+        $defaults = [
+            // BRANDING
+            'primaryColor' => '#4F46E5', // Indigo 600
+            'secondaryColor' => '#8B5CF6', // Violet 500
+            'fontFamily' => 'Inter, sans-serif',
+            'headingFont' => 'Inter, sans-serif',
+            'borderRadius' => '1',
+            'shadowIntensity' => '1',
+            'buttonGradient' => 'linear-gradient(135deg, var(--primary), var(--secondary))',
+            'glassEffect' => '0.7',
+            'loginTitle' => 'Admin Login',
+            'loginSubtitle' => '',
+            'showBranding' => 'false',
+
+            // LANDING PAGE - HERO
+            'heroTitle1' => 'Secure Your Academic',
+            'heroTitle2' => 'Future Today',
+            'heroDescription' => 'Streamline your academic recommendation process. Submit requests, track status in real-time, and get professional letters tailored to your achievements.',
+            'heroPrimaryBtn' => 'Request Recommendation',
+            'heroSecondaryBtn' => 'Track Existing Request',
+
+            // LANDING PAGE - FEATURES
+            'feature1Icon' => 'file-plus',
+            'feature1Title' => 'Request Recommendation',
+            'feature1Text' => 'Submit a new recommendation letter request.',
+            'feature2Icon' => 'search',
+            'feature2Title' => 'Track Existing Request',
+            'feature2Text' => 'Check the status of an existing request.',
+            'feature3Icon' => 'check-circle',
+            'feature3Title' => 'Official Verification',
+            'feature3Text' => 'All letters are verifiable.',
+
+            // FOOTER
+            'footerText' => '© {year} {siteName}. All rights reserved.',
+
+            // STUDENT PAGES - REQUEST
+            'requestTitle' => 'Request a Recommendation',
+            'requestSubtitle' => 'Please fill out the form below carefully.',
+            'requestSubmitBtn' => 'Submit Request',
+
+            // STUDENT PAGES - TRACKING
+            'trackingTitle' => 'Track Your Request',
+            'trackingSubtitle' => 'Enter your ID Number to check your status.',
+            'trackingSearchBtn' => 'Track Request',
+
+            // MESSAGES
+            'trackingFixedMessage' => '',
+            'trackingPendingMessage' => 'Your request is currently pending review.',
+            'trackingReviewMessage' => 'Your request is being reviewed by the administration.',
+            'trackingApprovedMessage' => 'Congratulations! Your recommendation has been approved.',
+            'trackingRejectedMessage' => 'We regret to inform you that your request was not approved.',
+            'trackingRevisionMessage' => 'Your request needs some changes. Please contact administration.',
+        ];
+
+        foreach ($defaults as $key => $value) {
+            Settings::updateOrCreate(
+                ['key' => $key],
+                ['value' => $value]
+            );
+        }
+
+        return redirect()->route('admin.appearance')->with('success', 'Factory defaults restored successfully!');
     }
     /**
      * Preview Letter

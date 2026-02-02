@@ -5,10 +5,11 @@
 @section('styles')
     <style>
         /* ========================================
-                               HERO SECTION
-                               ======================================== */
+                                                                           HERO SECTION
+                                                                           ======================================== */
         .hero-section {
-            min-height: calc(100vh - 4.5rem);
+            height: calc(100vh - 4.5rem);
+            min-height: auto;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -19,8 +20,8 @@
         }
 
         /* ========================================
-                               FLOATING PARTICLES
-                               ======================================== */
+                                                                           FLOATING PARTICLES
+                                                                           ======================================== */
         .particles {
             position: absolute;
             inset: 0;
@@ -98,27 +99,27 @@
         }
 
         /* ========================================
-                               CARD DESIGN
-                               ======================================== */
+                                                                           CARD DESIGN
+                                                                           ======================================== */
         .landing-card {
             background: var(--glass-bg);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border);
-            border-radius: 1.5rem;
-            padding: 2.5rem 2rem;
-            max-width: 800px;
+            border-radius: var(--border-radius);
+            padding: 2rem 2.5rem;
+            max-width: 900px;
             width: 100%;
             text-align: center;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+            box-shadow: var(--shadow-lg);
             position: relative;
             z-index: 10;
             animation: fadeInUp 0.8s ease-out;
         }
 
         /* ========================================
-                               ANIMATED BADGE
-                               ======================================== */
+                                                                           ANIMATED BADGE
+                                                                           ======================================== */
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -127,7 +128,7 @@
             border: 1px solid rgba(99, 102, 241, 0.2);
             padding: 0.5rem 1rem;
             border-radius: 9999px;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
             font-size: 0.875rem;
             font-weight: 500;
             color: var(--primary);
@@ -135,13 +136,13 @@
         }
 
         /* ========================================
-                               HERO TITLE
-                               ======================================== */
+                                                                           HERO TITLE
+                                                                           ======================================== */
         .hero-title {
             font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 800;
             line-height: 1.1;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
             letter-spacing: -0.02em;
         }
 
@@ -156,15 +157,15 @@
             font-size: 1.125rem;
             color: var(--text-secondary);
             line-height: 1.6;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
             max-width: 600px;
             margin-left: auto;
             margin-right: auto;
         }
 
         /* ========================================
-                               ACTION BUTTONS
-                               ======================================== */
+                                                                           ACTION BUTTONS
+                                                                           ======================================== */
         .action-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -177,12 +178,13 @@
             flex-direction: column;
             align-items: center;
             padding: 2rem;
-            border-radius: 1rem;
+            border-radius: var(--radius-md);
             background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
             color: var(--text-primary);
+            box-shadow: var(--shadow-sm);
             position: relative;
             overflow: hidden;
         }
@@ -227,14 +229,14 @@
         }
 
         .action-card.primary .action-icon {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            background: var(--btn-gradient);
             color: white;
-            box-shadow: 0 8px 16px -4px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 8px 16px -4px rgba(var(--primary-rgb, 99, 102, 241), 0.4);
         }
 
         /* ========================================
-                               RESPONSIVE
-                               ======================================== */
+                                                                           RESPONSIVE
+                                                                           ======================================== */
         @media (max-width: 640px) {
             .landing-card {
                 padding: 2rem 1.5rem;
@@ -341,9 +343,10 @@
             transform: translateY(-5px) scale(1.05);
             box-shadow: 0 12px 30px -8px rgba(99, 102, 241, 0.6);
         }
+
         /* ========================================
-           RESPONSIVE HEADER & MOBILE MENU
-           ======================================== */
+                                                       RESPONSIVE HEADER & MOBILE MENU
+                                                       ======================================== */
         .nav-inner {
             display: flex;
             justify-content: space-between;
@@ -376,7 +379,8 @@
             color: var(--text-primary);
             cursor: pointer;
             padding: 0.5rem;
-            z-index: 1001; /* Above menu overlay */
+            z-index: 1001;
+            /* Above menu overlay */
         }
 
         /* Mobile Menu Overlay */
@@ -405,7 +409,8 @@
             top: 0;
             right: -100%;
             width: 100%;
-            max-width: 320px; /* Limit width for cleaner look */
+            max-width: 320px;
+            /* Limit width for cleaner look */
             height: 100vh;
             background: var(--bg-secondary);
             z-index: 1000;
@@ -415,7 +420,7 @@
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateX(100%);
             overflow-y: auto;
-            box-shadow: -10px 0 40px rgba(0,0,0,0.2);
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.2);
             border-top-left-radius: 24px;
             border-bottom-left-radius: 24px;
         }
@@ -430,11 +435,13 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.5rem 1.5rem 1rem; /* Compact header */
+            padding: 1.5rem 1.5rem 1rem;
+            /* Compact header */
         }
 
         .mobile-menu-title {
-            font-size: 1.25rem; /* Smaller title */
+            font-size: 1.25rem;
+            /* Smaller title */
             font-weight: 700;
             color: var(--text-primary);
             letter-spacing: -0.01em;
@@ -445,17 +452,21 @@
             padding: 0 1.5rem;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem; /* Tighter gap */
+            gap: 0.75rem;
+            /* Tighter gap */
             margin-top: 0.5rem;
         }
 
         .mobile-nav-card {
             display: flex;
             align-items: center;
-            padding: 0.875rem 1rem; /* Compact padding */
+            padding: 0.875rem 1rem;
+            /* Compact padding */
             background: var(--bg-card);
-            border: 1px solid var(--border-color); /* Thinner border */
-            border-radius: 1rem; /* Softer rounded corners */
+            border: 1px solid var(--border-color);
+            /* Thinner border */
+            border-radius: 1rem;
+            /* Softer rounded corners */
             text-decoration: none;
             transition: all 0.2s ease;
             position: relative;
@@ -464,7 +475,8 @@
 
         /* Icon Container */
         .mobile-nav-icon {
-            width: 40px; /* Smaller icons */
+            width: 40px;
+            /* Smaller icons */
             height: 40px;
             border-radius: 10px;
             display: flex;
@@ -482,7 +494,8 @@
         }
 
         .mobile-nav-title {
-            font-size: 1rem; /* Compact title */
+            font-size: 1rem;
+            /* Compact title */
             font-weight: 600;
             color: var(--text-primary);
             margin-bottom: 0;
@@ -490,7 +503,8 @@
         }
 
         .mobile-nav-desc {
-            font-size: 0.75rem; /* Smaller description */
+            font-size: 0.75rem;
+            /* Smaller description */
             color: var(--text-muted);
             font-weight: 500;
         }
@@ -506,15 +520,15 @@
             background: rgba(99, 102, 241, 0.08);
             color: var(--primary);
         }
-        
+
         .mobile-nav-card.item-track .mobile-nav-icon {
-             background: rgba(139, 92, 246, 0.08);
-             color: var(--secondary);
+            background: rgba(139, 92, 246, 0.08);
+            color: var(--secondary);
         }
 
         .mobile-nav-card.item-admin .mobile-nav-icon {
-             background: rgba(16, 185, 129, 0.08);
-             color: var(--accent);
+            background: rgba(16, 185, 129, 0.08);
+            color: var(--accent);
         }
 
         /* Theme Toggle specific */
@@ -536,30 +550,110 @@
             opacity: 0;
             transform: translateY(15px);
         }
-        
-        .mobile-menu.active .mobile-nav-card:nth-child(1) { animation-delay: 0.05s; }
-        .mobile-menu.active .mobile-nav-card:nth-child(2) { animation-delay: 0.1s; }
-        .mobile-menu.active .mobile-nav-card:nth-child(3) { animation-delay: 0.15s; }
+
+        .mobile-menu.active .mobile-nav-card:nth-child(1) {
+            animation-delay: 0.05s;
+        }
+
+        .mobile-menu.active .mobile-nav-card:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .mobile-menu.active .mobile-nav-card:nth-child(3) {
+            animation-delay: 0.15s;
+        }
 
         @keyframes slideUpFade {
-            to { opacity: 1; transform: translateY(0); }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @media (max-width: 768px) {
             .nav-links {
-                display: none; /* Hide desktop nav */
+                display: none;
+                /* Hide desktop nav */
             }
+
             .mobile-menu-btn {
-                display: block; /* Show hamburger */
+                display: block;
+                /* Show hamburger */
+            }
+        }
+    </style>
+    <style>
+        /* Mobile Optimization */
+        @media (max-width: 640px) {
+            .hero-section {
+                padding: 1rem;
+                height: auto;
+                min-height: calc(100vh - 4.5rem);
+                align-items: flex-start;
+                /* Align top on mobile preventing center cut-off */
+                padding-top: 2rem;
+            }
+
+            .landing-card {
+                padding: 1.5rem 1rem;
+                border-radius: 1.5rem;
+            }
+
+            .hero-title {
+                font-size: 2.25rem !important;
+                /* Force readable size */
+                line-height: 1.25;
+                margin-bottom: 1rem;
+            }
+
+            .hero-description {
+                font-size: 0.95rem;
+                line-height: 1.6;
+                padding: 0 0.5rem;
+            }
+
+            .action-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .action-card {
+                padding: 1.25rem;
+                align-items: center;
+                /* Center align content */
+            }
+
+            .action-icon {
+                width: 48px;
+                height: 48px;
+                margin-bottom: 0.75rem;
+            }
+
+            .action-title {
+                font-size: 1.15rem;
             }
         }
     </style>
 @endsection
 
 @section('content')
-    <div style="min-height: 100vh; display: flex; flex-direction: column;">
+    @php
+        $siteName = $settings['siteName'] ?? 'AAMD Recommendations';
+        $currentYear = date('Y');
+
+        $heroTitle1 = $settings['heroTitle1'] ?? '';
+        $heroTitle2 = $settings['heroTitle2'] ?? '';
+        $heroDescription = $settings['heroDescription'] ?? '';
+
+        // Replace variables
+        $heroTitle1 = str_replace(['{siteName}', '{year}'], [$siteName, $currentYear], $heroTitle1);
+        $heroTitle2 = str_replace(['{siteName}', '{year}'], [$siteName, $currentYear], $heroTitle2);
+        $heroDescription = str_replace(['{siteName}', '{year}'], [$siteName, $currentYear], $heroDescription);
+    @endphp
+    <div style="min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden;">
         <!-- Navigation -->
-        <nav class="nav" style="position: sticky; top: 0; z-index: 999; background: var(--bg-nav); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-color);">
+        <nav class="nav"
+            style="position: sticky; top: 0; z-index: 999; background: var(--bg-nav); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border-color);">
             <div class="nav-inner">
                 <a href="{{ url('/') }}" class="logo">
                     @if(!empty($settings['logoUrl']))
@@ -598,11 +692,13 @@
             <!-- Header -->
             <div class="mobile-menu-header">
                 <div>
-                    <span style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Navigation</span>
+                    <span
+                        style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Navigation</span>
                     <div class="mobile-menu-title">{{ $settings['siteName'] ?? 'AAMD' }}</div>
                 </div>
                 <!-- Close Button -->
-                <button onclick="toggleMobileMenu()" style="width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-color); background: var(--bg-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                <button onclick="toggleMobileMenu()"
+                    style="width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border-color); background: var(--bg-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
                     <i data-lucide="x" style="width: 18px; height: 18px; color: var(--text-primary);"></i>
                 </button>
             </div>
@@ -620,11 +716,11 @@
                     </div>
                     <i data-lucide="chevron-right" style="width: 16px; color: var(--text-muted); opacity: 0.5;"></i>
                 </a>
-                
+
                 <!-- Track Request -->
                 <a href="{{ url('/track') }}" class="mobile-nav-card item-track">
                     <div class="mobile-nav-icon">
-                         <i data-lucide="search" style="width: 20px; height: 20px;"></i>
+                        <i data-lucide="search" style="width: 20px; height: 20px;"></i>
                     </div>
                     <div class="mobile-nav-content">
                         <span class="mobile-nav-title">Track Request</span>
@@ -645,20 +741,26 @@
                     <i data-lucide="chevron-right" style="width: 16px; color: var(--text-muted); opacity: 0.5;"></i>
                 </a>
             </div>
-            
+
             <!-- Bottom Actions -->
             <div class="mobile-theme-card" onclick="toggleTheme()">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="sun" class="sun-icon" style="width: 16px; height: 16px; color: var(--text-primary);"></i>
-                        <i data-lucide="moon" class="moon-icon" style="width: 16px; height: 16px; color: var(--text-primary); display: none;"></i>
+                    <div
+                        style="width: 32px; height: 32px; border-radius: 8px; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="sun" class="sun-icon"
+                            style="width: 16px; height: 16px; color: var(--text-primary);"></i>
+                        <i data-lucide="moon" class="moon-icon"
+                            style="width: 16px; height: 16px; color: var(--text-primary); display: none;"></i>
                     </div>
                     <span class="mobile-nav-title" style="font-size: 0.95rem;">Dark Mode</span>
                 </div>
-                
+
                 <!-- Toggle Switch -->
-                <div class="theme-switch" style="width: 44px; height: 24px; background: var(--border-color); border-radius: 99px; position: relative; transition: background 0.3s;">
-                    <div class="switch-ball" style="width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
+                <div class="theme-switch"
+                    style="width: 44px; height: 24px; background: var(--border-color); border-radius: 99px; position: relative; transition: background 0.3s;">
+                    <div class="switch-ball"
+                        style="width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    </div>
                 </div>
             </div>
             <!-- Deploy Trigger: {{ date('Y-m-d H:i:s') }} .. -->
@@ -683,40 +785,56 @@
                 </div>
 
                 <!-- Title -->
-                <h1 class="hero-title">
-                    {{ $settings['welcomeTitle'] ?? 'Welcome to' }}
-                    <br>
-                    <span class="highlight">{{ $settings['siteName'] ?? 'Academic Recommendations' }}</span>
-                </h1>
+                @if(!empty($heroTitle1) || !empty($heroTitle2))
+                    <h1 class="hero-title">
+                        @if(!empty($heroTitle1))
+                            {{ $heroTitle1 }}
+                        @endif
+                        @if(!empty($heroTitle1) && !empty($heroTitle2))
+                            <br>
+                        @endif
+                        @if(!empty($heroTitle2))
+                            <span class="highlight">{{ $heroTitle2 }}</span>
+                        @endif
+                    </h1>
+                @endif
 
                 <!-- Description -->
-                <p class="hero-description">
-                    {{ $settings['welcomeText'] ?? 'Easily request, track, and manage your academic recommendation letters in one secure place.' }}
-                </p>
+                @if(!empty($heroDescription))
+                    <p class="hero-description">
+                        {{ $heroDescription }}
+                    </p>
+                @endif
 
                 <!-- Action Grid -->
                 <div class="action-grid">
                     <!-- New Request -->
                     <a href="{{ url('/request') }}" class="action-card primary">
                         <div class="action-icon">
-                            <i data-lucide="file-plus" style="width: 32px; height: 32px;"></i>
+                            <i data-lucide="{{ $settings['feature1Icon'] ?? 'file-plus' }}"
+                                style="width: 32px; height: 32px;"></i>
                         </div>
-                        <h3 class="action-title">New Request</h3>
-                        <p class="action-desc">Submit a new recommendation letter request.</p>
+                        <h3 class="action-title">{{ $settings['heroPrimaryBtn'] ?? 'Request Recommendation' }}</h3>
+                        <p class="action-desc">
+                            {{ $settings['feature1Title'] ?? 'Submit a new recommendation letter request.' }}
+                        </p>
                     </a>
 
                     <!-- Track Request -->
                     <a href="{{ url('/track') }}" class="action-card">
                         <div class="action-icon">
-                            <i data-lucide="search" style="width: 32px; height: 32px;"></i>
+                            <i data-lucide="{{ $settings['feature2Icon'] ?? 'search' }}"
+                                style="width: 32px; height: 32px;"></i>
                         </div>
-                        <h3 class="action-title">Track Request</h3>
-                        <p class="action-desc">Check the status of an existing request.</p>
+                        <h3 class="action-title">{{ $settings['heroSecondaryBtn'] ?? 'Track Existing Request' }}</h3>
+                        <p class="action-desc">
+                            {{ $settings['feature2Title'] ?? 'Check the status of an existing request.' }}
+                        </p>
                     </a>
                 </div>
 
                 <footer class="landing-footer"
-                    style="border-top: 1px solid var(--border-light); padding-top: 2.5rem; margin-top: 2.5rem;">
+                    style="border-top: 1px solid var(--border-light); padding-top: 1.5rem; margin-top: 1.5rem;">
                     @php
                         $footerText = $settings['footerText'] ?? '© {year} {siteName}';
                         $footerText = str_replace('{year}', date('Y'), $footerText);
@@ -756,7 +874,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             lucide.createIcons();
-
             const scrollToTopBtn = document.getElementById('scrollToTop');
 
             window.addEventListener('scroll', function () {
@@ -789,16 +906,19 @@
 
             // Handle Icon Toggle
             const isActive = menu.classList.contains('active');
-            menuIcon.style.display = isActive ? 'none' : 'block';
-            closeIcon.style.display = isActive ? 'block' : 'none';
-            
+            if (menuIcon) menuIcon.style.display = isActive ? 'none' : 'block';
+            if (closeIcon) closeIcon.style.display = isActive ? 'block' : 'none';
+
             // Re-render icons for new elements
             lucide.createIcons();
-            
+
             // Handle Theme Text Toggle
             const isDark = document.documentElement.classList.contains('dark');
-            document.querySelector('.theme-text-light').style.display = isDark ? 'none' : 'flex';
-            document.querySelector('.theme-text-dark').style.display = isDark ? 'flex' : 'none';
+            const lightText = document.querySelector('.theme-text-light');
+            const darkText = document.querySelector('.theme-text-dark');
+
+            if (lightText) lightText.style.display = isDark ? 'none' : 'flex';
+            if (darkText) darkText.style.display = isDark ? 'flex' : 'none';
         }
     </script>
 @endsection

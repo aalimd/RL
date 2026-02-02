@@ -38,8 +38,14 @@ class PageController extends Controller
             'secondaryColor',
             'maintenanceMode',
             'logoUrl',
+            'borderRadius',
+            'shadowIntensity',
+            'buttonGradient',
+            'glassEffect',
+            'fontFamily',
+            'headingFont', // Added Heading Font
             'welcomeTitle',
-            'welcomeText',
+            // 'welcomeText',
             'loginBackgroundImage',
             'loginTitle',
             'loginSubtitle',
@@ -66,7 +72,14 @@ class PageController extends Controller
             'trackingReviewMessage',
             'trackingApprovedMessage',
             'trackingRejectedMessage',
-            'trackingRevisionMessage'
+            'trackingRevisionMessage',
+            'trackingTitle',
+            'trackingSubtitle',
+            'trackingSearchBtn',
+            // Request Page
+            'requestTitle',
+            'requestSubtitle',
+            'requestSubmitBtn',
         ];
 
         return Settings::whereIn('key', $publicKeys)

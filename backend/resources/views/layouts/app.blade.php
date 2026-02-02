@@ -7,11 +7,11 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', $settings['siteName'] ?? 'Academic Portal')</title>
 
-    <!-- Google Fonts - Multiple Options -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Anton&family=Bebas+Neue&family=Cinzel:wght@400;700&family=Dancing+Script:wght@400;700&family=DM+Serif+Display&family=Great+Vibes&family=Inter:wght@300;400;500;600;700&family=Josefin+Sans:wght@300;400;500;600;700&family=Libre+Baskerville:wght@400;700&family=Lobster&family=Manrope:wght@400;500;600;700&family=Merriweather:wght@300;400;700&family=Montserrat:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Pacifico&family=Playfair+Display:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Prata&family=Quicksand:wght@300;400;500;600;700&family=Raleway:wght@400;500;600;700&family=Righteous&family=Satisfy&family=Space+Grotesk:wght@300;400;500;600;700&family=Urbanist:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
 
     <!-- Lucide Icons (Modern Fork of Feather) -->
@@ -48,8 +48,14 @@
         :root {
             /* Brand Colors - Customizable from Admin */
             --primary:
-                {{ $settings['primaryColor'] ?? '#6366F1' }}
+                {{ $primary = $settings['primaryColor'] ?? '#6366F1' }}
             ;
+            @php
+                list($r, $g, $b) = sscanf($primary, "#%02x%02x%02x");
+            @endphp
+
+               
+                        --primary-rgb: {{ "$r, $g, $b" }};
             --secondary:
                 {{ $settings['secondaryColor'] ?? '#8B5CF6' }}
             ;
@@ -57,6 +63,7 @@
 
             /* Font - Customizable from Admin */
             --font-family: '{{ $settings['fontFamily'] ?? 'Inter' }}', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-heading: '{{ $settings['headingFont'] ?? 'Inter' }}', sans-serif;
 
             /* Theme Colors - Light */
             --bg-primary: #F8FAFC;
@@ -78,6 +85,28 @@
 
             /* RGB Values for Light Mode */
             --bg-secondary-rgb: 255, 255, 255;
+
+            /* Global Aesthetics - From Admin */
+            --radius-factor:
+                {{ $settings['borderRadius'] ?? '1' }}
+            ;
+            --border-radius: calc(1rem * var(--radius-factor));
+            --radius-md: calc(0.75rem * var(--radius-factor));
+            --radius-sm: calc(0.5rem * var(--radius-factor));
+
+            --shadow-intensity:
+                {{ $settings['shadowIntensity'] ?? '1' }}
+            ;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, calc(0.05 * var(--shadow-intensity)));
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, calc(0.1 * var(--shadow-intensity))), 0 2px 4px -1px rgba(0, 0, 0, calc(0.06 * var(--shadow-intensity)));
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, calc(0.1 * var(--shadow-intensity))), 0 4px 6px -2px rgba(0, 0, 0, calc(0.05 * var(--shadow-intensity)));
+
+            --glass-opacity:
+                {{ $settings['glassEffect'] ?? '0.7' }}
+            ;
+            --btn-gradient:
+                {{ $settings['buttonGradient'] ?? 'linear-gradient(135deg, var(--primary), var(--secondary))' }}
+            ;
         }
 
         /* Dark Mode */
@@ -110,10 +139,14 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: var(--font-main);
+        }
+
+        h1, h2, h3, h4, h5, h6, .hero-title {
+            font-family: var(--font-heading);
         }
 
         body {
-            font-family: var(--font-family);
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -121,6 +154,10 @@
             -moz-osx-font-smoothing: grayscale;
             transition: background-color 0.4s ease, color 0.4s ease;
             overflow-x: hidden;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--font-heading);
         }
 
         /* ========================================
@@ -323,6 +360,7 @@
         }
 
         .logo-text {
+            font-family: var(--font-heading);
             font-weight: 800;
             font-size: 1.375rem;
             color: var(--text-primary);
