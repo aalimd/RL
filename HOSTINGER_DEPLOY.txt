@@ -11,12 +11,16 @@ Updated: Jan 29, 2026
    - Upload to your `public_html` (or subfolder).
    - Extract the files.
 
-3. WEB INSTALLATION (Recommended)
-   - Go to: `https://your-domain.com/install`
-   - Follow the wizard.
-   - It will set up the database structure automatically (including the new QR Code and Verification features).
+3. AUTOMATED DEPLOYMENT (GitHub Actions) - **RECOMMENDED**
+   - Just push your changes to the `main` branch.
+   - The system will automatically:
+     1. Upload files.
+     2. Extract them to the correct `backend/` folder.
+     3. Update the database (`migrate --force`).
+     4. Clear the cache.
+   - **No manual intervention required.**
 
-4. MANUAL INSTALLATION (If wizard fails)
+4. MANUAL INSTALLATION (Emergency Only)
    - Create a database in Hostinger.
    - Import the file: `/install/database/fresh_install.sql` via phpMyAdmin.
    - Rename `backend/.env.example` to `backend/.env`.
