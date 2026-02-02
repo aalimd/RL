@@ -5,8 +5,8 @@
 @section('styles')
     <style>
         /* ========================================
-                   HERO SECTION
-                   ======================================== */
+                       HERO SECTION
+                       ======================================== */
         .hero-section {
             min-height: calc(100vh - 4.5rem);
             display: flex;
@@ -19,8 +19,8 @@
         }
 
         /* ========================================
-                   FLOATING PARTICLES
-                   ======================================== */
+                       FLOATING PARTICLES
+                       ======================================== */
         .particles {
             position: absolute;
             inset: 0;
@@ -98,8 +98,8 @@
         }
 
         /* ========================================
-                   CARD DESIGN
-                   ======================================== */
+                       CARD DESIGN
+                       ======================================== */
         .landing-card {
             background: var(--glass-bg);
             backdrop-filter: blur(16px);
@@ -117,8 +117,8 @@
         }
 
         /* ========================================
-                   ANIMATED BADGE
-                   ======================================== */
+                       ANIMATED BADGE
+                       ======================================== */
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -135,8 +135,8 @@
         }
 
         /* ========================================
-                   HERO TITLE
-                   ======================================== */
+                       HERO TITLE
+                       ======================================== */
         .hero-title {
             font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 800;
@@ -163,8 +163,8 @@
         }
 
         /* ========================================
-                   ACTION BUTTONS
-                   ======================================== */
+                       ACTION BUTTONS
+                       ======================================== */
         .action-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -233,8 +233,8 @@
         }
 
         /* ========================================
-                   RESPONSIVE
-                   ======================================== */
+                       RESPONSIVE
+                       ======================================== */
         @media (max-width: 640px) {
             .landing-card {
                 padding: 2rem 1.5rem;
@@ -249,33 +249,63 @@
         .developer-link {
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
-            color: var(--text-primary);
-            font-weight: 700;
+            gap: 0.5rem;
             text-decoration: none;
-            padding: 0.35rem 0.75rem;
-            border-radius: 9999px;
-            background: rgba(0, 0, 0, 0.03);
+            padding: 0.5rem 1.25rem;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.5);
             border: 1px solid rgba(0, 0, 0, 0.05);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        }
+
+        .developer-link::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(16, 185, 129, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
 
         .developer-link:hover {
-            background: var(--bg-secondary);
-            border-color: var(--primary);
-            color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        .developer-link:hover::before {
+            opacity: 1;
+        }
+
+        .dev-label {
+            font-family: 'Dancing Script', cursive;
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            margin-right: 0.25rem;
+        }
+
+        .dev-name {
+            font-family: 'Fira Code', monospace;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 0.95rem;
         }
 
         html.dark .developer-link {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.08);
+            box-shadow: none;
         }
 
         html.dark .developer-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: var(--primary);
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
         }
     </style>
 @endsection
@@ -360,7 +390,7 @@
                 </div>
 
                 <footer class="landing-footer"
-                    style="border-top: 1px solid var(--border-light); padding-top: 2rem; margin-top: 2rem;">
+                    style="border-top: 1px solid var(--border-light); padding-top: 2.5rem; margin-top: 2.5rem;">
                     @php
                         $footerText = $settings['footerText'] ?? '© {year} {siteName}';
                         $footerText = str_replace('{year}', date('Y'), $footerText);
@@ -373,9 +403,14 @@
                         <div
                             style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--text-muted);">
                             <span>Made By</span>
+                            <link
+                                href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Poppins:wght@300;400;500;600;700;800&family=Fira+Code:wght@500;600&family=Dancing+Script:wght@600;700&display=swap"
+                                rel="stylesheet">
+
+                            <!-- Lucide Icons (Modern Fork of Feather) -->
                             <a href="https://x.com/I_am_Doctor" target="_blank" rel="noopener noreferrer"
                                 class="developer-link">
-                                AAliMD <span style="font-size: 1.25em; line-height: 1;">🇸🇦</span>
+                                <span class="dev-label">AAliMD</span> <span class="dev-name">🇸🇦</span>
                             </a>
                         </div>
                     </div>
@@ -404,15 +439,15 @@
                     scrollToTopBtn.classList.remove('visible');
                 }
             });
-        });
 
-        // Scroll to top function
-        function scrollToTop() {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
+            // Scroll to top functionality
+            scrollToTopBtn.addEventListener('click', function () {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
             });
-        }
+        });
 
         // Mobile menu toggle
         function toggleMobileMenu() {
