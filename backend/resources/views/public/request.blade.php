@@ -737,7 +737,7 @@
                                 <div class="form-group">
                                     <label class="form-label">Phone Number @if($isRequired('phone'))<span class="required">*</span>@endif</label>
                                     <input type="tel" name="data[phone]" class="form-input" id="phone"
-                                        value="{{ old('data.phone', $formData['phone'] ?? '') }}" placeholder="+1 234 567 8900" {{ $isRequired('phone') ? 'required' : '' }}>
+                                        value="{{ old('data.phone', $formData['phone'] ?? '') }}" placeholder="50 123 4567" {{ $isRequired('phone') ? 'required' : '' }}>
                                     <small style="display: block; margin-top: 0.25rem; color: #6b7280;">
                                         Please provide a Telegram-connected phone number to receive real-time status updates.
                                     </small>
