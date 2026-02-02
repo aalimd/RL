@@ -735,7 +735,7 @@
 
     @yield('scripts')
     <!-- Deployment Version: {{ date('Y-m-d H:i:s') }} -->
-    <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); padding: 1rem; opacity: 0.5;">
+    <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); padding: 0.25rem; opacity: 0.3;">
         v{{ date('Ymd.Hi') }}
     </div>
 </body>

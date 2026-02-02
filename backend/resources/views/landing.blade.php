@@ -5,8 +5,8 @@
 @section('styles')
     <style>
         /* ========================================
-                       HERO SECTION
-                       ======================================== */
+                           HERO SECTION
+                           ======================================== */
         .hero-section {
             min-height: calc(100vh - 4.5rem);
             display: flex;
@@ -19,8 +19,8 @@
         }
 
         /* ========================================
-                       FLOATING PARTICLES
-                       ======================================== */
+                           FLOATING PARTICLES
+                           ======================================== */
         .particles {
             position: absolute;
             inset: 0;
@@ -98,8 +98,8 @@
         }
 
         /* ========================================
-                       CARD DESIGN
-                       ======================================== */
+                           CARD DESIGN
+                           ======================================== */
         .landing-card {
             background: var(--glass-bg);
             backdrop-filter: blur(16px);
@@ -117,8 +117,8 @@
         }
 
         /* ========================================
-                       ANIMATED BADGE
-                       ======================================== */
+                           ANIMATED BADGE
+                           ======================================== */
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -135,8 +135,8 @@
         }
 
         /* ========================================
-                       HERO TITLE
-                       ======================================== */
+                           HERO TITLE
+                           ======================================== */
         .hero-title {
             font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 800;
@@ -163,8 +163,8 @@
         }
 
         /* ========================================
-                       ACTION BUTTONS
-                       ======================================== */
+                           ACTION BUTTONS
+                           ======================================== */
         .action-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -233,8 +233,8 @@
         }
 
         /* ========================================
-                       RESPONSIVE
-                       ======================================== */
+                           RESPONSIVE
+                           ======================================== */
         @media (max-width: 640px) {
             .landing-card {
                 padding: 2rem 1.5rem;
@@ -306,6 +306,40 @@
             background: rgba(255, 255, 255, 0.05);
             border-color: rgba(99, 102, 241, 0.3);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Scroll To Top */
+        .scroll-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px -5px rgba(99, 102, 241, 0.4);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+        }
+
+        .scroll-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .scroll-to-top:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 12px 30px -8px rgba(99, 102, 241, 0.6);
         }
     </style>
 @endsection
@@ -410,7 +444,8 @@
                             <!-- Lucide Icons (Modern Fork of Feather) -->
                             <a href="https://x.com/I_am_Doctor" target="_blank" rel="noopener noreferrer"
                                 class="developer-link">
-                                <span class="dev-label">AAliMD</span> <span class="dev-name">🇸🇦</span>
+                                <span class="dev-name">AAliMD</span> <span class="dev-label"
+                                    style="font-style: normal; margin-left: 0.25rem;">🇸🇦</span>
                             </a>
                         </div>
                     </div>
