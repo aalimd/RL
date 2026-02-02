@@ -32,7 +32,8 @@
             </div>
             <div class="stat-title">Pending Migrations</div>
             <div class="stat-value">
-                {{ $systemInfo['pending_migrations'] >= 0 ? $systemInfo['pending_migrations'] : 'Error' }}</div>
+                {{ $systemInfo['pending_migrations'] >= 0 ? $systemInfo['pending_migrations'] : 'Error' }}
+            </div>
         </div>
     </div>
 
@@ -85,6 +86,39 @@
                     </button>
                 </div>
 
+            </div>
+        </div>
+    </div>
+    </div>
+    </div>
+
+    <!-- Hostinger Cron Job Setup -->
+    <div class="card">
+        <div class="card-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-feather="clock" style="width: 20px; height: 20px;"></i>
+                <h3 style="color: white; margin: 0;">Automated Tasks (Cron Job)</h3>
+            </div>
+            <span style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">Required for scheduled backups</span>
+        </div>
+        <div class="card-body">
+            <p style="margin-bottom: 1rem; color: #4b5563;">
+                To enable automated weekly backups, please copy the command below and add it to your
+                <strong>Hostinger Control Panel > Advanced > Cron Jobs</strong>.
+            </p>
+
+            <div
+                style="background: #1f2937; color: #10b981; padding: 1rem; border-radius: 0.5rem; font-family: monospace; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                <code id="cronCommand"
+                    style="word-break: break-all;">php {{ base_path('artisan') }} schedule:run >> /dev/null 2>&1</code>
+                <button class="btn btn-sm btn-secondary" onclick="copyCron()" style="white-space: nowrap;">
+                    <i data-feather="copy" style="width: 14px; height: 14px;"></i> Copy
+                </button>
+            </div>
+
+            <div style="margin-top: 1rem; font-size: 0.875rem; color: #6b7280;">
+                <i data-feather="info" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+                Set the schedule to <strong>Once Per Minute</strong> (* * * * *) in Hostinger.
             </div>
         </div>
     </div>
@@ -230,6 +264,15 @@
             document.getElementById('outputCard').style.display = 'block';
             document.getElementById('outputArea').textContent = text;
             document.getElementById('outputCard').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyCron() {
+            const command = document.getElementById('cronCommand').innerText;
+            navigator.clipboard.writeText(command).then(() => {
+                showToast('Command copied to clipboard!', 'success');
+            }).catch(() => {
+                showToast('Failed to copy', 'error');
+            });
         }
     </script>
 @endsection
