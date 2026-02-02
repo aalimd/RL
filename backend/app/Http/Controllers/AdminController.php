@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use App\Mail\RequestStatusUpdated;
 use App\Services\LetterService;
 use App\Services\AiService;
+use App\Services\TelegramService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -22,11 +23,13 @@ class AdminController extends Controller
 {
     protected $letterService;
     protected $aiService;
+    protected $telegramService;
 
-    public function __construct(LetterService $letterService, AiService $aiService)
+    public function __construct(LetterService $letterService, AiService $aiService, TelegramService $telegramService)
     {
         $this->letterService = $letterService;
         $this->aiService = $aiService;
+        $this->telegramService = $telegramService;
     }
 
     // ... existing ...
@@ -180,6 +183,27 @@ class AdminController extends Controller
             Mail::to($requestModel->student_email)->send(new RequestStatusUpdated($requestModel));
         } catch (\Exception $e) {
             Log::error('Status update email failed: ' . $e->getMessage());
+        }
+
+        // Send Telegram Notification to Student (if subscribed)
+        if ($requestModel->telegram_chat_id) {
+            $status = $request->input('status');
+            $studentMsg = "🔔 <b>Update on your Request</b>\n\n";
+            $studentMsg .= "Your request status has been updated to: <b>$status</b>\n";
+
+            if ($status === 'Approved') {
+                $studentMsg .= "✅ Congratulations! Check your email for the recommendation letter.";
+            } elseif ($status === 'Rejected') {
+                $studentMsg .= "❌ We are sorry, but your request has been declined. Check your email for details.";
+            } elseif ($status === 'Needs Revision') {
+                $studentMsg .= "📝 Additional information is needed. Please check your email.";
+            }
+
+            try {
+                $this->telegramService->sendMessageToChat($requestModel->telegram_chat_id, $studentMsg);
+            } catch (\Exception $e) {
+                Log::error("Failed to send Telegram update to student from Admin: " . $e->getMessage());
+            }
         }
 
         // Audit Log
