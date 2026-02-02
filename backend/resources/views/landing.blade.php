@@ -403,39 +403,82 @@
         .mobile-menu {
             position: fixed;
             top: 0;
-            right: -280px; /* Hidden by default */
-            width: 280px;
+            right: -300px; /* Hidden by default */
+            width: 300px;
             height: 100vh;
-            background: var(--bg-secondary);
+            background: rgba(255, 255, 255, 0.85); /* Light mode glass */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             z-index: 1000;
-            padding: 5rem 2rem 2rem;
+            padding: 2rem;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
-            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.1);
-            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            gap: 1rem;
+            box-shadow: -10px 0 40px rgba(0, 0, 0, 0.1);
+            border-left: 1px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+            transform: translateX(100%);
+            border-top-left-radius: 2rem;
+            border-bottom-left-radius: 2rem;
+        }
+
+        html.dark .mobile-menu {
+            background: rgba(30, 41, 59, 0.85); /* Dark mode glass */
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .mobile-menu.active {
-            right: 0;
+            transform: translateX(0);
+            right: 0; /* Fallback */
         }
 
-        /* Mobile Menu Items */
+        /* Mobile Menu Header */
+        .mobile-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        /* Mobile Menu Items Staggered Animation */
         .mobile-nav-link {
-            font-size: 1.125rem;
-            font-weight: 500;
+            font-size: 1.1rem;
+            font-weight: 600;
             color: var(--text-primary);
             text-decoration: none;
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            border-radius: 0.75rem;
-            transition: background 0.2s;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 1rem;
+            transition: all 0.2s;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s;
         }
+
+        .mobile-menu.active .mobile-nav-link {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Stagger delays */
+        .mobile-menu.active .mobile-nav-link:nth-child(1) { transition-delay: 0.1s; }
+        .mobile-menu.active .mobile-nav-link:nth-child(2) { transition-delay: 0.15s; }
+        .mobile-menu.active .mobile-nav-link:nth-child(3) { transition-delay: 0.2s; }
+        .mobile-menu.active .mobile-nav-link:nth-child(4) { transition-delay: 0.25s; }
 
         .mobile-nav-link:hover {
             background: var(--bg-primary);
+            color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .mobile-nav-link i {
+            width: 24px;
+            height: 24px;
             color: var(--primary);
         }
 
@@ -489,18 +532,33 @@
 
         <!-- Mobile Menu Config -->
         <div class="mobile-menu" id="mobileMenu">
-            <a href="{{ url('/request') }}" class="mobile-nav-link">
-                <i data-lucide="file-plus"></i> New Request
-            </a>
-            <a href="{{ url('/track') }}" class="mobile-nav-link">
-                <i data-lucide="search"></i> Track Request
-            </a>
-            <a href="/RL/login" class="mobile-nav-link">
-                <i data-lucide="shield"></i> Admin Panel
-            </a>
+            <div class="mobile-menu-header">
+                <span style="font-weight: 800; font-size: 1.5rem;">Menu</span>
+                <button onclick="toggleMobileMenu()" style="background:none; border:none; cursor:pointer; padding:0.5rem; color: var(--text-muted);">
+                    <i data-lucide="x" style="width: 28px; height: 28px;"></i>
+                </button>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <a href="{{ url('/request') }}" class="mobile-nav-link">
+                    <i data-lucide="file-plus"></i>
+                    <span>New Request</span>
+                    <i data-lucide="chevron-right" style="margin-left: auto; width: 18px; color: var(--text-muted);"></i>
+                </a>
+                <a href="{{ url('/track') }}" class="mobile-nav-link">
+                    <i data-lucide="search"></i>
+                    <span>Track Request</span>
+                    <i data-lucide="chevron-right" style="margin-left: auto; width: 18px; color: var(--text-muted);"></i>
+                </a>
+                <a href="/RL/login" class="mobile-nav-link">
+                    <i data-lucide="shield"></i>
+                    <span>Admin Panel</span>
+                    <i data-lucide="chevron-right" style="margin-left: auto; width: 18px; color: var(--text-muted);"></i>
+                </a>
+            </div>
             
-            <div style="border-top: 1px solid var(--border-color); margin-top: auto; padding-top: 1.5rem;">
-                <button class="mobile-nav-link" onclick="toggleTheme()" style="width: 100%; border: none; background: none; cursor: pointer;">
+            <div style="margin-top: auto;">
+                <button class="mobile-nav-link" onclick="toggleTheme()" style="width: 100%; border: 1px solid var(--border-color); background: var(--bg-primary); justify-content: center; transform: none !important;">
                     <span class="theme-text-light" style="display: flex; gap: 0.75rem; align-items: center;">
                         <i data-lucide="sun"></i> Light Mode
                     </span>
@@ -508,6 +566,9 @@
                          <i data-lucide="moon"></i> Dark Mode
                     </span>
                 </button>
+                <p style="text-align: center; color: var(--text-muted); font-size: 0.75rem; margin-top: 1.5rem; opacity: 0.6;">
+                    v{{ date('Ymd') }}
+                </p>
             </div>
         </div>
 
