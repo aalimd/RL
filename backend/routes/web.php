@@ -90,6 +90,7 @@ Route::middleware(['auth', 'twofactor'])->prefix('admin')->name('admin.')->group
         Route::put('/appearance', [AdminController::class, 'updateAppearance'])->name('appearance.update');
         Route::post('/settings/test-email', [AdminController::class, 'sendTestEmail'])->name('settings.test-email');
         Route::put('/form-settings', [AdminController::class, 'updateFormSettings'])->name('form-settings.update');
+        Route::post('/settings/backup', [AdminController::class, 'downloadDatabaseBackup'])->name('settings.backup');
 
         // Email Templates
         // Email Templates

@@ -18,6 +18,8 @@ use App\Services\TelegramService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminController extends Controller
 {
@@ -822,6 +824,86 @@ class AdminController extends Controller
         return view('admin.appearance', compact('settings'));
     }
 
+    /**
+     * Secure Database Backup Download
+     */
+    public function downloadDatabaseBackup(Request $request)
+    {
+        // 1. Security Check: Admin Role
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Unauthorized');
+        }
+
+        // 2. Security Check: Password Confirmation
+        $request->validate([
+            'password' => 'required|string',
+        ]);
+
+        if (!Hash::check($request->password, Auth::user()->password)) {
+            return back()->with('error', 'Incorrect password. Backup aborted.');
+        }
+
+        // 3. Audit Log
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'download_database_backup',
+            'details' => 'Downloaded full database backup (SQL)',
+            'ip_address' => $request->ip(),
+        ]);
+
+        // 4. Stream the Backup
+        $filename = 'backup_' . date('Y-m-d_H-i-s') . '.sql';
+
+        $response = new StreamedResponse(function () {
+            $handle = fopen('php://output', 'w');
+
+            // Header info
+            fwrite($handle, "-- Database Backup\n");
+            fwrite($handle, "-- Generated: " . date('Y-m-d H:i:s') . "\n");
+            fwrite($handle, "-- User: " . Auth::user()->name . " (" . Auth::user()->email . ")\n\n");
+            fwrite($handle, "SET FOREIGN_KEY_CHECKS=0;\n\n");
+
+            // Get all tables
+            $tables = DB::select('SHOW TABLES');
+            $tables = array_map('reset', $tables);
+
+            foreach ($tables as $table) {
+                // Structure
+                fwrite($handle, "-- Table structure for `$table`\n");
+                fwrite($handle, "DROP TABLE IF EXISTS `$table`;\n");
+
+                $createTable = DB::select("SHOW CREATE TABLE `$table`")[0]->{'Create Table'};
+                fwrite($handle, $createTable . ";\n\n");
+
+                // Data
+                fwrite($handle, "-- Dumping data for `$table`\n");
+
+                // Use cursor to avoid memory issues
+                DB::table($table)->orderBy('id')->chunk(100, function ($rows) use ($handle, $table) {
+                    foreach ($rows as $row) {
+                        $values = array_map(function ($value) {
+                            if (is_null($value))
+                                return 'NULL';
+                            return "'" . addslashes($value) . "'";
+                        }, (array) $row);
+
+                        $sql = "INSERT INTO `$table` VALUES (" . implode(', ', $values) . ");\n";
+                        fwrite($handle, $sql);
+                    }
+                });
+
+                fwrite($handle, "\n");
+            }
+
+            fwrite($handle, "SET FOREIGN_KEY_CHECKS=1;\n");
+            fclose($handle);
+        });
+
+        $response->headers->set('Content-Type', 'application/sql');
+        $response->headers->set('Content-Disposition', 'attachment; filename="' . $filename . '"');
+
+        return $response;
+    }
     /**
      * Audit logs
      */

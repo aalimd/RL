@@ -269,189 +269,263 @@
                 </form>
             </div>
         </div>
+    </div>
+
+    <!-- System Maintenance & Backup -->
+    <div class="card" style="border-color: #6366F1;">
+        <div class="card-header" style="background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%); color: white;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-feather="database" style="width: 20px; height: 20px;"></i>
+                <h3 style="color: white; margin: 0;">System Security & Backup</h3>
+            </div>
+            <span style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">Protect your data</span>
+        </div>
+        <div class="card-body">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">Full Database Backup</h4>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin: 0;">
+                        Download a complete SQL dump of the database. <br>
+                        <span style="color: #ef4444; font-size: 0.75rem;">Requires password re-confirmation.</span>
+                    </p>
+                </div>
+                <button type="button" class="btn" style="background: #1e293b; color: white;" onclick="openBackupModal()">
+                    <i data-feather="download-cloud" style="width: 16px; height: 16px;"></i>
+                    Download .SQL
+                </button>
+            </div>
+        </div>
+    </div>
 @endsection
 
-    @section('styles')
-        {{-- Styles are now in layouts.admin --}}
-    @endsection
+<!-- Password Confirmation Modal -->
+<div id="backupModal" class="modal-backdrop"
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div class="modal"
+        style="background: white; padding: 2rem; border-radius: 1rem; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
+        <h3 style="margin-top: 0; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i data-feather="lock" style="color: #6366F1;"></i> Security Check
+        </h3>
+        <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 1.5rem;">
+            Please enter your password to confirm your identity and start the download.
+        </p>
 
-    @section('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                // Tab switching for uploads
-                const uploadWrappers = document.querySelectorAll('.image-upload-wrapper');
-                uploadWrappers.forEach(wrapper => {
-                    const tabs = wrapper.querySelectorAll('.upload-tab');
-                    const contents = wrapper.querySelectorAll('.upload-content');
+        <form action="{{ route('admin.settings.backup') }}" method="POST">
+            @csrf
+            <div class="form-group">
+                <label class="form-label">Current Password</label>
+                <input type="password" name="password" class="form-input" required autofocus placeholder="••••••••">
+            </div>
 
-                    tabs.forEach(tab => {
-                        tab.addEventListener('click', () => {
-                            tabs.forEach(t => t.classList.remove('active'));
-                            tab.classList.add('active');
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeBackupModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" onclick="closeBackupModal()">Confirm & Download</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-                            const target = tab.dataset.target;
-                            contents.forEach(c => {
-                                if (c.dataset.type === target) c.style.display = 'block';
-                                else c.style.display = 'none';
-                            });
+@section('styles')
+    {{-- Styles are now in layouts.admin --}}
+@endsection
+
+@section('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Tab switching for uploads
+            const uploadWrappers = document.querySelectorAll('.image-upload-wrapper');
+            uploadWrappers.forEach(wrapper => {
+                const tabs = wrapper.querySelectorAll('.upload-tab');
+                const contents = wrapper.querySelectorAll('.upload-content');
+
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        tabs.forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+
+                        const target = tab.dataset.target;
+                        contents.forEach(c => {
+                            if (c.dataset.type === target) c.style.display = 'block';
+                            else c.style.display = 'none';
                         });
                     });
                 });
             });
+        });
 
-            function previewImage(input, previewId) {
-                const preview = document.getElementById(previewId);
-                const wrapper = preview.parentElement;
-                const placeholder = wrapper.querySelector('.placeholder-text');
+        function previewImage(input, previewId) {
+            const preview = document.getElementById(previewId);
+            const wrapper = preview.parentElement;
+            const placeholder = wrapper.querySelector('.placeholder-text');
 
-                if (input.files && input.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        preview.src = e.target.result;
-                        preview.style.display = 'block';
-                        wrapper.classList.add('has-image');
-                        if (placeholder) placeholder.style.display = 'none';
-                    }
-                    reader.readAsDataURL(input.files[0]);
-                }
-            }
-
-            function updatePreview(url, previewId) {
-                const preview = document.getElementById(previewId);
-                const wrapper = preview.parentElement;
-                const placeholder = wrapper.querySelector('.placeholder-text');
-
-                if (url) {
-                    preview.src = url;
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
                     preview.style.display = 'block';
                     wrapper.classList.add('has-image');
                     if (placeholder) placeholder.style.display = 'none';
-                } else {
-                    preview.style.display = 'none';
-                    wrapper.classList.remove('has-image');
-                    if (placeholder) placeholder.style.display = 'block';
                 }
+                reader.readAsDataURL(input.files[0]);
             }
+        }
 
-            function testEmail() {
-                const email = prompt("Enter email address to receive test email:", "{{ auth()->user()->email }}");
-                if (!email) return;
+        function updatePreview(url, previewId) {
+            const preview = document.getElementById(previewId);
+            const wrapper = preview.parentElement;
+            const placeholder = wrapper.querySelector('.placeholder-text');
 
-                const result = document.getElementById('testEmailResult');
-                result.style.display = 'block';
-                result.style.background = '#dbeafe';
-                result.style.color = '#1e40af';
-                result.innerHTML = '<i data-feather="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Sending test email...';
-                feather.replace();
+            if (url) {
+                preview.src = url;
+                preview.style.display = 'block';
+                wrapper.classList.add('has-image');
+                if (placeholder) placeholder.style.display = 'none';
+            } else {
+                preview.style.display = 'none';
+                wrapper.classList.remove('has-image');
+                if (placeholder) placeholder.style.display = 'block';
+            }
+        }
 
-                fetch('{{ route("admin.settings.test-email") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ email: email })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            result.style.background = '#d1fae5';
-                            result.style.color = '#065f46';
-                            result.innerHTML = '✓ ' + data.message;
-                        } else {
-                            result.style.background = '#fee2e2';
-                            result.style.color = '#991b1b';
-                            result.innerHTML = '✗ Failed: ' + (data.message || 'Unknown error');
-                        }
-                    })
-                    .catch(error => {
+        function testEmail() {
+            const email = prompt("Enter email address to receive test email:", "{{ auth()->user()->email }}");
+            if (!email) return;
+
+            const result = document.getElementById('testEmailResult');
+            result.style.display = 'block';
+            result.style.background = '#dbeafe';
+            result.style.color = '#1e40af';
+            result.innerHTML = '<i data-feather="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Sending test email...';
+            feather.replace();
+
+            fetch('{{ route("admin.settings.test-email") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ email: email })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        result.style.background = '#d1fae5';
+                        result.style.color = '#065f46';
+                        result.innerHTML = '✓ ' + data.message;
+                    } else {
                         result.style.background = '#fee2e2';
                         result.style.color = '#991b1b';
-                        result.innerHTML = '✗ Error: ' + error.message;
-                    });
-            }
-            function toggleMaintenanceMessage(isChecked) {
-                const group = document.getElementById('maintenanceMessageGroup');
-                if (isChecked) {
-                    group.style.display = 'flex';
-                } else {
-                    group.style.display = 'none';
-                }
-            }
-
-            function testTelegram() {
-                const result = document.getElementById('telegramResult');
-                result.style.display = 'block';
-                result.style.background = '#dbeafe';
-                result.style.color = '#1e40af';
-                result.innerHTML = '<i data-feather="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Sending test notification...';
-                feather.replace();
-
-                fetch('{{ url("/api/telegram/webhook") }}?test=1', { // Using direct webhook EP for testing logic or a dedicated controller method
-                    // Actually, better to use a dedicated admin route, but for simplicity let's assume we add a test route or use a simple ajax
-                    // Wait, I didn't create a dedicated route for 'testTelegram' in web.php, but I put logic in TelegramController.
-                    // Let's create a route for it or use a trick.
-                    // I will add a new method in AdminController or TelegramController exposed to admin web.
+                        result.innerHTML = '✗ Failed: ' + (data.message || 'Unknown error');
+                    }
+                })
+                .catch(error => {
+                    result.style.background = '#fee2e2';
+                    result.style.color = '#991b1b';
+                    result.innerHTML = '✗ Error: ' + error.message;
                 });
+        }
+        function toggleMaintenanceMessage(isChecked) {
+            const group = document.getElementById('maintenanceMessageGroup');
+            if (isChecked) {
+                group.style.display = 'flex';
+            } else {
+                group.style.display = 'none';
+            }
+        }
 
-                // Correction: I should call a proper endpoint. Let's fix this in next step or use what we have.
-                // I'll assume we'll add /admin/settings/test-telegram route.
-                fetch('{{ url("/admin/settings/test-telegram") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    }
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            result.style.background = '#d1fae5';
-                            result.style.color = '#065f46';
-                            result.innerHTML = '✓ ' + (data.response.result ? 'Message sent successfully!' : 'Sent, but check your Telegram.');
-                        } else {
-                            result.style.background = '#fee2e2';
-                            result.style.color = '#991b1b';
-                            result.innerHTML = '✗ Failed: ' + (data.message || 'Check logs');
-                        }
-                    })
-                    .catch(err => {
+        function testTelegram() {
+            const result = document.getElementById('telegramResult');
+            result.style.display = 'block';
+            result.style.background = '#dbeafe';
+            result.style.color = '#1e40af';
+            result.innerHTML = '<i data-feather="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Sending test notification...';
+            feather.replace();
+
+            fetch('{{ url("/api/telegram/webhook") }}?test=1', { // Using direct webhook EP for testing logic or a dedicated controller method
+                // Actually, better to use a dedicated admin route, but for simplicity let's assume we add a test route or use a simple ajax
+                // Wait, I didn't create a dedicated route for 'testTelegram' in web.php, but I put logic in TelegramController.
+                // Let's create a route for it or use a trick.
+                // I will add a new method in AdminController or TelegramController exposed to admin web.
+            });
+
+            // Correction: I should call a proper endpoint. Let's fix this in next step or use what we have.
+            // I'll assume we'll add /admin/settings/test-telegram route.
+            fetch('{{ url("/admin/settings/test-telegram") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        result.style.background = '#d1fae5';
+                        result.style.color = '#065f46';
+                        result.innerHTML = '✓ ' + (data.response.result ? 'Message sent successfully!' : 'Sent, but check your Telegram.');
+                    } else {
                         result.style.background = '#fee2e2';
                         result.style.color = '#991b1b';
-                        result.innerHTML = '✗ Error: ' + err.message;
-                    });
-            }
-
-            function setupWebhook() {
-                const result = document.getElementById('telegramResult');
-                result.style.display = 'block';
-                result.innerHTML = 'Setting up webhook...';
-
-                fetch('{{ url("/admin/settings/setup-webhook") }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        result.innerHTML = '✗ Failed: ' + (data.message || 'Check logs');
                     }
                 })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.ok) {
-                            result.style.background = '#d1fae5';
-                            result.innerHTML = '✓ Webhook connected successfully!';
-                        } else {
-                            result.style.background = '#fee2e2';
-                            result.innerHTML = '✗ connection failed: ' + data.description;
-                        }
-                    });
-            }
-        </script>
-        <style>
-            @keyframes spin {
-                100% {
-                    transform: rotate(360deg);
+                .catch(err => {
+                    result.style.background = '#fee2e2';
+                    result.style.color = '#991b1b';
+                    result.innerHTML = '✗ Error: ' + err.message;
+                });
+        }
+
+        function setupWebhook() {
+            const result = document.getElementById('telegramResult');
+            result.style.display = 'block';
+            result.innerHTML = 'Setting up webhook...';
+
+            fetch('{{ url("/admin/settings/setup-webhook") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.ok) {
+                        result.style.background = '#d1fae5';
+                        result.innerHTML = '✓ Webhook connected successfully!';
+                    } else {
+                        result.style.background = '#fee2e2';
+                        result.innerHTML = '✗ connection failed: ' + data.description;
+                    }
+                });
+        }
+
+        // Backup Modal Logic
+        function openBackupModal() {
+            const modal = document.getElementById('backupModal');
+            modal.style.display = 'flex';
+            // Focus password field
+            setTimeout(() => modal.querySelector('input[name="password"]').focus(), 100);
+        }
+
+        function closeBackupModal() {
+            document.getElementById('backupModal').style.display = 'none';
+        }
+
+        // Close on click outside
+        window.onclick = function (event) {
+            const modal = document.getElementById('backupModal');
+            if (event.target == modal) {
+                closeBackupModal();
             }
-        </style>
-    @endsection
+        }
+    </script>
+    <style>
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+@endsection
