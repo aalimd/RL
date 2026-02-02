@@ -661,7 +661,7 @@
                     <div class="switch-ball" style="width: 20px; height: 20px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.1);"></div>
                 </div>
             </div>
-            <!-- Deployment Retry Trigger: {{ date('Y-m-d H:i:s') }} -->
+            <!-- Deploy Trigger: {{ date('Y-m-d H:i:s') }} -->
         </div>
 
         <!-- Hero Section -->

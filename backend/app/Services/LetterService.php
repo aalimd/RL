@@ -298,12 +298,14 @@ class LetterService
 
         $url = route('public.verify', $request->verify_token);
 
-        // Generate SVG or PNG. SVG is better for print.
-        // We use base64 data URI
-        $qr = QrCode::format('svg')->size(70)->generate($url);
-        // Clean XML header if strictly embedding
-        $qr = str_replace('<?xml version="1.0" encoding="UTF-8"?>', '', $qr);
+        // Generate SVG and Encode as Base64 to survive HTML Purifier
+        $qrInfo = QrCode::format('svg')->size(70)->generate($url);
 
-        return '<div class="qr-code-container" style="margin-top: 10px;">' . $qr . '<div style="font-size: 10px; color: #555; margin-top: 2px;">Scan to Verify</div></div>';
+        // Clean XML header if strictly embedding
+        $qrString = str_replace('<?xml version="1.0" encoding="UTF-8"?>', '', $qrInfo);
+        $base64Qr = base64_encode($qrString);
+
+        // Return as IMG tag because Purifier accepts <img> but strips <svg>
+        return '<div class="qr-code-container" style="margin-top: 10px;"><img src="data:image/svg+xml;base64,' . $base64Qr . '" alt="QR Code" style="width: 70px; height: 70px;"><div style="font-size: 10px; color: #555; margin-top: 2px;">Scan to Verify</div></div>';
     }
 }
