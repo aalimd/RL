@@ -411,8 +411,9 @@
             padding: 0;
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
             transform: translateX(100%);
+            overflow-y: auto;
         }
 
         .mobile-menu.active {
@@ -425,91 +426,124 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 1.5rem;
-            border-bottom: 1px solid var(--border-light);
-            background: var(--bg-primary);
+            padding: 2rem;
         }
 
         .mobile-menu-title {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+
+        /* Mobile Menu Links Section */
+        .mobile-nav-group {
+            padding: 0 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .mobile-nav-card {
+            display: flex;
+            align-items: center;
+            padding: 1.25rem 1.5rem;
+            background: var(--bg-card);
+            border: 2px solid var(--border-color);
+            border-radius: 1.25rem;
+            text-decoration: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Icon Container */
+        .mobile-nav-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1.25rem;
+            flex-shrink: 0;
+            transition: transform 0.2s;
+        }
+
+        /* Text Content */
+        .mobile-nav-content {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .mobile-nav-title {
             font-size: 1.125rem;
             font-weight: 700;
             color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
+            margin-bottom: 0.15rem;
         }
 
-        /* Mobile Menu Links */
-        .mobile-nav-group {
-            padding: 1rem 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .mobile-nav-link {
-            font-size: 1.1rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem 0;
-            border-bottom: 1px solid var(--border-light);
-            transition: color 0.2s;
-        }
-
-        .mobile-nav-link:last-child {
-            border-bottom: none;
-        }
-
-        .mobile-nav-link:hover {
-            color: var(--primary);
-            transform: none; /* efficient reset */
-            background: none;
-        }
-
-        .mobile-nav-link i {
-            width: 20px;
-            height: 20px;
+        .mobile-nav-desc {
+            font-size: 0.8rem;
             color: var(--text-muted);
-            transition: color 0.2s;
+            font-weight: 500;
         }
 
-        .mobile-nav-link:hover i {
+        /* Hover & Active States */
+        .mobile-nav-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.15);
+        }
+
+        .mobile-nav-card:hover .mobile-nav-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        /* Specific Colors for Items */
+        .mobile-nav-card.item-request .mobile-nav-icon {
+            background: rgba(99, 102, 241, 0.1);
             color: var(--primary);
         }
+        
+        .mobile-nav-card.item-track .mobile-nav-icon {
+             background: rgba(139, 92, 246, 0.1);
+             color: var(--secondary);
+        }
 
-        /* Theme Toggle Button */
-        .mobile-theme-btn {
+        .mobile-nav-card.item-admin .mobile-nav-icon {
+             background: rgba(16, 185, 129, 0.1);
+             color: var(--accent);
+        }
+
+        /* Theme Toggle specific */
+        .mobile-theme-card {
+            margin: auto 2rem 3rem;
+            padding: 1.25rem;
+            border-radius: 1.25rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            width: 100%;
-            padding: 1.25rem 1.5rem;
-            background: none;
-            border: none;
-            border-top: 1px solid var(--border-light);
-            text-align: left;
-            font-size: 1rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-top: auto;
             cursor: pointer;
         }
 
-        /* Animation reset */
-        .mobile-nav-link {
-            opacity: 1;
-            transform: none;
-            animation: none;
+        /* Entrance Animations */
+        .mobile-menu.active .mobile-nav-card {
+            animation: slideUpFade 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            opacity: 0;
+            transform: translateY(20px);
         }
         
-        .mobile-menu.active .mobile-nav-link {
-             animation: none;
-             opacity: 1;
-             transform: none;
+        .mobile-menu.active .mobile-nav-card:nth-child(1) { animation-delay: 0.1s; }
+        .mobile-menu.active .mobile-nav-card:nth-child(2) { animation-delay: 0.2s; }
+        .mobile-menu.active .mobile-nav-card:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes slideUpFade {
+            to { opacity: 1; transform: translateY(0); }
         }
 
         @media (max-width: 768px) {
@@ -564,48 +598,70 @@
         <div class="mobile-menu" id="mobileMenu">
             <!-- Header -->
             <div class="mobile-menu-header">
-                <div class="mobile-menu-title">
-                     @if(!empty($settings['logoUrl']))
-                        <img src="{{ $settings['logoUrl'] }}" alt="Logo" style="height: 24px; width: auto; border-radius: 4px;">
-                    @else
-                        <div style="width:24px; height:24px; background:var(--primary); color:white; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:bold;">R</div>
-                    @endif
-                    <span>{{ $settings['siteName'] ?? 'AAMD' }}</span>
+                <div>
+                    <span style="font-size: 0.85rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 1px;">Menu</span>
+                    <div class="mobile-menu-title">Navigation</div>
                 </div>
-                <button onclick="toggleMobileMenu()" style="background:none; border:none; cursor:pointer; color: var(--text-muted); padding: 0.5rem;">
-                    <i data-lucide="x" style="width: 24px; height: 24px;"></i>
+                <!-- Close Button -->
+                <button onclick="toggleMobileMenu()" style="width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border-color); background: var(--bg-primary); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                    <i data-lucide="x" style="width: 24px; height: 24px; color: var(--text-primary);"></i>
                 </button>
             </div>
 
             <!-- Links -->
             <div class="mobile-nav-group">
-                <a href="{{ url('/') }}" class="mobile-nav-link">
-                    <i data-lucide="home"></i>
-                    <span>Home</span>
+                <!-- New Request -->
+                <a href="{{ url('/request') }}" class="mobile-nav-card item-request">
+                    <div class="mobile-nav-icon">
+                        <i data-lucide="file-plus" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div class="mobile-nav-content">
+                        <span class="mobile-nav-title">New Request</span>
+                        <span class="mobile-nav-desc">Start a new application</span>
+                    </div>
                 </a>
-                <a href="{{ url('/request') }}" class="mobile-nav-link">
-                    <i data-lucide="file-plus"></i>
-                    <span>New Request</span>
+                
+                <!-- Track Request -->
+                <a href="{{ url('/track') }}" class="mobile-nav-card item-track">
+                    <div class="mobile-nav-icon">
+                         <i data-lucide="search" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div class="mobile-nav-content">
+                        <span class="mobile-nav-title">Track Request</span>
+                        <span class="mobile-nav-desc">Check status updates</span>
+                    </div>
                 </a>
-                <a href="{{ url('/track') }}" class="mobile-nav-link">
-                    <i data-lucide="search"></i>
-                    <span>Track Request</span>
-                </a>
-                <a href="/RL/login" class="mobile-nav-link" style="border-bottom: none;">
-                    <i data-lucide="shield"></i>
-                    <span>Admin Panel</span>
+
+                <!-- Admin -->
+                <a href="/RL/login" class="mobile-nav-card item-admin">
+                    <div class="mobile-nav-icon">
+                        <i data-lucide="shield" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div class="mobile-nav-content">
+                        <span class="mobile-nav-title">Admin Panel</span>
+                        <span class="mobile-nav-desc">Authorized access only</span>
+                    </div>
                 </a>
             </div>
             
             <!-- Bottom Actions -->
-            <button class="mobile-theme-btn" onclick="toggleTheme()">
-                <div style="display: flex; gap: 0.75rem; align-items: center;">
-                    <i data-lucide="moon" class="moon-icon" style="width: 20px; height: 20px;"></i>
-                    <i data-lucide="sun" class="sun-icon" style="width: 20px; height: 20px;"></i>
-                    <span>Switch Theme</span>
+            <div class="mobile-theme-card" onclick="toggleTheme()">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--bg-secondary); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="sun" class="sun-icon" style="width: 20px; height: 20px; color: var(--text-primary);"></i>
+                        <i data-lucide="moon" class="moon-icon" style="width: 20px; height: 20px; color: var(--text-primary); display: none;"></i>
+                    </div>
+                    <div>
+                        <span class="mobile-nav-title" style="font-size: 1rem;">Appearance</span>
+                        <span class="mobile-nav-desc" style="display: block;">Switch light/dark mode</span>
+                    </div>
                 </div>
-                <i data-lucide="chevron-right" style="width: 16px; color: var(--text-muted);"></i>
-            </button>
+                
+                <!-- Toggle Switch -->
+                <div class="theme-switch" style="width: 48px; height: 26px; background: var(--text-muted); border-radius: 99px; position: relative; transition: background 0.3s;">
+                    <div class="switch-ball" style="width: 22px; height: 22px; background: white; border-radius: 50%; position: absolute; top: 2px; left: 2px; transition: transform 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Hero Section -->
