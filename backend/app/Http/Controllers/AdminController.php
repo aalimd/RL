@@ -237,6 +237,8 @@ class AdminController extends Controller
             'training_period' => 'nullable|string',
             'custom_content' => 'nullable|string',
             'gender' => 'required|in:male,female',
+            'phone' => 'nullable|string|max:20',
+            'major' => 'nullable|string|max:255',
         ]);
 
         // Extract gender before updating model (it goes in form_data, not directly)
@@ -245,9 +247,10 @@ class AdminController extends Controller
 
         $requestModel->update($validated);
 
-        // Update gender in form_data
+        // Update gender and major in form_data
         $formData = $requestModel->form_data ?? [];
         $formData['gender'] = $gender;
+        $formData['major'] = $validated['major'] ?? ($formData['major'] ?? null);
         $requestModel->form_data = $formData;
         $requestModel->save();
 
