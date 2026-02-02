@@ -16,10 +16,16 @@ echo "PHP Version: " . phpversion() . "<br>";
 echo "Server Software: " . $_SERVER['SERVER_SOFTWARE'] . "<br>";
 echo "Current File: " . __FILE__ . "<br>";
 
-// 3. Permission Check
-echo "<h3>2. Critical Paths Permissions</h3>";
+echo "<h3>2. Critical Paths Permissions & Files</h3>";
 $baseDir = dirname(__DIR__); // Up one level from public
 echo "Backend Root: " . $baseDir . "<br>";
+
+$envFile = $baseDir . '/.env';
+if (file_exists($envFile)) {
+    echo "<b>.env File:</b> <span style='color:green'>FOUND</span><br>";
+} else {
+    echo "<b>.env File:</b> <span style='color:red; font-size:1.2em; font-weight:bold'>MISSING (CRITICAL)</span> - This is likely the cause!<br>";
+}
 
 $pathsToCheck = [
     $baseDir . '/storage',
