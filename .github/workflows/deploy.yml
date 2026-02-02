@@ -34,84 +34,77 @@ jobs:
           # Zip the contents
           zip -r "../deploy_package/$ZIP_NAME" . -x "*.git*" "*.github*" "node_modules/*" "storage/*.key" "storage/logs/*" ".env" "phpunit.xml" ".DS_Store" "tests/*"
           
-          # Create Smart Extraction Script check
+          # Create Smart & SAFE Extraction Script
           echo "<?php
           // Increase limits
           ini_set('memory_limit', '512M');
           ini_set('max_execution_time', 300);
 
-          echo '<pre>';
-          echo '🚀 Starting Deployment Process...<br>';
+          header('Content-Type: text/plain'); 
+          echo '🚀 Starting Safe Deployment...'.PHP_EOL;
 
-          // 1. Force Delete Critical Files (To prove write access)
-          \$criticalFile = __DIR__ . '/backend/app/Services/TelegramService.php';
-          if (file_exists(\$criticalFile)) {
-              unlink(\$criticalFile);
-              echo '🗑️ Deleted old TelegramService.php<br>';
-          }
+          \$zipFile = '$ZIP_NAME';
+          \$extractPath = __DIR__ . '/backend';
+          \$lockFile = 'deploy.lock';
 
-          // 2. Extract Files
-          \$zip = new ZipArchive;
-          \$res = \$zip->open('$ZIP_NAME');
-          
-          if (\$res === TRUE) {
-              // EXTRACT TO BACKEND FOLDER
-              \$extractPath = __DIR__ . '/backend';
+          try {
+              // 1. INTEGRITY CHECK (Verify Zip before touching anything)
+              \$zip = new ZipArchive;
+              if (\$zip->open(\$zipFile) !== TRUE) {
+                  throw new Exception('❌ Invalid or corrupted ZIP file. Aborting.');
+              }
+              echo '✅ Integrity Check Passed.'.PHP_EOL;
+
+              // 2. PERMISSION CHECK (Non-destructive write test)
+              \$testFile = \$extractPath . '/write_test.tmp';
+              if (@file_put_contents(\$testFile, 'test') === false) {
+                  throw new Exception('❌ Write permission denied. Cannot write to backend folder.');
+              }
+              @unlink(\$testFile);
+              echo '✅ Write Permission Verified.'.PHP_EOL;
+
+              // 3. EXTRACTION
               if (!file_exists(\$extractPath)) {
                   mkdir(\$extractPath, 0755, true);
               }
-              \$zip->extractTo(\$extractPath);
+              
+              if (!\$zip->extractTo(\$extractPath)) {
+                  throw new Exception('❌ Extraction failed during process.');
+              }
               \$zip->close();
-              echo '✅ Files Extracted to backend/.<br>';
+              echo '✅ Files Extracted Successfully.'.PHP_EOL;
 
-              // 3. Reset PHP Opcache
-              if (function_exists('opcache_reset')) {
-                  opcache_reset();
-                  echo '✅ Opcache Reset.<br>';
-              } else {
-                  echo 'ℹ️ Opcache not enabled/accessible.<br>';
+              // 4. POST-DEPLOYMENT OPTIMIZATION
+              if (file_exists(\$extractPath . '/vendor/autoload.php')) {
+                  require \$extractPath . '/vendor/autoload.php';
+                  \$app = require_once \$extractPath . '/bootstrap/app.php';
+                  \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class);
+                  \$kernel->bootstrap();
+
+                  echo '✅ Laravel Bootstrapped.'.PHP_EOL;
+
+                  // Force maintenance mode off if stuck? No, just standard routine.
+                  Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+                  echo '✅ Database Migrated.'.PHP_EOL;
+
+                  Illuminate\Support\Facades\Artisan::call('view:clear');
+                  Illuminate\Support\Facades\Artisan::call('cache:clear');
+                  Illuminate\Support\Facades\Artisan::call('config:clear');
+                  Illuminate\Support\Facades\Artisan::call('route:clear');
+                  echo '✅ Cache Cleared.'.PHP_EOL;
               }
 
-              // BOOTSTRAP LARAVEL
-              try {
-                  if (file_exists(__DIR__ . '/backend/vendor/autoload.php')) {
-                      require __DIR__ . '/backend/vendor/autoload.php';
-                      \$app = require_once __DIR__ . '/backend/bootstrap/app.php';
-                      \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class);
-                      \$kernel->bootstrap();
-
-                      echo '✅ Laravel Bootstrapped.<br>';
-
-                      // Migrate Database
-                      Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-                      echo '✅ Database Migrated.<br>';
-
-                      // Clear Everything
-                      Illuminate\Support\Facades\Artisan::call('view:clear');
-                      Illuminate\Support\Facades\Artisan::call('cache:clear');
-                      Illuminate\Support\Facades\Artisan::call('config:clear');
-                      Illuminate\Support\Facades\Artisan::call('route:clear');
-                      echo '✅ All Artisan Caches Cleared.<br>';
-
-                      // Verify File Update
-                      if (file_exists(\$criticalFile)) {
-                          echo '📄 TelegramService Hash: ' . md5_file(\$criticalFile) . '<br>';
-                      }
-                      
-                  }
-              } catch (Throwable \$e) {
-                  echo '⚠️ Post-Install Error: ' . \$e->getMessage() . '<br>';
-              }
-
-              // Cleanup
-              @unlink('$ZIP_NAME');
-              @unlink(__FILE__);
-              echo '✅ Cleanup Complete.';
-          } else {
+          } catch (Exception \$e) {
               http_response_code(500);
-              echo '❌ Extraction Failed';
+              echo '🔥 CRITICAL ERROR: ' . \$e->getMessage() . PHP_EOL;
+              exit(1);
+          } finally {
+              // 5. CLEANUP (Always clean up zip and script)
+              if (file_exists(\$zipFile)) @unlink(\$zipFile);
+              // Self-destruct script
+              @unlink(__FILE__);
+              echo '🧹 Cleanup Complete.';
           }
-          echo '</pre>';
           ?>" > "../deploy_package/$SCRIPT_NAME"
 
       - name: 📂 Sync files (Upload Zip)
@@ -128,5 +121,5 @@ jobs:
           server-dir: ./
 
       - name: 🚀 Trigger Unzip on Server
-        run: curl -s "https://apps.aamd.sa/RL/unzip_${{ github.sha }}.php"
+        run: curl -s "${{ secrets.APP_URL }}/unzip_${{ github.sha }}.php"
         continue-on-error: true
