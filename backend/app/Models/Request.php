@@ -15,6 +15,7 @@ class Request extends Model
         'middle_name',
         'last_name',
         'student_email',
+        'phone',
         'verification_token', // This might be an old column name from previous devs? The new one is verify_token
         'verify_token',
         'university',
