@@ -610,32 +610,37 @@
             border-color: #ef4444 !important;
         }
     </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@26.0.9/build/css/intlTelInput.css">
     <style>
         .iti { width: 100%; }
-        /* Fix for Country List Visibility */
+        
+        /* Ensure list has no bullets - Critical Fix */
         .iti__country-list {
-            z-index: 100 !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border: 1px solid var(--border-color);
-            background-color: var(--bg-secondary);
+            list-style: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            border: 1px solid var(--border-color) !important;
+            background-color: var(--bg-secondary) !important;
+            z-index: 9999 !important; /* Ensure it's on top */
+        }
+
+        .iti__country-name {
             color: var(--text-primary);
         }
         
-        /* Ensure specific countries are hidden and only shown on click */
-        .iti__country-list.iti__hide {
-            display: none !important;
-        }
-
-        /* Styling for list items */
-        .iti__country {
-            padding: 10px 10px;
-            outline: none;
+        /* Fix flag position */
+        .iti__flag {
+            box-shadow: none !important;
         }
         
-        .iti__country:hover, .iti__country.iti__highlight {
-            background-color: var(--primary);
-            color: white;
+        /* Fix dropdown arrow color */
+        .iti__arrow {
+            border-top-color: var(--text-muted);
+        }
+        
+        .iti__arrow--up {
+            border-bottom-color: var(--text-muted);
         }
     </style>
 @endsection
@@ -1080,7 +1085,7 @@
 @endsection
 
 @section('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/intlTelInput.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@26.0.9/build/js/intlTelInput.min.js"></script>
     <script>
         // Initialize Lucide icons
         lucide.createIcons();
@@ -1092,7 +1097,7 @@
                     initialCountry: "sa",
                     preferredCountries: ['sa', 'ae', 'kw', 'qa', 'bh', 'om'],
                     separateDialCode: true,
-                    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js",
+                    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@26.0.9/build/js/utils.js",
                 });
 
                 // Set initial phone number if available
