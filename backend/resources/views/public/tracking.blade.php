@@ -357,6 +357,98 @@
             font-size: 0.75rem;
             color: var(--text-muted);
         }
+
+        /* Timeline Styles */
+        .timeline {
+            position: relative;
+            margin: 2rem 0;
+            padding-left: 1rem;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e5e7eb;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 3rem;
+            padding-bottom: 2rem;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            border: 2px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            transition: all 0.3s ease;
+        }
+
+        .timeline-item.completed .timeline-marker {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+
+        .timeline-item.active .timeline-marker {
+            background: var(--bg-secondary);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+        }
+
+        /* Connect active line */
+        .timeline-item.completed::after {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 40px;
+            bottom: -20px;
+            /* Connect to next */
+            width: 2px;
+            background: #10b981;
+            z-index: 0;
+        }
+
+        .timeline-item:last-child::after {
+            display: none;
+        }
+
+        .timeline-content h4 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .timeline-content p {
+            margin: 0.25rem 0 0;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .timeline-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
     </style>
 @endsection
 
@@ -422,13 +514,79 @@
                             <span class="result-title">Request Status</span>
                             <span
                                 class="status-badge 
-                                                                                                            @if($request->status === 'Approved') status-approved
-                                                                                                            @elseif($request->status === 'Rejected') status-rejected
-                                                                                                            @elseif($request->status === 'Needs Revision') status-revision
-                                                                                                            @elseif($request->status === 'Under Review') status-review
-                                                                                                            @else status-pending @endif">
+                                                                                                                    @if($request->status === 'Approved') status-approved
+                                                                                                                    @elseif($request->status === 'Rejected') status-rejected
+                                                                                                                    @elseif($request->status === 'Needs Revision') status-revision
+                                                                                                                    @elseif($request->status === 'Under Review') status-review
+                                                                                                                    @else status-pending @endif">
                                 {{ $request->status }}
                             </span>
+                            </span>
+                        </div>
+
+                        <!-- Visual Timeline -->
+                        <div class="timeline">
+                            <!-- Step 1: Submitted -->
+                            <div class="timeline-item completed">
+                                <div class="timeline-marker">
+                                    <i data-lucide="check" style="width: 20px; height: 20px;"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h4>Request Submitted</h4>
+                                    <p>Your request has been received.</p>
+                                    <div class="timeline-date">{{ $request->created_at->format('M d, Y h:i A') }}</div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Under Review -->
+                            @php
+                                $isReviewActive = in_array($request->status, ['Under Review', 'Needs Revision']);
+                                $isReviewCompleted = in_array($request->status, ['Approved', 'Rejected']);
+                                $reviewClass = $isReviewCompleted ? 'completed' : ($isReviewActive ? 'active' : '');
+                                $reviewIcon = $isReviewCompleted ? 'check' : 'search';
+                            @endphp
+                            <div class="timeline-item {{ $reviewClass }}">
+                                <div class="timeline-marker">
+                                    <i data-lucide="{{ $reviewIcon }}" style="width: 20px; height: 20px;"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h4>Details Review</h4>
+                                    <p>Checking your information and requirements.</p>
+                                    @if($isReviewActive || $isReviewCompleted)
+                                        <div class="timeline-date">In Progress</div>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <!-- Step 3: Final Decision -->
+                            @php
+                                $isDecisionActive = in_array($request->status, ['Approved', 'Rejected']);
+                                $decisionClass = $isDecisionActive ? ($request->status == 'Approved' ? 'completed' : 'active') : ''; // Green if approved, Active if rejected/final
+                                $decisionIcon = $request->status == 'Approved' ? 'check' : ($request->status == 'Rejected' ? 'x' : 'file-text');
+
+                                // Override for Rejected to show red marker
+                                $markerStyle = $request->status == 'Rejected' ? 'border-color: #ef4444; color: #ef4444;' : '';
+                            @endphp
+                            <div class="timeline-item {{ $decisionClass }}">
+                                <div class="timeline-marker" style="{{ $markerStyle }}">
+                                    <i data-lucide="{{ $decisionIcon }}" style="width: 20px; height: 20px;"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <h4>Final Decision</h4>
+                                    <p>
+                                        @if($request->status == 'Approved')
+                                            Congratulations! Your letter is ready.
+                                        @elseif($request->status == 'Rejected')
+                                            Request declined. See admin message.
+                                        @else
+                                            Awaiting final approval.
+                                        @endif
+                                    </p>
+                                    @if($isDecisionActive)
+                                        <div class="timeline-date">{{ $request->updated_at->format('M d, Y') }}</div>
+                                    @endif
+                                </div>
+                            </div>
                         </div>
 
                         <div>
