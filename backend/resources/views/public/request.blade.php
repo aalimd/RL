@@ -732,7 +732,7 @@
                                 @if($isVisible('phone'))
                                 <div class="form-group">
                                     <label class="form-label">Phone Number @if($isRequired('phone'))<span class="required">*</span>@endif</label>
-                                    <input type="tel" name="data[phone]" class="form-input"
+                                    <input type="tel" name="data[phone]" class="form-input" id="phone"
                                         value="{{ old('data.phone', $formData['phone'] ?? '') }}" placeholder="+1 234 567 8900" {{ $isRequired('phone') ? 'required' : '' }}>
                                     <small style="display: block; margin-top: 0.25rem; color: #6b7280;">
                                         Please provide a Telegram-connected phone number to receive real-time status updates.
@@ -961,14 +961,40 @@
 @endsection
 
 @section('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/intlTelInput.min.js"></script>
     <script>
         // Initialize Lucide icons
         lucide.createIcons();
 
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.querySelector("#phone");
+            if (input) {
+                const iti = window.intlTelInput(input, {
+                    initialCountry: "sa",
+                    preferredCountries: ['sa', 'ae', 'kw', 'qa', 'bh', 'om'],
+                    separateDialCode: true,
+                    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/js/utils.js",
+                });
+
+                // Update input value with full number on form submit
+                const form = document.querySelector("#wizardForm");
+                if (form) {
+                    form.addEventListener('submit', function() {
+                        if (iti.isValidNumber()) {
+                            input.value = iti.getNumber();
+                        }
+                    });
+                }
+            }
+        });
+
         function selectContentOption(option) {
-            document.getElementById('contentOption').value = option;
+            // Visual update
             document.querySelectorAll('.content-option').forEach(el => el.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
+            document.querySelector(`.content-option[onclick="selectContentOption('${option}')"]`).classList.add('selected');
+            
+            // Update hidden input
+            document.getElementById('contentOption').value = option;
 
             if (option === 'template') {
                 document.getElementById('templateSection').style.display = 'block';
