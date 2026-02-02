@@ -273,11 +273,11 @@
         </div>
 
         {{-- QR Code Automatic Display --}}
-        @if(!empty($qrCode))
-            <div class="letter-qrcode" style="padding: 0 15mm;">
-                {!! $qrCode !!}
-            </div>
-        @endif
+        {{-- @if(!empty($qrCode))
+        <div class="letter-qrcode" style="padding: 0 15mm;">
+            {!! $qrCode !!}
+        </div>
+        @endif --}}
 
         <!-- Footer -->
         <div class="letter-footer">

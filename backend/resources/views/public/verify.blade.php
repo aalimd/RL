@@ -13,12 +13,18 @@
             position: relative;
             overflow: hidden;
             /* Gradient Background matching Landing */
-            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            background: linear-gradient(135deg, var(--bg-primary 100%), var(--bg-secondary 100%));
+        }
+
+        /* Force dark mode background if variable not set */
+        [data-theme="dark"] .verify-page,
+        body.dark-mode .verify-page {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
         }
 
         /* ========================================
-               PARTICLES (Shared with Landing)
-               ======================================== */
+                   PARTICLES (Shared with Landing)
+                   ======================================== */
         .particles {
             position: absolute;
             inset: 0;
@@ -85,8 +91,8 @@
         }
 
         /* ========================================
-               GLASS CARD
-               ======================================== */
+                   GLASS CARD
+                   ======================================== */
         .verify-card {
             max-width: 500px;
             width: 100%;
@@ -95,21 +101,45 @@
             border-radius: 1.5rem;
             overflow: hidden;
 
-            /* Glassmorphism */
-            background: rgba(255, 255, 255, 0.7);
+            /* Enhanced Glassmorphism for Light Mode */
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px) saturate(180%);
             -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.6);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        /* Dark Mode Glass Support (Assumes theme toggler sets generic CSS variables or class) */
+        /* Dark Mode Glass Support */
         [data-theme="dark"] .verify-card,
         body.dark-mode .verify-card {
-            background: rgba(30, 41, 59, 0.7);
-            /* Darker semi-transparent */
-            border-color: rgba(255, 255, 255, 0.1);
+            background: rgba(30, 41, 59, 0.85) !important;
+            border-color: rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        [data-theme="dark"] .verify-header {
+            border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+        }
+
+        [data-theme="dark"] .status-title {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .status-desc {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .info-label {
+            color: #64748b;
+        }
+
+        [data-theme="dark"] .info-value {
+            color: #e2e8f0;
+        }
+
+        [data-theme="dark"] .info-row {
+            border-bottom-color: rgba(255, 255, 255, 0.1);
         }
 
         .verify-card:hover {
@@ -118,8 +148,8 @@
         }
 
         /* ========================================
-               GLOW EFFECTS
-               ======================================== */
+                   GLOW EFFECTS
+                   ======================================== */
         .glow-bg {
             position: absolute;
             top: 50%;
@@ -142,8 +172,8 @@
         }
 
         /* ========================================
-               HEADER & ICON
-               ======================================== */
+                   HEADER & ICON
+                   ======================================== */
         .verify-header {
             padding: 2.5rem 2rem 1.5rem;
             text-align: center;
@@ -213,8 +243,8 @@
         }
 
         /* ========================================
-               BODY & CONTENT
-               ======================================== */
+                   BODY & CONTENT
+                   ======================================== */
         .verify-body {
             padding: 2rem;
         }
@@ -272,8 +302,8 @@
         }
 
         /* ========================================
-               BUTTONS
-               ======================================== */
+                   BUTTONS
+                   ======================================== */
         .btn-return {
             display: inline-flex;
             align-items: center;
