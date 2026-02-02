@@ -67,25 +67,52 @@ foreach ($pathsToCheck as $path) {
     }
 }
 
-// 4. Try Booting Laravel
-echo "<h3>3. Laravel Boot Test</h3>";
+// 4. Laravel Boot Test & DB Auto-Fix
+echo "<h3>3. Laravel Boot Test & Database Repair</h3>";
 try {
     if (!file_exists($baseDir . '/vendor/autoload.php')) {
-        throw new Exception("Vendor autoload not found. Did 'composer install' run?");
+        throw new Exception("Vendor autoload not found.");
     }
-
     require $baseDir . '/vendor/autoload.php';
-    echo "✅ Vendor Autoloaded<br>";
-
     if (!file_exists($baseDir . '/bootstrap/app.php')) {
         throw new Exception("bootstrap/app.php not found.");
     }
-
     $app = require_once $baseDir . '/bootstrap/app.php';
-    echo "✅ App Required<br>";
-
     $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
-    echo "✅ Kernel Made<br>";
+
+    // Attempt Database Connection
+    try {
+        Illuminate\Support\Facades\DB::connection()->getPdo();
+        echo "✅ Database Connection: SUCCESS<br>";
+
+        // AUTO-FIX: Check for missing columns
+        if (Illuminate\Support\Facades\Schema::hasTable('users')) {
+            if (!Illuminate\Support\Facades\Schema::hasColumn('users', 'deleted_at')) {
+                echo "<div style='background:#fee2e2; padding:15px; border:2px solid red; margin:10px 0;'>";
+                echo "<h3 style='color:red; margin-top:0'>🚨 CRITICAL: Missing Database Column Detected</h3>";
+                echo "Column <b>'deleted_at'</b> is missing from <b>'users'</b> table.<br>";
+                echo "This is causing the 500 Error!<br><br>";
+
+                echo "<b>Attempting Auto-Fix...</b><br>";
+                try {
+                    Illuminate\Support\Facades\Schema::table('users', function ($table) {
+                        $table->softDeletes();
+                    });
+                    echo "<h3 style='color:green'>✅ AUTO-FIX SUCCESSFUL! Column added.</h3>";
+                    echo "Please refresh the Admin Panel now.";
+                } catch (Throwable $ex) {
+                    echo "<b>Auto-Fix Failed:</b> " . $ex->getMessage() . "<br><br>";
+                    echo "<b>MANUAL FIX (Run in phpMyAdmin):</b><br>";
+                    echo "<code style='background:#333; color:#fff; padding:5px; display:block; margin-top:5px'>ALTER TABLE users ADD COLUMN deleted_at TIMESTAMP NULL DEFAULT NULL;</code>";
+                }
+                echo "</div>";
+            } else {
+                echo "✅ Column 'deleted_at' exists in 'users' table.<br>";
+            }
+        }
+    } catch (Throwable $dbEx) {
+        echo "❌ Database Connection Failed: " . $dbEx->getMessage() . "<br>";
+    }
 
     echo "Attempting to handle request...<br>";
 
