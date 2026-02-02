@@ -587,8 +587,27 @@
         .btn-loading .btn-text {
             display: none;
         }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .btn-loading .btn-text {
+            display: none;
+        }
         .btn-loading .spinner {
             display: inline-block;
+        }
+
+        /* Shake Animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            border-color: #ef4444 !important;
         }
     </style>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css">
@@ -1114,7 +1133,27 @@
         // Loading State for Buttons
         const forms = document.querySelectorAll('form');
         forms.forEach(form => {
-            form.addEventListener('submit', function() {
+            form.addEventListener('submit', function(e) {
+                // Client-side validation shake
+                const inputs = this.querySelectorAll('input[required], select[required], textarea[required]');
+                let isValid = true;
+                
+                inputs.forEach(input => {
+                    if (!input.value.trim()) {
+                        isValid = false;
+                        input.classList.add('shake');
+                        input.addEventListener('animationend', () => {
+                            input.classList.remove('shake');
+                        });
+                    }
+                });
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    // showToast('Please fill in all required fields.', 'error'); // If toast exists
+                    return;
+                }
+
                 const btn = this.querySelector('button[type="submit"]');
                 if (btn) {
                     btn.classList.add('btn-loading');
