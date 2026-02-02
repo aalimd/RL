@@ -112,6 +112,10 @@
             border-color: var(--border-color) !important;
         }
 
+        body.dark-mode .user-menu-wrapper button:hover {
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
         body.dark-mode .user-menu-wrapper button span {
             color: var(--text-main) !important;
         }
@@ -176,6 +180,14 @@
 
         body.dark-mode .dropdown-item:hover {
             background: rgba(255, 255, 255, 0.05);
+        }
+
+        body.dark-mode .dropdown-header {
+            border-bottom-color: var(--border-color);
+        }
+
+        body.dark-mode .dropdown-header strong {
+            color: var(--text-main);
         }
 
         /* Dark mode for filters and inputs */
@@ -277,6 +289,34 @@
         body.dark-mode .empty-state,
         body.dark-mode .empty-message {
             color: var(--text-muted);
+        }
+
+        /* Modal Dark Mode Fixes */
+        body.dark-mode .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+        }
+
+        body.dark-mode .modal-header {
+            background: var(--card-bg);
+            border-bottom-color: var(--border-color);
+        }
+
+        body.dark-mode .modal-header h3 {
+            color: var(--text-main);
+        }
+
+        body.dark-mode .modal-body {
+            color: var(--text-main);
+        }
+
+        body.dark-mode .modal-footer {
+            background: rgba(0, 0, 0, 0.2);
+            border-top-color: var(--border-color);
+        }
+
+        body.dark-mode .sidebar-nav {
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
         }
 
         /* Dark mode toggle button */
@@ -1353,7 +1393,7 @@
 
                 <div class="user-menu-wrapper">
                     <button class="user-menu" onclick="toggleUserMenu()"
-                        style="background: white; display: flex; align-items: center; gap: 0.75rem; padding: 0.25rem 0.5rem 0.25rem 0.25rem; border-radius: 9999px; border: 1px solid #e5e7eb; cursor: pointer;">
+                        style="display: flex; align-items: center; gap: 0.75rem; padding: 0.25rem 0.5rem 0.25rem 0.25rem; border-radius: 9999px; border: 1px solid var(--border-color); cursor: pointer;">
                         <div class="user-avatar"
                             style="width: 2rem; height: 2rem; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: white;">
                             {{ substr(auth()->user()->name ?? 'A', 0, 1) }}

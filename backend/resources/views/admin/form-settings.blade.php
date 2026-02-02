@@ -4,7 +4,7 @@
 
 @section('content')
     @if(session('success'))
-        <div style="background: #d1fae5; color: #065f46; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+        <div style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.3);">
             {{ session('success') }}
         </div>
     @endif
@@ -67,10 +67,10 @@
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse;">
                         <thead>
-                            <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
-                                <th style="text-align: left; padding: 0.75rem 1rem; font-weight: 600;">Field Name</th>
-                                <th style="text-align: center; padding: 0.75rem 1rem; font-weight: 600;">Visible</th>
-                                <th style="text-align: center; padding: 0.75rem 1rem; font-weight: 600;">Required</th>
+                            <tr style="background: var(--input-bg); border-bottom: 2px solid var(--border-color);">
+                                <th style="text-align: left; padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main);">Field Name</th>
+                                <th style="text-align: center; padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main);">Visible</th>
+                                <th style="text-align: center; padding: 0.75rem 1rem; font-weight: 600; color: var(--text-main);">Required</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -97,7 +97,7 @@
                                     $isVisible = $fieldConfig[$fieldKey]['visible'] ?? true;
                                     $isRequired = $fieldConfig[$fieldKey]['required'] ?? in_array($fieldKey, ['student_name', 'last_name', 'student_email', 'gender', 'verification_token', 'training_period', 'purpose', 'deadline']);
                                 @endphp
-                                <tr style="border-bottom: 1px solid #e5e7eb;">
+                                <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-main);">
                                     <td style="padding: 0.75rem 1rem;">{{ $fieldLabel }}</td>
                                     <td style="text-align: center; padding: 0.75rem 1rem;">
                                         <input type="checkbox" name="fields[{{ $fieldKey }}][visible]" value="1" {{ $isVisible ? 'checked' : '' }}>

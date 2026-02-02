@@ -4,13 +4,15 @@
 
 @section('content')
     @if(session('success'))
-        <div style="background: #d1fae5; color: #065f46; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+        <div
+            style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.3);">
             {{ session('success') }}
         </div>
     @endif
 
     @if(session('error'))
-        <div style="background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+        <div
+            style="background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid rgba(239, 68, 68, 0.3);">
             {{ session('error') }}
         </div>
     @endif
@@ -111,7 +113,7 @@
                     </div>
 
                     <!-- AI Settings -->
-                    <div style="margin: 2rem 0; padding-top: 2rem; border-top: 1px solid #e5e7eb;">
+                    <div style="margin: 2rem 0; padding-top: 2rem; border-top: 1px solid var(--border-color);">
                         <h4
                             style="font-size: 1rem; font-weight: 600; color: #1e293b; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                             <i data-feather="cpu" style="width: 18px; height: 18px; color: #4f46e5;"></i>
@@ -128,7 +130,7 @@
                                     Get Key &rarr;
                                 </a>
                             </div>
-                            <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">
+                            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
                                 Uses Google's free tier. Get your key for free from Google AI Studio.
                             </p>
                         </div>
@@ -300,25 +302,25 @@
 
 <!-- Password Confirmation Modal -->
 <div id="backupModal" class="modal-backdrop"
-    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-    <div class="modal"
-        style="background: white; padding: 2rem; border-radius: 1rem; width: 100%; max-width: 400px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
-        <h3 style="margin-top: 0; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+    style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
+    <div class="modal-content" style="padding: 2rem; width: 100%; max-width: 400px;">
+        <h3
+            style="margin-top: 0; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; color: var(--text-main);">
             <i data-feather="lock" style="color: #6366F1;"></i> Security Check
         </h3>
-        <p style="color: #6b7280; font-size: 0.875rem; margin-bottom: 1.5rem;">
+        <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.5rem;">
             Please enter your password to confirm your identity and start the download.
         </p>
 
         <form action="{{ route('admin.settings.backup') }}" method="POST">
             @csrf
             <div class="form-group">
-                <label class="form-label">Current Password</label>
+                <label class="form-label" style="color: var(--text-main);">Current Password</label>
                 <input type="password" name="password" class="form-input" required autofocus placeholder="••••••••">
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
-                <button type="button" class="btn btn-secondary" onclick="closeBackupModal()">Cancel</button>
+                <button type="button" class="btn btn-ghost" onclick="closeBackupModal()">Cancel</button>
                 <button type="submit" class="btn btn-primary" onclick="closeBackupModal()">Confirm & Download</button>
             </div>
         </form>

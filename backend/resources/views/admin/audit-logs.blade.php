@@ -35,7 +35,8 @@
                             }
                         @endphp
                         <tr>
-                            <td style="font-size: 0.875rem; color: #6b7280;">{{ $log->created_at->format('M d, Y H:i') }}</td>
+                            <td style="font-size: 0.875rem; color: var(--text-muted);">
+                                {{ $log->created_at->format('M d, Y H:i') }}</td>
                             <td>{{ $log->user->name ?? 'System' }}</td>
                             <td>
                                 <span class="badge badge-pending">{{ str_replace('_', ' ', $log->action) }}</span>
@@ -46,20 +47,18 @@
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="4" style="text-align: center; padding: 3rem; color: #6b7280;">
-                                <i data-feather="activity"
-                                    style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
-                                <p>No activity logs yet</p>
-                            </td>
-                        </tr>
+                        <td colspan="4" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <i data-feather="activity"
+                                style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
+                            <p>No activity logs yet</p>
+                        </td>
                     @endforelse
                 </tbody>
             </table>
         </div>
 
         @if($logs->hasPages())
-            <div class="card-body" style="border-top: 1px solid #e5e7eb;">
+            <div class="card-body" style="border-top: 1px solid var(--border-color);">
                 {{ $logs->links() }}
             </div>
         @endif

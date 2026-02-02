@@ -4,13 +4,15 @@
 
 @section('content')
     @if(session('success'))
-        <div style="background: #d1fae5; color: #065f46; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+        <div
+            style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.3);">
             {{ session('success') }}
         </div>
     @endif
 
     @if($errors->any())
-        <div style="background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+        <div
+            style="background: rgba(239, 68, 68, 0.2); color: #f87171; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid rgba(239, 68, 68, 0.3);">
             <ul style="margin: 0; padding-left: 1rem;">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -29,7 +31,7 @@
         </div>
         <div class="card-body" style="padding: 0;">
             @if($users->isEmpty())
-                <div style="text-align: center; padding: 3rem; color: #6b7280;">
+                <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
                     <i data-feather="users" style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
                     <p>No users found</p>
                 </div>
@@ -56,8 +58,9 @@
                                                 {{ strtoupper(substr($user->name ?? 'U', 0, 1)) }}
                                             </div>
                                             <div>
-                                                <div style="font-weight: 500;">{{ $user->name ?? 'No Name' }}</div>
-                                                <div style="font-size: 0.75rem; color: #6b7280;">{{ $user->email }}</div>
+                                                <div style="font-weight: 500; color: var(--text-main);">
+                                                    {{ $user->name ?? 'No Name' }}</div>
+                                                <div style="font-size: 0.75rem; color: var(--text-muted);">{{ $user->email }}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -101,7 +104,7 @@
                 </div>
 
                 @if($users->hasPages())
-                    <div style="padding: 1rem; border-top: 1px solid #e5e7eb;">
+                    <div style="padding: 1rem; border-top: 1px solid var(--border-color);">
                         {{ $users->links() }}
                     </div>
                 @endif
@@ -156,7 +159,7 @@
                     </div>
                     <div class="form-group" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                         <input type="checkbox" name="is_active" id="addActive" value="1" checked>
-                        <label for="addActive" style="font-size: 0.875rem; font-weight: 500;">Active Account</label>
+                        <label for="addActive" style="font-size: 0.875rem; font-weight: 500; color: var(--text-main);">Active Account</label>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -212,7 +215,7 @@
                     </div>
                     <div class="form-group" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                         <input type="checkbox" name="is_active" id="editActive" value="1">
-                        <label for="editActive" style="font-size: 0.875rem; font-weight: 500;">Active Account</label>
+                        <label for="editActive" style="font-size: 0.875rem; font-weight: 500; color: var(--text-main);">Active Account</label>
                     </div>
                 </div>
                 <div class="modal-footer">

@@ -4,7 +4,8 @@
 
 @section('content')
     @if(session('success'))
-        <div style="background: #d1fae5; color: #065f46; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+        <div
+            style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid rgba(16, 185, 129, 0.3);">
             {{ session('success') }}
         </div>
     @endif
@@ -139,8 +140,9 @@
 
                 <div class="form-grid">
                     <!-- Hero Section -->
-                    <div style="border-bottom: 1px solid #e5e7eb; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
-                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">
+                    <div
+                        style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-main);">
                             <i data-feather="layout"
                                 style="width: 16px; height: 16px; display: inline; vertical-align: middle;"></i>
                             Hero Section
@@ -180,8 +182,9 @@
                     </div>
 
                     <!-- Feature 1 -->
-                    <div style="border-bottom: 1px solid #e5e7eb; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
-                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">
+                    <div
+                        style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-main);">
                             <i data-feather="box"
                                 style="width: 16px; height: 16px; display: inline; vertical-align: middle;"></i>
                             Feature Card 1
@@ -208,8 +211,9 @@
                     </div>
 
                     <!-- Feature 2 -->
-                    <div style="border-bottom: 1px solid #e5e7eb; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
-                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">
+                    <div
+                        style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-main);">
                             <i data-feather="box"
                                 style="width: 16px; height: 16px; display: inline; vertical-align: middle;"></i>
                             Feature Card 2
@@ -236,8 +240,9 @@
                     </div>
 
                     <!-- Feature 3 -->
-                    <div style="border-bottom: 1px solid #e5e7eb; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
-                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">
+                    <div
+                        style="border-bottom: 1px solid var(--border-color); padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-main);">
                             <i data-feather="box"
                                 style="width: 16px; height: 16px; display: inline; vertical-align: middle;"></i>
                             Feature Card 3
@@ -265,7 +270,7 @@
 
                     <!-- Footer -->
                     <div class="form-group">
-                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">
+                        <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--text-main);">
                             <i data-feather="align-center"
                                 style="width: 16px; height: 16px; display: inline; vertical-align: middle;"></i>
                             Footer

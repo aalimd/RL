@@ -65,7 +65,7 @@
                                     <td>
                                         <div style="display: flex; align-items: center; gap: 0.5rem;">
                                             <span
-                                                style="font-family: monospace; font-weight: 600; color: #111827;">{{ $request->tracking_id }}</span>
+                                                style="font-family: monospace; font-weight: 600; color: var(--text-main);">{{ $request->tracking_id }}</span>
                                             <button onclick="copyTracking('{{ $request->tracking_id }}')" class="btn-ghost"
                                                 style="padding: 2px; height: auto;" title="Copy ID">
                                                 <i data-feather="copy" style="width: 12px; height: 12px;"></i>
@@ -73,17 +73,18 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <div style="font-weight: 500; color: #111827;">{{ $request->student_name ?? 'N/A' }}
+                                        <div style="font-weight: 500; color: var(--text-main);">
+                                            {{ $request->student_name ?? 'N/A' }}
                                         </div>
                                         <div style="font-size: 0.75rem; color: #6b7280;">{{ $request->purpose ?? 'General' }}
                                         </div>
                                     </td>
                                     <td>
                                         <span class="badge 
-                                                            @if($request->status === 'Approved') badge-approved
-                                                            @elseif($request->status === 'Rejected') badge-rejected
-                                                            @elseif($request->status === 'Under Review') badge-revision
-                                                            @else badge-pending @endif">
+                                                                    @if($request->status === 'Approved') badge-approved
+                                                                    @elseif($request->status === 'Rejected') badge-rejected
+                                                                    @elseif($request->status === 'Under Review') badge-revision
+                                                                    @else badge-pending @endif">
                                             {{ $request->status }}
                                         </span>
                                     </td>
@@ -161,9 +162,9 @@
                         }
                     @endphp
                     <div
-                        style="padding: 1rem 1.5rem; border-bottom: 1px solid #f3f4f6; display: flex; gap: 1rem; align-items: flex-start;">
+                        style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; gap: 1rem; align-items: flex-start;">
                         <div
-                            style="background: #f3f4f6; padding: 0.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            style="background: var(--input-bg); padding: 0.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
                             <i data-feather="activity" style="width: 16px; height: 16px; color: #6b7280;"></i>
                         </div>
                         <div>
@@ -173,7 +174,7 @@
                                     {{ str_replace(['_', 'api'], [' ', ''], $log->action) }}
                                 </span>
                             </div>
-                            <div style="font-size: 0.8rem; color: #4b5563; margin-top: 0.25rem;">
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
                                 {{ $isJson ? $details : Str::limit($details, 60) }}
                             </div>
                             <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">
@@ -195,6 +196,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             try {
+                const isDarkMode = document.body.classList.contains('dark-mode');
+
                 // Status Doughnut Chart
                 const statusCanvas = document.getElementById('statusChart');
                 if (statusCanvas) {
@@ -221,7 +224,12 @@
                             plugins: {
                                 legend: {
                                     position: 'bottom',
-                                    labels: { usePointStyle: true, padding: 20, font: { family: "'Inter', sans-serif", size: 11 } }
+                                    labels: {
+                                        usePointStyle: true,
+                                        padding: 20,
+                                        font: { family: "'Inter', sans-serif", size: 11 },
+                                        color: isDarkMode ? '#f1f5f9' : '#111827'
+                                    }
                                 }
                             },
                             cutout: '75%'
@@ -261,8 +269,22 @@
                                 tooltip: { mode: 'index', intersect: false }
                             },
                             scales: {
-                                y: { beginAtZero: true, grid: { borderDash: [2, 4], color: '#f3f4f6' } },
-                                x: { grid: { display: false } }
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        borderDash: [2, 4],
+                                        color: isDarkMode ? '#334155' : '#f3f4f6'
+                                    },
+                                    ticks: {
+                                        color: isDarkMode ? '#94a3b8' : '#64748b'
+                                    }
+                                },
+                                x: {
+                                    grid: { display: false },
+                                    ticks: {
+                                        color: isDarkMode ? '#94a3b8' : '#64748b'
+                                    }
+                                }
                             }
                         }
                     });
