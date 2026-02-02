@@ -75,39 +75,39 @@ try {
     }
     require $baseDir . '/vendor/autoload.php';
     if (!file_exists($baseDir . '/bootstrap/app.php')) {
-         throw new Exception("bootstrap/app.php not found.");
+        throw new Exception("bootstrap/app.php not found.");
     }
-    
+
     // Bootstrap the application (Standard Way)
     $app = require_once $baseDir . '/bootstrap/app.php';
-    
+
     // Resolve Console Kernel to run Artisan commands
     $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
     $kernel->bootstrap();
-    
+
     echo "✅ Application Bootstrapped.<br>";
 
     // Attempt Database Connection
     try {
         Illuminate\Support\Facades\DB::connection()->getPdo();
         echo "✅ Database Connection: SUCCESS<br>";
-        
+
         // AUTO-FIX: Run Migrations FORCEFULLY
         echo "<div style='background:#e0f2fe; padding:15px; border:2px solid #0ea5e9; margin:10px 0;'>";
         echo "<h3 style='color:#0284c7; margin-top:0'>🚀 Attempting Full Database Migration...</h3>";
-        
+
         try {
             // Check if we need to migrate
             echo "Running: <code>php artisan migrate --force</code>...<br>";
-            
+
             // Capture output
             Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
             $output = Illuminate\Support\Facades\Artisan::output();
-            
+
             echo "<b>Result:</b><pre style='background:#fff; padding:10px; border:1px solid #ccc;'>" . ($output ?: 'Migration command ran (no output). Check if errors exist below.') . "</pre>";
             echo "<h3 style='color:green'>✅ Operations Completed.</h3>";
             echo "Please refresh the Admin Panel now to check if it works!";
-            
+
         } catch (Throwable $artisanEx) {
             echo "<h3 style='color:red'>❌ Migration Failed:</h3>";
             echo $artisanEx->getMessage() . "<br>";
@@ -118,15 +118,9 @@ try {
         echo "❌ Database Connection Failed: " . $dbEx->getMessage() . "<br>";
         echo "Ensure .env has correct DB_HOST, DB_DATABASE, DB_USERNAME, DB_PASSWORD.<br>";
     }
-    
-} catch (Throwable $e) {
-    echo "<h2 style='color:red'>🔥 CRITICAL BOOT ERROR</h2>";
-    echo "<b>Exception:</b> " . get_class($e) . "<br>";
-    echo "<b>Message:</b> " . $e->getMessage() . "<br>";
-    echo "<pre>" . $e->getTraceAsString() . "</pre>";
-}
 
     // Simulate a request to the failing route (Admin)
+    echo "Attempting to handle request...<br>";
     $request = Illuminate\Http\Request::create('/admin/dashboard', 'GET');
     $response = $kernel->handle($request);
 
