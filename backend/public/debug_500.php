@@ -20,11 +20,24 @@ echo "<h3>2. Critical Paths Permissions & Files</h3>";
 $baseDir = dirname(__DIR__); // Up one level from public
 echo "Backend Root: " . $baseDir . "<br>";
 
-$envFile = $baseDir . '/.env';
 if (file_exists($envFile)) {
-    echo "<b>.env File:</b> <span style='color:green'>FOUND</span><br>";
+    echo "<b>.env File:</b> <span style='color:green'>FOUND</span> (Perms: " . substr(sprintf('%o', fileperms($envFile)), -4) . ")<br>";
 } else {
-    echo "<b>.env File:</b> <span style='color:red; font-size:1.2em; font-weight:bold'>MISSING (CRITICAL)</span> - This is likely the cause!<br>";
+    echo "<b>.env File:</b> <span style='color:red; font-size:1.2em; font-weight:bold'>MISSING (CRITICAL)</span><br>";
+}
+
+// 2.5 Check & Clear Config Cache
+echo "<h3>2.5 Configuration Cache Check</h3>";
+$configCache = $baseDir . '/bootstrap/cache/config.php';
+if (file_exists($configCache)) {
+    echo "<b>Config Cache:</b> <span style='color:orange'>FOUND</span> - This might be blocking .env updates.<br>";
+    if (unlink($configCache)) {
+        echo "<b>Action:</b> <span style='color:green'>DELETED (Cache Cleared)</span>. Please refresh the page!<br>";
+    } else {
+        echo "<b>Action:</b> <span style='color:red'>FAILED TO DELETE</span>. Please delete 'bootstrap/cache/config.php' manually via File Manager.<br>";
+    }
+} else {
+    echo "<b>Config Cache:</b> CLEAN (No stale config found).<br>";
 }
 
 $pathsToCheck = [
