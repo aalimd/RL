@@ -300,28 +300,35 @@ class PageController extends Controller
             return back()->with('error', 'Tracking details not found. Please check your inputs.');
         }
 
-        // 2FA Check: If Telegram is linked, enforce OTP
+        // Always Enforce 2FA/OTP for Security
+        // Generate 6-digit OTP
+        $otp = rand(100000, 999999);
+
+        // Store in session with expiry (5 mins)
+        session([
+            '2fa_otp' => $otp,
+            '2fa_expires' => now()->addMinutes(5),
+            '2fa_request_id' => $result->id,
+            '2fa_tracking_id' => $result->tracking_id // For display/context
+        ]);
+
         if ($result->telegram_chat_id) {
-            // Generate 6-digit OTP
-            $otp = rand(100000, 999999);
-
-            // Store in session with expiry (5 mins)
-            session([
-                '2fa_otp' => $otp,
-                '2fa_expires' => now()->addMinutes(5),
-                '2fa_request_id' => $result->id,
-                '2fa_tracking_id' => $result->tracking_id // For display/context
-            ]);
-
             // Send via Telegram
             $this->telegramService->sendMessageToChat(
                 $result->telegram_chat_id,
                 "🔐 <b>Verification Code</b>\n\nYour code to access request details is: <code>$otp</code>\n\nDo not share this code with anyone."
             );
-
-            // Redirect to Verify Page
-            return redirect()->route('public.tracking.verify');
+        } else {
+            // Send via Email (Fallback)
+            try {
+                Mail::to($result->student_email)->send(new \App\Mail\TrackingVerificationCode($result, $otp));
+            } catch (\Exception $e) {
+                return back()->with('error', 'Failed to send verification code. Please contact support.');
+            }
         }
+
+        // Redirect to Verify Page
+        return redirect()->route('public.tracking.verify');
 
         // No 2FA -> Show details directly
         return view('public.tracking', [
