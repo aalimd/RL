@@ -77,6 +77,10 @@ jobs:
 
                       echo '✅ Laravel Bootstrapped.<br>';
 
+                      // Migrate Database
+                      Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+                      echo '✅ Database Migrated.<br>';
+
                       // Clear Everything
                       Illuminate\Support\Facades\Artisan::call('view:clear');
                       Illuminate\Support\Facades\Artisan::call('cache:clear');
