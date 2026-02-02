@@ -44,7 +44,7 @@ jobs:
           echo '🚀 Starting Deployment Process...<br>';
 
           // 1. Force Delete Critical Files (To prove write access)
-          \$criticalFile = __DIR__ . '/app/Services/TelegramService.php';
+          \$criticalFile = __DIR__ . '/backend/app/Services/TelegramService.php';
           if (file_exists(\$criticalFile)) {
               unlink(\$criticalFile);
               echo '🗑️ Deleted old TelegramService.php<br>';
@@ -55,11 +55,16 @@ jobs:
           \$res = \$zip->open('$ZIP_NAME');
           
           if (\$res === TRUE) {
-              \$zip->extractTo(__DIR__);
+              // EXTRACT TO BACKEND FOLDER
+              \$extractPath = __DIR__ . '/backend';
+              if (!file_exists(\$extractPath)) {
+                  mkdir(\$extractPath, 0755, true);
+              }
+              \$zip->extractTo(\$extractPath);
               \$zip->close();
-              echo '✅ Files Extracted.<br>';
+              echo '✅ Files Extracted to backend/.<br>';
 
-              // 3. Reset PHP Opcache (The likely culprit)
+              // 3. Reset PHP Opcache
               if (function_exists('opcache_reset')) {
                   opcache_reset();
                   echo '✅ Opcache Reset.<br>';
@@ -69,9 +74,9 @@ jobs:
 
               // BOOTSTRAP LARAVEL
               try {
-                  if (file_exists(__DIR__ . '/vendor/autoload.php')) {
-                      require __DIR__ . '/vendor/autoload.php';
-                      \$app = require_once __DIR__ . '/bootstrap/app.php';
+                  if (file_exists(__DIR__ . '/backend/vendor/autoload.php')) {
+                      require __DIR__ . '/backend/vendor/autoload.php';
+                      \$app = require_once __DIR__ . '/backend/bootstrap/app.php';
                       \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class);
                       \$kernel->bootstrap();
 
