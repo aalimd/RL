@@ -526,6 +526,10 @@
             opacity: 1;
         }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@19.5.6/build/css/intlTelInput.css">
+    <style>
+        .iti { width: 100%; }
+    </style>
 @endsection
 
 @section('content')
