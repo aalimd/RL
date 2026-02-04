@@ -1197,12 +1197,39 @@
         preview.innerHTML = `
             <div style="margin-bottom: 20px;">${header}</div>
             <div style="min-height: 400px; line-height: 1.6;">${body}</div>
+            <!-- Signature Section - Table Layout -->
             <div style="margin-top: 40px;">
-                <p style="margin-bottom: 5px;"><strong>${sigName}</strong></p>
-                <p style="margin: 2px 0; color: #666;">${sigTitle}</p>
-                <p style="margin: 2px 0; color: #666;">${sigDept}</p>
-                <p style="margin: 2px 0; color: #666;">${sigInst}</p>
-                ${sigImage ? `<img src="${sigImage}" style="height: 50px; margin-top: 10px;">` : ''}
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <!-- Left Column: Signature Details & Image -->
+                        <td style="vertical-align: top; width: 65%;">
+                            <p style="margin-bottom: 5px;"><strong>${sigName}</strong></p>
+                            ${sigTitle ? `<p style="margin: 2px 0; color: #333;">${sigTitle}</p>` : ''}
+                            
+                            ${sigDept || sigInst ? `
+                                <div style="margin-top: 5px; color: #4b5563;">
+                                    ${sigDept ? `<div>${sigDept}</div>` : ''}
+                                    ${sigInst ? `<div>${sigInst}</div>` : ''}
+                                </div>
+                            ` : ''}
+                            
+                            <!-- Signature Image BELOW details -->
+                            ${sigImage ? `<div style="margin-top: 15px;"><img src="${sigImage}" style="height: 50px; display: block;"></div>` : ''}
+                        </td>
+
+                        <!-- Right Column: Stamp & QR Code -->
+                        <td style="vertical-align: top; text-align: right; width: 35%;">
+                            <!-- Stamp from saved template (if available) - Editor might not show live stamp preview unless we add logic, but placeholder is good for layout check -->
+                            <!-- QR Code Placeholder -->
+                            ${document.getElementById('qrCodeEnabled')?.checked ? `
+                                <div style="margin-top: 10px;">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=PREVIEW" alt="QR Code" style="width: 70px; height: 70px; opacity: 0.5;">
+                                    <div style="font-size: 8px; color: #999;">(Preview)</div>
+                                </div>
+                            ` : ''}
+                        </td>
+                    </tr>
+                </table>
             </div>
             <div style="position: absolute; bottom: 20mm; left: 20mm; right: 20mm; text-align: center; font-size: 9pt; color: #666;">${footer}</div>
         `;

@@ -176,10 +176,6 @@
                 <table style="width: 100%;">
                     <tr>
                         <td style="vertical-align: top; width: 65%;">
-                            @if(!empty($signature['image']))
-                                <img src="{{ $signature['image'] }}" alt="Signature" class="signature-image"><br>
-                            @endif
-
                             @if(!empty($signature['name']))
                                 <div class="signature-name">{{ $signature['name'] }}</div>
                             @endif
@@ -209,10 +205,23 @@
                                     @endif
                                 </div>
                             @endif
+
+                            @if(!empty($signature['image']))
+                                <div style="margin-top: 15px;">
+                                    <img src="{{ $signature['image'] }}" alt="Signature" class="signature-image">
+                                </div>
+                            @endif
                         </td>
                         <td style="vertical-align: top; text-align: right; width: 35%;">
                             @if(!empty($signature['stamp']))
                                 <img src="{{ $signature['stamp'] }}" alt="Official Stamp" class="stamp-image">
+                            @endif
+
+                            {{-- QR Code moved to signature section --}}
+                            @if(!empty($qrCode))
+                                <div style="margin-top: 10px;">
+                                    {!! $qrCode !!}
+                                </div>
                             @endif
                         </td>
                     </tr>

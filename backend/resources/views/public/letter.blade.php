@@ -205,6 +205,64 @@
                 transform-origin: top center;
             }
         }
+
+        /* Mobile/Tablet Responsiveness */
+        @media screen and (max-width: 220mm) {
+            body {
+                padding: 10px;
+                justify-content: flex-start;
+                overflow-x: auto;
+                /* Allow horizontal scroll if really needed, but try to scale first */
+            }
+
+            .letter-page {
+                /* Scale down the entire A4 page to fit screen width */
+                width: 210mm;
+                min-width: 210mm;
+                margin-left: auto;
+                margin-right: auto;
+                transform: scale(0.9);
+                /* Default slight scale down for laptops */
+                margin-top: 20px;
+            }
+
+            .toolbar {
+                position: fixed;
+                top: auto;
+                bottom: 20px;
+                right: 20px;
+                flex-direction: column-reverse;
+                /* Stack buttons on mobile */
+            }
+        }
+
+        @media screen and (max-width: 800px) {
+            .letter-page {
+                transform: scale(0.6);
+                /* Scale more for tablets */
+                margin-top: 0;
+            }
+        }
+
+        @media screen and (max-width: 500px) {
+            .letter-page {
+                transform: scale(0.40);
+                /* Scale more for mobile */
+                margin-top: -100px;
+                /* Counteract empty space from scaling */
+                margin-bottom: -100px;
+            }
+
+            body {
+                padding: 0;
+                overflow-x: hidden;
+            }
+
+            .toolbar {
+                right: 10px;
+                bottom: 10px;
+            }
+        }
     </style>
 </head>
 
@@ -253,27 +311,68 @@
 
         <!-- Signature Block -->
         <div class="letter-signature">
-            <div class="signature-name">{{ $signature['name'] }}</div>
-            <div class="signature-details">
-                @if(!empty($signature['title']))
-                    <div>{{ $signature['title'] }}</div>
-                @endif
-                @if(!empty($signature['department']))
-                    <div>{{ $signature['department'] }}</div>
-                @endif
-                @if(!empty($signature['institution']))
-                    <div>{{ $signature['institution'] }}</div>
-                @endif
-                @if(!empty($signature['email']))
-                    <div>Email: {{ $signature['email'] }}</div>
-                @endif
-            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="vertical-align: top; width: 65%;">
+                        <!-- Name & Title -->
+                        <div class="signature-name">{{ $signature['name'] }}</div>
 
-            @if(!empty($signature['image']))
-                <div class="signature-image">
-                    <img src="{{ $signature['image'] }}" alt="Signature">
-                </div>
-            @endif
+                        @if(!empty($signature['title']))
+                            <div class="signature-details" style="color: #333; font-weight: 500;">
+                                {{ $signature['title'] }}
+                            </div>
+                        @endif
+
+                        <!-- Dept & Institution -->
+                        @if((!empty($signature['institution'])) || (!empty($signature['department'])))
+                            <div class="signature-details" style="margin-top: 5px;">
+                                @if(!empty($signature['department']))
+                                    {{ $signature['department'] }}<br>
+                                @endif
+                                @if(!empty($signature['institution']))
+                                    {{ $signature['institution'] }}
+                                @endif
+                            </div>
+                        @endif
+
+                        <!-- Contact Info -->
+                        @if((!empty($signature['email'])) || (!empty($signature['phone'])))
+                            <div class="signature-details" style="margin-top: 8px;">
+                                @if(!empty($signature['email']))
+                                    <div>Email: {{ $signature['email'] }}</div>
+                                @endif
+                                @if(!empty($signature['phone']))
+                                    <div>Phone: {{ $signature['phone'] }}</div>
+                                @endif
+                            </div>
+                        @endif
+
+                        <!-- Signature Image (Now Below) -->
+                        @if(!empty($signature['image']))
+                            <div class="signature-image" style="margin-top: 15px;">
+                                <img src="{{ $signature['image'] }}" alt="Signature"
+                                    style="height: auto; max-height: 60px; max-width: 150px;">
+                            </div>
+                        @endif
+                    </td>
+
+                    <!-- Right Column: Stamp & QR Code -->
+                    <td style="vertical-align: top; text-align: right; width: 35%;">
+                        @if(!empty($signature['stamp']))
+                            <div style="margin-bottom: 15px;">
+                                <img src="{{ $signature['stamp'] }}" alt="Official Stamp"
+                                    style="max-width: 100px; max-height: 100px; height: auto;">
+                            </div>
+                        @endif
+
+                        @if(!empty($qrCode))
+                            <div style="margin-top: 10px;">
+                                {!! $qrCode !!}
+                            </div>
+                        @endif
+                    </td>
+                </tr>
+            </table>
         </div>
 
         {{-- QR Code Automatic Display --}}
