@@ -109,6 +109,10 @@ jobs:
                   Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
                   echo '✅ Database Migrated.'.PHP_EOL;
 
+                  // Encrypt sensitive settings (Safe to run multiple times)
+                  Illuminate\Support\Facades\Artisan::call('settings:encrypt');
+                  echo '✅ Settings Encrypted.'.PHP_EOL;
+
                   Illuminate\Support\Facades\Artisan::call('view:clear');
                   Illuminate\Support\Facades\Artisan::call('cache:clear');
                   Illuminate\Support\Facades\Artisan::call('config:clear');
