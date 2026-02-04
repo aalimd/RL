@@ -15,9 +15,8 @@ class TelegramService
     public function __construct()
     {
         // Load settings from database
-        // Using get() instead of pluck() to trigger model accessors (encryption)
-        $this->botToken = Settings::where('key', 'telegram_bot_token')->first()?->value;
-        $this->chatId = Settings::where('key', 'telegram_chat_id')->first()?->value;
+        $this->botToken = Settings::getValue('telegram_bot_token');
+        $this->chatId = Settings::getValue('telegram_chat_id');
     }
 
     /**
@@ -156,7 +155,7 @@ class TelegramService
     public function getBotUsername()
     {
         // Check DB first
-        $username = Settings::where('key', 'telegram_bot_username')->value('value');
+        $username = Settings::getValue('telegram_bot_username');
         if ($username) {
             return $username;
         }

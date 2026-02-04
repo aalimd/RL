@@ -60,7 +60,7 @@ class TelegramController extends Controller
         $chatId = $callback['message']['chat']['id'];
 
         // Verify this allows only authorized chat ID
-        $authorizedChatId = Settings::where('key', 'telegram_chat_id')->value('value');
+        $authorizedChatId = Settings::getValue('telegram_chat_id');
         if ($chatId != $authorizedChatId) {
             Log::warning("Unauthorized Telegram attempt from Chat ID: $chatId");
             $this->answerCallback($callbackId, '⛔ Unauthorized');
@@ -289,7 +289,7 @@ class TelegramController extends Controller
      */
     protected function answerCallback($callbackId, $text = null)
     {
-        $botToken = Settings::where('key', 'telegram_bot_token')->value('value');
+        $botToken = Settings::getValue('telegram_bot_token');
         if (!$botToken)
             return;
 
@@ -312,7 +312,7 @@ class TelegramController extends Controller
     public function setupWebhook()
     {
         // Get or generate webhook secret
-        $webhookSecret = Settings::where('key', 'telegram_webhook_secret')->value('value');
+        $webhookSecret = Settings::getValue('telegram_webhook_secret');
         if (!$webhookSecret) {
             $webhookSecret = \Str::random(32);
             Settings::updateOrCreate(
