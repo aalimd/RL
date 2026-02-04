@@ -80,6 +80,7 @@ class RequestController extends Controller
                 'gpa' => $request->gpa ?? null,
                 'deadline' => $request->deadline ?? null,
                 'verify_token' => Str::random(32), // For QR code verification
+                'verification_token' => Str::random(60), // For Student Tracking
                 'status' => 'Submitted'
             ];
 

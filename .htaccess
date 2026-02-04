@@ -1,5 +1,8 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Block access to /install directory
+    RewriteRule ^install/ - [F,L]
     # RewriteBase /
     
     # Handle Authorization Header

@@ -218,7 +218,7 @@ class PageController extends Controller
                         'last_name' => $formData['last_name'] ?? null,
                         'student_email' => $formData['student_email'] ?? '',
                         'phone' => $formData['phone'] ?? null,
-                        'verification_token' => $formData['verification_token'] ?? '',
+                        'verification_token' => $formData['verification_token'] ?? \Str::random(60),
                         'verify_token' => \Str::random(32), // For QR code verification
                         'university' => $formData['university'] ?? null,
                         'purpose' => $formData['purpose'] ?? null,

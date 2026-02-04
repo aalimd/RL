@@ -27,10 +27,16 @@ class TelegramController extends Controller
     public function handleWebhook(Request $request)
     {
         // Security: Verify webhook secret if configured
-        $webhookSecret = Settings::where('key', 'telegram_webhook_secret')->value('value');
-        if ($webhookSecret && $request->query('secret') !== $webhookSecret) {
-            Log::warning('Telegram webhook rejected: Invalid secret token');
-            return response('Forbidden', 403);
+        // Security: Verify webhook secret via Header (New Standard)
+        $webhookSecret = Settings::getValue('telegram_webhook_secret');
+
+        // Strict Check: Check header First
+        if ($webhookSecret) {
+            $headerSecret = $request->header('X-Telegram-Bot-Api-Secret-Token');
+            if ($headerSecret !== $webhookSecret) {
+                Log::warning('Telegram webhook rejected: Invalid secret token header');
+                return response('Forbidden', 403);
+            }
         }
 
         $update = $request->all();
@@ -315,14 +321,18 @@ class TelegramController extends Controller
             );
         }
 
-        $url = url('/api/telegram/webhook') . '?secret=' . $webhookSecret;
+
+
+        // Clean URL (Remove query params if any)
+        $url = url('/api/telegram/webhook');
 
         // Ensure HTTPS
         if (strpos($url, 'http://') === 0) {
             $url = str_replace('http://', 'https://', $url);
         }
 
-        $result = $this->telegram->setWebhook($url);
+        // Set Webhook with Secret Token Header
+        $result = $this->telegram->setWebhook($url, $webhookSecret);
 
         return response()->json($result);
     }

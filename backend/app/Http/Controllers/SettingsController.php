@@ -64,6 +64,15 @@ class SettingsController extends Controller
                 ['key' => $key],
                 ['value' => $value]
             );
+            $updatedKeys[] = $key;
+        }
+
+        if (!empty($updatedKeys)) {
+            \App\Models\AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'update_settings',
+                'details' => json_encode(['updated_keys' => $updatedKeys, 'ip' => $request->ip()]),
+            ]);
         }
 
         return response()->json(['message' => 'Settings updated', 'settings' => $data]);

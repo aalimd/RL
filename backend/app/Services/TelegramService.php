@@ -111,13 +111,22 @@ class TelegramService
 
         // Always add View Details button, ensuring HTTPS manually if needed
         $detailsUrl = url("/admin/requests/{$request->id}");
-        if (strpos($detailsUrl, 'http://') === 0) {
-            $detailsUrl = str_replace('http://', 'https://', $detailsUrl);
-        }
+        $detailsUrl = url("/admin/requests/{$request->id}");
 
-        $keyboard['inline_keyboard'][] = [
-            ['text' => '👁️ View Details', 'url' => $detailsUrl]
-        ];
+        // Ensure HTTPS for production URLs (exclude localhost)
+        $isLocalhost = str_contains($detailsUrl, 'localhost') || str_contains($detailsUrl, '127.0.0.1');
+
+        if (!$isLocalhost) {
+            if (strpos($detailsUrl, 'http://') === 0) {
+                $detailsUrl = str_replace('http://', 'https://', $detailsUrl);
+            }
+            // Only add button if not localhost (Telegram rejects localhost URLs)
+            $keyboard['inline_keyboard'][] = [
+                ['text' => '👁️ View Details', 'url' => $detailsUrl]
+            ];
+        } else {
+            $message .= "\n<b>Note:</b> Access details on your local server.";
+        }
 
         return $this->sendMessage($message, $keyboard);
     }
@@ -125,15 +134,18 @@ class TelegramService
     /**
      * Set the webhook for the bot
      */
-    public function setWebhook($url)
+    public function setWebhook($url, $secretToken = null)
     {
         if (!$this->botToken) {
             return ['ok' => false, 'description' => 'Bot token not set'];
         }
 
-        $response = Http::post($this->apiUrl . $this->botToken . '/setWebhook', [
-            'url' => $url
-        ]);
+        $data = ['url' => $url];
+        if ($secretToken) {
+            $data['secret_token'] = $secretToken;
+        }
+
+        $response = Http::post($this->apiUrl . $this->botToken . '/setWebhook', $data);
 
         return $response->json();
     }
