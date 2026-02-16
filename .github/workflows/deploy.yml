@@ -139,8 +139,8 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: ftps
-          port: 21
+          protocol: sftp
+          port: 65002
           timeout: 600000
           security: loose
           local-dir: ./deploy_package/
