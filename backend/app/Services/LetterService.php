@@ -41,17 +41,17 @@ class LetterService
      */
     public function generateLetterContent(Request $request, ?Template $template = null): array
     {
+        $formData = [];
+        try {
+            $formData = $request->form_data ?? [];
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            Log::error('Decryption failed for request ' . $request->id . ': ' . $e->getMessage());
+            $formData = [];
+        }
+        $templateId = $formData['template_id'] ?? null;
+
         // Resolve Template
         if (!$template) {
-            $templateId = null;
-            try {
-                $formData = $request->form_data ?? [];
-                $templateId = $formData['template_id'] ?? null;
-            } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-                Log::error('Decryption failed for request ' . $request->id . ': ' . $e->getMessage());
-                $formData = [];
-            }
-
             if ($templateId) {
                 $template = Template::find($templateId);
             }

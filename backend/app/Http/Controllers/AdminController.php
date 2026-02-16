@@ -168,13 +168,31 @@ class AdminController extends Controller
     {
         $requestModel = RequestModel::findOrFail($id);
 
+        $validated = $request->validate([
+            'status' => 'required|in:Submitted,Under Review,Approved,Rejected,Archived,Needs Revision',
+            'admin_message' => 'required_if:status,Needs Revision|nullable|string|max:2000',
+        ], [
+            'admin_message.required_if' => 'Admin message is required when status is Needs Revision.',
+        ]);
+
+        if (
+            $validated['status'] === 'Needs Revision' &&
+            trim((string) ($validated['admin_message'] ?? '')) === ''
+        ) {
+            return back()
+                ->withErrors(['admin_message' => 'Admin message is required when status is Needs Revision.'])
+                ->withInput();
+        }
+
         $updateData = [
-            'status' => $request->input('status'),
-            'admin_message' => $request->input('admin_message'),
+            'status' => $validated['status'],
+            'admin_message' => $validated['status'] === 'Needs Revision'
+                ? trim((string) ($validated['admin_message'] ?? ''))
+                : null,
         ];
 
         // Generate verification token if approved and not exists
-        if ($request->input('status') === 'Approved' && !$requestModel->verify_token) {
+        if ($validated['status'] === 'Approved' && !$requestModel->verify_token) {
             $updateData['verify_token'] = Str::random(32);
         }
 
@@ -189,7 +207,7 @@ class AdminController extends Controller
 
         // Send Telegram Notification to Student (if subscribed)
         if ($requestModel->telegram_chat_id) {
-            $status = $request->input('status');
+            $status = $validated['status'];
             $studentMsg = "🔔 <b>Update on your Request</b>\n\n";
             $studentMsg .= "Your request status has been updated to: <b>$status</b>\n";
 
@@ -212,7 +230,7 @@ class AdminController extends Controller
         AuditLog::create([
             'user_id' => auth()->id(),
             'action' => 'update_request_status',
-            'details' => "Changed status of Request #{$requestModel->tracking_id} to {$request->input('status')}"
+            'details' => "Changed status of Request #{$requestModel->tracking_id} to {$validated['status']}"
         ]);
 
         return back()->with('success', 'Status updated successfully!');
@@ -1271,22 +1289,57 @@ class AdminController extends Controller
             abort(403, 'Only admins can change form settings.');
         }
 
+        $validated = $request->validate([
+            'templateSelectionMode' => 'required|in:student_choice,admin_fixed,custom_only',
+            'defaultTemplateId' => 'nullable|integer|exists:templates,id',
+            'fields' => 'nullable|array',
+        ]);
+
+        $templateSelectionMode = $validated['templateSelectionMode'];
+        $defaultTemplateId = $validated['defaultTemplateId'] ?? null;
+
+        if ($templateSelectionMode === 'admin_fixed') {
+            if (!$defaultTemplateId) {
+                return back()
+                    ->withErrors(['defaultTemplateId' => 'Default template is required when using Admin Fixed mode.'])
+                    ->withInput();
+            }
+
+            $hasActiveTemplate = Template::where('id', $defaultTemplateId)
+                ->where('is_active', true)
+                ->exists();
+
+            if (!$hasActiveTemplate) {
+                return back()
+                    ->withErrors(['defaultTemplateId' => 'Selected default template must be active.'])
+                    ->withInput();
+            }
+        }
+
+        $allowCustomContent = $templateSelectionMode === 'custom_only'
+            ? 'true'
+            : ($request->has('allowCustomContent') ? 'true' : 'false');
+
+        $defaultTemplateToSave = $templateSelectionMode === 'admin_fixed'
+            ? (string) $defaultTemplateId
+            : '';
+
         // Save template selection mode
         Settings::updateOrCreate(
             ['key' => 'templateSelectionMode'],
-            ['value' => $request->input('templateSelectionMode', 'student_choice')]
+            ['value' => $templateSelectionMode]
         );
 
         // Save default template ID
         Settings::updateOrCreate(
             ['key' => 'defaultTemplateId'],
-            ['value' => $request->input('defaultTemplateId', '')]
+            ['value' => $defaultTemplateToSave]
         );
 
         // Save allow custom content
         Settings::updateOrCreate(
             ['key' => 'allowCustomContent'],
-            ['value' => $request->has('allowCustomContent') ? 'true' : 'false']
+            ['value' => $allowCustomContent]
         );
 
         // Build and save field configuration
@@ -1306,14 +1359,28 @@ class AdminController extends Controller
             'deadline',
             'notes'
         ];
+        $lockedRequiredFields = ['student_email', 'verification_token'];
 
         $submittedFields = $request->input('fields', []);
         $fieldConfig = [];
 
         foreach ($knownFields as $fieldKey) {
+            $isVisible = isset($submittedFields[$fieldKey]['visible']);
+            $isRequired = isset($submittedFields[$fieldKey]['required']);
+
+            // Required field cannot be true when the field is hidden.
+            if (!$isVisible) {
+                $isRequired = false;
+            }
+
+            if (in_array($fieldKey, $lockedRequiredFields, true)) {
+                $isVisible = true;
+                $isRequired = true;
+            }
+
             $fieldConfig[$fieldKey] = [
-                'visible' => isset($submittedFields[$fieldKey]['visible']),
-                'required' => isset($submittedFields[$fieldKey]['required']),
+                'visible' => $isVisible,
+                'required' => $isRequired,
             ];
         }
 

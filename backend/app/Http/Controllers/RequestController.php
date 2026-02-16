@@ -7,8 +7,8 @@ use App\Models\User;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use App\Mail\RequestSubmittedToStudent;
 use App\Mail\RequestSubmittedToAdmin;
 
@@ -60,10 +60,22 @@ class RequestController extends Controller
         try {
             // Validation
             $validated = $request->validate([
-                'studentName' => 'required|string',
-                'studentEmail' => 'required|email',
-                'university' => 'required|string',
-                'purpose' => 'required|string',
+                'studentName' => 'required|string|max:255',
+                'middleName' => 'nullable|string|max:255',
+                'lastName' => 'nullable|string|max:255',
+                'studentEmail' => 'required|email|max:255',
+                'phone' => 'nullable|string|max:20',
+                'university' => 'required|string|max:255',
+                'purpose' => 'required|string|max:100',
+                'gpa' => 'nullable|numeric|min:0|max:4',
+                'deadline' => 'nullable|date',
+                'trainingPeriod' => 'nullable|string|max:100',
+                'templateId' => 'nullable|integer|exists:templates,id',
+                'customContent' => 'nullable|string',
+                'contentOption' => 'nullable|in:template,custom',
+                'formData' => 'nullable|array',
+                'verificationToken' => 'nullable|string|max:100',
+                'verifyToken' => 'nullable|string|max:64',
                 // File validation
                 'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048'
             ]);
@@ -71,16 +83,47 @@ class RequestController extends Controller
 
             $trackingId = 'REC-' . date('Y') . '-' . strtoupper(Str::random(8));
 
+            $formData = $validated['formData'] ?? [];
+            if (!array_key_exists('middle_name', $formData) && !empty($validated['middleName'])) {
+                $formData['middle_name'] = $validated['middleName'];
+            }
+            if (!array_key_exists('last_name', $formData) && !empty($validated['lastName'])) {
+                $formData['last_name'] = $validated['lastName'];
+            }
+            if (!array_key_exists('phone', $formData) && !empty($validated['phone'])) {
+                $formData['phone'] = $validated['phone'];
+            }
+            if (!array_key_exists('training_period', $formData) && !empty($validated['trainingPeriod'])) {
+                $formData['training_period'] = $validated['trainingPeriod'];
+            }
+            if (!array_key_exists('template_id', $formData) && !empty($validated['templateId'])) {
+                $formData['template_id'] = $validated['templateId'];
+            }
+            if (!array_key_exists('custom_content', $formData) && !empty($validated['customContent'])) {
+                $formData['custom_content'] = $validated['customContent'];
+            }
+            if (!array_key_exists('content_option', $formData) && !empty($validated['contentOption'])) {
+                $formData['content_option'] = $validated['contentOption'];
+            }
+
             $data = [
                 'tracking_id' => $trackingId,
-                'student_name' => $request->studentName,
-                'student_email' => $request->studentEmail,
-                'university' => $request->university,
-                'purpose' => $request->purpose,
-                'gpa' => $request->gpa ?? null,
-                'deadline' => $request->deadline ?? null,
-                'verify_token' => Str::random(32), // For QR code verification
-                'verification_token' => Str::random(60), // For Student Tracking
+                'student_name' => $validated['studentName'],
+                'middle_name' => $validated['middleName'] ?? null,
+                'last_name' => $validated['lastName'] ?? null,
+                'student_email' => $validated['studentEmail'],
+                'phone' => $validated['phone'] ?? null,
+                'university' => $validated['university'],
+                'purpose' => $validated['purpose'],
+                'gpa' => $validated['gpa'] ?? null,
+                'deadline' => $validated['deadline'] ?? null,
+                'training_period' => $validated['trainingPeriod'] ?? null,
+                'template_id' => $validated['templateId'] ?? null,
+                'custom_content' => $validated['customContent'] ?? null,
+                'content_option' => $validated['contentOption'] ?? null,
+                'form_data' => !empty($formData) ? $formData : null,
+                'verify_token' => $validated['verifyToken'] ?? Str::random(32), // For QR code verification
+                'verification_token' => $validated['verificationToken'] ?? Str::random(60), // For Student Tracking
                 'status' => 'Submitted'
             ];
 
@@ -133,6 +176,8 @@ class RequestController extends Controller
 
             return response()->json($this->mapBackendToFrontend([$newRequest])[0], 201);
 
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Request Creation Failed: ' . $e->getMessage());
             return response()->json(['message' => 'An error occurred. Please try again later.'], 500);
@@ -153,26 +198,94 @@ class RequestController extends Controller
 
         $validated = $request->validate([
             'studentName' => 'sometimes|string|max:255',
+            'middleName' => 'sometimes|nullable|string|max:255',
+            'lastName' => 'sometimes|nullable|string|max:255',
             'studentEmail' => 'sometimes|email|max:255',
+            'phone' => 'sometimes|nullable|string|max:20',
             'university' => 'sometimes|string|max:255',
             'purpose' => 'sometimes|string|max:100',
             'gpa' => 'sometimes|nullable|numeric|min:0|max:4',
             'deadline' => 'sometimes|nullable|date',
+            'trainingPeriod' => 'sometimes|nullable|string|max:100',
+            'templateId' => 'sometimes|nullable|integer|exists:templates,id',
+            'customContent' => 'sometimes|nullable|string',
+            'contentOption' => 'sometimes|nullable|in:template,custom',
+            'verificationToken' => 'sometimes|nullable|string|max:100',
+            'verifyToken' => 'sometimes|nullable|string|max:64',
+            'formData' => 'sometimes|nullable|array',
         ]);
 
         $data = [];
-        if (isset($validated['studentName']))
+        if (array_key_exists('studentName', $validated))
             $data['student_name'] = $validated['studentName'];
-        if (isset($validated['studentEmail']))
+        if (array_key_exists('middleName', $validated))
+            $data['middle_name'] = $validated['middleName'];
+        if (array_key_exists('lastName', $validated))
+            $data['last_name'] = $validated['lastName'];
+        if (array_key_exists('studentEmail', $validated))
             $data['student_email'] = $validated['studentEmail'];
-        if (isset($validated['university']))
+        if (array_key_exists('phone', $validated))
+            $data['phone'] = $validated['phone'];
+        if (array_key_exists('university', $validated))
             $data['university'] = $validated['university'];
-        if (isset($validated['purpose']))
+        if (array_key_exists('purpose', $validated))
             $data['purpose'] = $validated['purpose'];
-        if (isset($validated['gpa']))
+        if (array_key_exists('gpa', $validated))
             $data['gpa'] = $validated['gpa'];
-        if (isset($validated['deadline']))
+        if (array_key_exists('deadline', $validated))
             $data['deadline'] = $validated['deadline'];
+        if (array_key_exists('trainingPeriod', $validated))
+            $data['training_period'] = $validated['trainingPeriod'];
+        if (array_key_exists('templateId', $validated))
+            $data['template_id'] = $validated['templateId'];
+        if (array_key_exists('customContent', $validated))
+            $data['custom_content'] = $validated['customContent'];
+        if (array_key_exists('contentOption', $validated))
+            $data['content_option'] = $validated['contentOption'];
+        if (array_key_exists('verificationToken', $validated))
+            $data['verification_token'] = $validated['verificationToken'];
+        if (array_key_exists('verifyToken', $validated))
+            $data['verify_token'] = $validated['verifyToken'];
+
+        $syncFormData = array_key_exists('formData', $validated)
+            || array_key_exists('middleName', $validated)
+            || array_key_exists('lastName', $validated)
+            || array_key_exists('phone', $validated)
+            || array_key_exists('trainingPeriod', $validated)
+            || array_key_exists('templateId', $validated)
+            || array_key_exists('customContent', $validated)
+            || array_key_exists('contentOption', $validated);
+
+        if ($syncFormData) {
+            $formData = array_key_exists('formData', $validated) ? ($validated['formData'] ?? []) : ($req->form_data ?? []);
+            if (!is_array($formData)) {
+                $formData = [];
+            }
+
+            if (array_key_exists('middleName', $validated)) {
+                $formData['middle_name'] = $validated['middleName'];
+            }
+            if (array_key_exists('lastName', $validated)) {
+                $formData['last_name'] = $validated['lastName'];
+            }
+            if (array_key_exists('phone', $validated)) {
+                $formData['phone'] = $validated['phone'];
+            }
+            if (array_key_exists('trainingPeriod', $validated)) {
+                $formData['training_period'] = $validated['trainingPeriod'];
+            }
+            if (array_key_exists('templateId', $validated)) {
+                $formData['template_id'] = $validated['templateId'];
+            }
+            if (array_key_exists('customContent', $validated)) {
+                $formData['custom_content'] = $validated['customContent'];
+            }
+            if (array_key_exists('contentOption', $validated)) {
+                $formData['content_option'] = $validated['contentOption'];
+            }
+
+            $data['form_data'] = $formData;
+        }
 
         $req->update($data);
         return response()->json($this->mapBackendToFrontend([$req])[0]);
@@ -187,16 +300,27 @@ class RequestController extends Controller
             return response()->json(['error' => 'Unauthorized. Admin or Editor role required.'], 403);
         }
 
+        $validated = $request->validate([
+            'status' => 'required|in:Submitted,Under Review,Approved,Rejected,Archived,Needs Revision',
+            'rejectionReason' => 'required_if:status,Rejected|nullable|string|max:2000',
+            'adminMessage' => 'required_if:status,Needs Revision|nullable|string|max:2000',
+        ]);
+
         $req = RequestModel::findOrFail($id);
-        $req->status = $request->status;
-        if ($request->status === 'Rejected') {
-            $req->rejection_reason = $request->rejectionReason;
+        $req->status = $validated['status'];
+        if ($validated['status'] === 'Rejected') {
+            $req->rejection_reason = $validated['rejectionReason'] ?? null;
+        } else {
+            $req->rejection_reason = null;
+        }
+        if (array_key_exists('adminMessage', $validated)) {
+            $req->admin_message = $validated['adminMessage'];
         }
         $req->save();
 
         AuditLog::create([
             'action' => 'UPDATE_STATUS',
-            'details' => "Status changed to {$request->status} by {$user->name} (Request ID: {$req->id})",
+            'details' => "Status changed to {$validated['status']} by {$user->name} (Request ID: {$req->id})",
             'user_id' => $user->id,
             'ip_address' => $request->ip()
         ]);
@@ -237,12 +361,23 @@ class RequestController extends Controller
                 'id' => $item['id'],
                 'trackingId' => $item['tracking_id'],
                 'studentName' => $item['student_name'],
+                'middleName' => $item['middle_name'],
+                'lastName' => $item['last_name'],
                 'studentEmail' => $item['student_email'],
+                'phone' => $item['phone'],
                 'university' => $item['university'],
                 'gpa' => $item['gpa'],
                 'purpose' => $item['purpose'],
                 'status' => $item['status'],
                 'deadline' => $item['deadline'],
+                'trainingPeriod' => $item['training_period'],
+                'templateId' => $item['template_id'],
+                'contentOption' => $item['content_option'],
+                'customContent' => $item['custom_content'],
+                'verifyToken' => $item['verify_token'],
+                'verificationToken' => $item['verification_token'],
+                'adminMessage' => $item['admin_message'],
+                'formData' => $item['form_data'],
                 'documentPath' => $item['document_path'],
                 'rejectionReason' => $item['rejection_reason'],
                 'createdAt' => $item['created_at'],

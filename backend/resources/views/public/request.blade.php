@@ -262,27 +262,6 @@
             color: #111827;
         }
 
-        border: 2px solid #e5e7eb;
-        border-radius: 0.75rem;
-        font-size: 1rem;
-        transition: all 0.2s;
-        background: #f9fafb;
-        color: #111827;
-        }
-
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-        }
-
-        .form-input::placeholder {
-            color: #9ca3af;
-        }
-
         .form-input.error,
         .form-select.error {
             border-color: #ef4444;
@@ -714,6 +693,9 @@
 @endsection
 
 @section('content')
+    @php
+        $isEditMode = session('wizard_mode') === 'edit';
+    @endphp
     <div class="request-page">
         <!-- Ambient Background -->
         <div class="ambient-bg"></div>
@@ -734,27 +716,37 @@
             <i data-lucide="sun" class="sun-icon"></i>
         </button>
 
-        <div class="wizard-container">
-            <!-- Header -->
-            <div class="page-header">
-                @if($settings['logoUrl'] ?? false)
-                    <img src="{{ $settings['logoUrl'] }}" alt="Logo" style="height: 50px; margin-bottom: 1rem;">
-                @endif
-                <h1>{{ $settings['requestTitle'] ?? 'Request Recommendation Letter' }}</h1>
-                <p>{{ $settings['requestSubtitle'] ?? 'Submit your recommendation letter request' }}</p>
-            </div>
+            <div class="wizard-container">
+                <!-- Header -->
+                <div class="page-header">
+                    @if($settings['logoUrl'] ?? false)
+                        <img src="{{ $settings['logoUrl'] }}" alt="Logo" style="height: 50px; margin-bottom: 1rem;">
+                    @endif
+                    <h1>{{ $isEditMode ? 'Update Recommendation Request' : ($settings['requestTitle'] ?? 'Request Recommendation Letter') }}
+                    </h1>
+                    <p>{{ $isEditMode ? 'Please complete the requested changes and submit your revisions for review.' : ($settings['requestSubtitle'] ?? 'Submit your recommendation letter request') }}
+                    </p>
+                </div>
 
-            @if(session('success'))
-                <!-- Success Screen -->
-                <div class="form-card">
-                    <div class="success-screen">
+                @if(session('info'))
+                    <div
+                        style="margin-bottom: 1rem; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #92400e; border-radius: 0.75rem; padding: 0.875rem 1rem;">
+                        {{ session('info') }}
+                    </div>
+                @endif
+
+                @if(session('success'))
+                    <!-- Success Screen -->
+                    <div class="form-card">
+                        <div class="success-screen">
                         <div class="success-icon">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
-                        <h2 class="success-title">Request Submitted Successfully!</h2>
-                        <p class="success-subtitle">Your recommendation request has been received.</p>
+                        <h2 class="success-title">{{ session('success_title', 'Request Submitted Successfully!') }}</h2>
+                        <p class="success-subtitle">
+                            {{ session('success_subtitle', 'Your recommendation request has been received.') }}</p>
 
                         <div class="tracking-box"
                             style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
@@ -822,6 +814,14 @@
                         @csrf
                         <input type="hidden" name="step" value="{{ $step }}">
                         <input type="hidden" name="action" value="next" id="formAction">
+
+                        @if($isEditMode && !empty($formData['admin_message']))
+                            <div
+                                style="margin-bottom: 1rem; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #92400e; border-radius: 0.75rem; padding: 1rem;">
+                                <div style="font-weight: 700; margin-bottom: 0.35rem;">Admin Revision Note</div>
+                                <div style="line-height: 1.5;">{{ $formData['admin_message'] }}</div>
+                            </div>
+                        @endif
 
                         <!-- Preserve data between steps -->
                         @foreach($formData as $key => $value)
@@ -1075,6 +1075,17 @@
                         @elseif($step == 3)
                             <!-- STEP 3: Review & Submit -->
                             <h2 class="form-section-title">Review & Submit</h2>
+                            @php
+                                $trainingPeriodDisplay = '-';
+                                $trainingPeriodRaw = $formData['training_period'] ?? null;
+                                if (!empty($trainingPeriodRaw)) {
+                                    try {
+                                        $trainingPeriodDisplay = \Carbon\Carbon::parse($trainingPeriodRaw . '-01')->format('F, Y');
+                                    } catch (\Exception $e) {
+                                        $trainingPeriodDisplay = $trainingPeriodRaw;
+                                    }
+                                }
+                            @endphp
 
                             <div class="summary-box">
                                 <div class="summary-row">
@@ -1102,8 +1113,7 @@
                                 </div>
                                 <div class="summary-row">
                                     <span class="summary-label">Training Period</span>
-                                    <span
-                                        class="summary-value">{{ $formData['training_period'] ? \Carbon\Carbon::parse($formData['training_period'] . '-01')->format('F, Y') : '-' }}</span>
+                                    <span class="summary-value">{{ $trainingPeriodDisplay }}</span>
                                 </div>
                                 <div class="summary-row">
                                     <span class="summary-label">Content Type</span>
@@ -1165,7 +1175,7 @@
                                 <button type="submit" name="action" value="submit" class="btn-nav btn-submit"
                                     onclick="document.getElementById('formAction').value='submit'">
                                     <i data-lucide="send" style="width: 16px; height: 16px;"></i>
-                                    {{ $settings['requestSubmitBtn'] ?? 'Submit Request' }}
+                                    {{ $isEditMode ? 'Submit Revisions' : ($settings['requestSubmitBtn'] ?? 'Submit Request') }}
                                 </button>
                             </div>
                         @endif

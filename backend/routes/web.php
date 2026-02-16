@@ -22,6 +22,7 @@ Route::post('/login', [PageController::class, 'login'])->middleware('throttle:6,
 Route::post('/logout', [PageController::class, 'logout'])->name('logout');
 Route::get('/request', [PageController::class, 'publicRequest'])->name('public.request');
 Route::post('/request', [PageController::class, 'handleWizard'])->middleware('throttle:10,1')->name('public.request.wizard');
+Route::post('/request/edit', [PageController::class, 'initializeEdit'])->middleware('throttle:10,1')->name('public.request.edit');
 Route::get('/track/{id?}', [PageController::class, 'tracking'])->name('public.tracking');
 Route::post('/track', [PageController::class, 'doTracking'])->middleware('throttle:10,1')->name('public.tracking.post');
 Route::get('/letter/{tracking_id}', [PageController::class, 'viewLetter'])->name('public.letter');

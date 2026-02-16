@@ -3,16 +3,23 @@
 @section('page-title', 'Request Details')
 
 @section('content')
+    @php
+        $canManageRequests = auth()->check() && in_array(auth()->user()->role, ['admin', 'editor'], true);
+        $statusValue = old('status', $request->status);
+        $adminMessageValue = old('admin_message', $request->admin_message ?? '');
+    @endphp
     <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
         <a href="{{ route('admin.requests') }}" class="btn btn-ghost">
             <i data-feather="arrow-left" style="width: 16px; height: 16px;"></i>
             Back to Requests
         </a>
         <div style="display: flex; gap: 0.5rem;">
-            <button type="button" class="btn btn-secondary" onclick="openEditModal()">
-                <i data-feather="edit-2" style="width: 16px; height: 16px;"></i>
-                Edit Request
-            </button>
+            @if($canManageRequests)
+                <button type="button" class="btn btn-secondary" onclick="openEditModal()">
+                    <i data-feather="edit-2" style="width: 16px; height: 16px;"></i>
+                    Edit Request
+                </button>
+            @endif
             @if($request->status === 'Approved')
                 {{--
                 <a href="{{ route('public.letter.pdf', $request->id) }}" class="btn btn-secondary"
@@ -33,6 +40,26 @@
         <div
             style="background: var(--success-bg); color: var(--success-text); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid var(--success-border);">
             {{ session('success') }}
+        </div>
+    @endif
+    @if(session('error'))
+        <div
+            style="background: #fef2f2; color: #b91c1c; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #fecaca;">
+            {{ session('error') }}
+        </div>
+    @endif
+    @if($errors->has('status') || $errors->has('admin_message'))
+        @php
+            $statusErrors = array_merge($errors->get('status'), $errors->get('admin_message'));
+        @endphp
+        <div
+            style="background: #fff7ed; color: #9a3412; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #fed7aa;">
+            <div style="font-weight: 600; margin-bottom: 0.5rem;">Could not update status:</div>
+            <ul style="margin: 0; padding-left: 1.25rem;">
+                @foreach($statusErrors as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
     @endif
     <div class="card">
@@ -172,38 +199,48 @@
                 <h4 style="font-size: 0.875rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem;">
                     Update
                     Status</h4>
+                @if($canManageRequests)
+                    <form method="POST" action="{{ route('admin.requests.update-status', $request->id) }}"
+                        style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        @csrf
+                        @method('PATCH')
 
-                <form method="POST" action="{{ route('admin.requests.update-status', $request->id) }}"
-                    style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                    @csrf
-                    @method('PATCH')
+                        <div>
+                            <label
+                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-main);">Status</label>
+                            <select id="statusSelect" name="status" class="form-select"
+                                style="padding: 0.5rem 1rem; border-radius: 0.5rem;">
+                                <option value="Submitted" {{ $statusValue === 'Submitted' ? 'selected' : '' }}>Submitted
+                                </option>
+                                <option value="Under Review" {{ $statusValue === 'Under Review' ? 'selected' : '' }}>Under
+                                    Review</option>
+                                <option value="Needs Revision" {{ $statusValue === 'Needs Revision' ? 'selected' : '' }}>Needs
+                                    Revision</option>
+                                <option value="Approved" {{ $statusValue === 'Approved' ? 'selected' : '' }}>Approved</option>
+                                <option value="Rejected" {{ $statusValue === 'Rejected' ? 'selected' : '' }}>Rejected</option>
+                                <option value="Archived" {{ $statusValue === 'Archived' ? 'selected' : '' }}>Archived</option>
+                            </select>
+                        </div>
 
-                    <div>
-                        <label
-                            style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-main);">Status</label>
-                        <select name="status" class="form-select" style="padding: 0.5rem 1rem; border-radius: 0.5rem;">
-                            <option value="Submitted" {{ $request->status === 'Submitted' ? 'selected' : '' }}>Submitted
-                            </option>
-                            <option value="Under Review" {{ $request->status === 'Under Review' ? 'selected' : '' }}>Under
-                                Review</option>
-                            <option value="Approved" {{ $request->status === 'Approved' ? 'selected' : '' }}>Approved</option>
-                            <option value="Rejected" {{ $request->status === 'Rejected' ? 'selected' : '' }}>Rejected</option>
-                            <option value="Archived" {{ $request->status === 'Archived' ? 'selected' : '' }}>Archived</option>
-                        </select>
+                        <div style="flex: 1; min-width: 250px;">
+                            <label id="adminMessageLabel"
+                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 500;">Admin
+                                Message <span id="adminMessageHint">{{ $statusValue === 'Needs Revision' ? '(Required for Needs Revision)' : '(Optional)' }}</span></label>
+                            <textarea id="adminMessageField" name="admin_message" rows="1" class="form-textarea"
+                                style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem; min-height: 42px; height: 42px; line-height: 1.5;"
+                                placeholder="Message to student..." onfocus="this.rows=3; this.style.height='auto'"
+                                onblur="if(this.value==''){this.rows=1; this.style.height='42px'}"
+                                {{ $statusValue === 'Needs Revision' ? 'required' : '' }}>{{ $adminMessageValue }}</textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Update Status</button>
+                    </form>
+                @else
+                    <div
+                        style="background: #f9fafb; color: #4b5563; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.75rem 1rem;">
+                        Your account has read-only access. Only admin/editor roles can update request status.
                     </div>
-
-                    <div style="flex: 1; min-width: 250px;">
-                        <label
-                            style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 500;">Admin
-                            Message (Optional)</label>
-                        <textarea name="admin_message" rows="1" class="form-textarea"
-                            style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem; min-height: 42px; height: 42px; line-height: 1.5;"
-                            placeholder="Message to student..." onfocus="this.rows=3; this.style.height='auto'"
-                            onblur="if(this.value==''){this.rows=1; this.style.height='42px'}">{{ $request->admin_message ?? '' }}</textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary">Update Status</button>
-                </form>
+                @endif
             </div>
         </div>
     </div>
@@ -241,21 +278,22 @@
         </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div id="editModal" class="modal" style="display: none;">
-        <div class="modal-overlay" onclick="closeEditModal()"></div>
-        <div class="modal-content" style="max-width: 700px; height: auto; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-header">
-                <h3>Edit Request Data</h3>
-                <button type="button" onclick="closeEditModal()" class="btn btn-ghost"
-                    style="color: #6b7280; padding: 0.5rem;">
-                    <i data-feather="x" style="width: 24px; height: 24px;"></i>
-                </button>
-            </div>
-            <div style="padding: 1.5rem;">
-                <form method="POST" action="{{ route('admin.requests.update', $request->id) }}">
-                    @csrf
-                    @method('PUT')
+    @if($canManageRequests)
+        <!-- Edit Modal -->
+        <div id="editModal" class="modal" style="display: none;">
+            <div class="modal-overlay" onclick="closeEditModal()"></div>
+            <div class="modal-content" style="max-width: 700px; height: auto; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h3>Edit Request Data</h3>
+                    <button type="button" onclick="closeEditModal()" class="btn btn-ghost"
+                        style="color: #6b7280; padding: 0.5rem;">
+                        <i data-feather="x" style="width: 24px; height: 24px;"></i>
+                    </button>
+                </div>
+                <div style="padding: 1.5rem;">
+                    <form method="POST" action="{{ route('admin.requests.update', $request->id) }}">
+                        @csrf
+                        @method('PUT')
 
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
                         <div style="margin-bottom: 1rem;">
@@ -388,10 +426,11 @@
                         <button type="button" onclick="closeEditModal()" class="btn btn-secondary">Cancel</button>
                         <button type="submit" class="btn btn-primary">Save Changes</button>
                     </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
-    </div>
+    @endif
 
     <style>
         @keyframes spin {
@@ -535,6 +574,25 @@
 @section('scripts')
     <script>
         let currentLetterData = null;
+        function syncStatusForm() {
+            const statusSelect = document.getElementById('statusSelect');
+            const adminMessageField = document.getElementById('adminMessageField');
+            const adminMessageHint = document.getElementById('adminMessageHint');
+
+            if (!statusSelect || !adminMessageField || !adminMessageHint) return;
+
+            const needsRevision = statusSelect.value === 'Needs Revision';
+            adminMessageField.required = needsRevision;
+            adminMessageHint.textContent = needsRevision ? '(Required for Needs Revision)' : '(Optional)';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusSelect = document.getElementById('statusSelect');
+            if (statusSelect) {
+                statusSelect.addEventListener('change', syncStatusForm);
+                syncStatusForm();
+            }
+        });
 
         function openPreviewModal() {
             document.getElementById('previewModal').style.display = 'flex';

@@ -17,6 +17,14 @@ class Request extends Model
         'last_name',
         'student_email',
         'phone',
+        'university',
+        'gpa',
+        'purpose',
+        'deadline',
+        'training_period',
+        'template_id',
+        'content_option',
+        'custom_content',
         'status',
         'verify_token', // QR Verification Token (generated on approval)
         'verification_token', // Student Tracking ID Number (used for public tracking)

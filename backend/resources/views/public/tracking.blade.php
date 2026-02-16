@@ -694,6 +694,14 @@
             </div>
 
             <div class="tracking-card">
+                @if(session('success'))
+                    <div class="status-info-box" style="margin-bottom: 1.5rem;">
+                        <i data-lucide="check-circle"
+                            style="width: 18px; height: 18px; color: #10b981; flex-shrink: 0; margin-top: 2px;"></i>
+                        <p class="status-info-text">{{ session('success') }}</p>
+                    </div>
+                @endif
+
                 @if(session('error'))
                     <div class="error-box">
                         <i data-lucide="alert-circle" style="width: 20px; height: 20px; flex-shrink: 0;"></i>
@@ -857,6 +865,30 @@
                                 </div>
                                 <span>Subscribe to Updates</span>
                             </a>
+                        @endif
+
+                        @php
+                            $verifiedRequestId = session('tracking_verified_request_id');
+                            $verifiedTrackingId = session('tracking_verified_tracking_id');
+                            $verifiedUntil = (int) session('tracking_verified_until', 0);
+                            $hasVerifiedSession = $verifiedRequestId
+                                && $verifiedTrackingId
+                                && $verifiedUntil >= now()->timestamp
+                                && (int) $verifiedRequestId === (int) $request->id
+                                && (string) $verifiedTrackingId === (string) $request->tracking_id;
+                            $canEditRequest = $request->status === 'Needs Revision' && $hasVerifiedSession;
+                        @endphp
+
+                        @if($canEditRequest)
+                            <form method="POST" action="{{ route('public.request.edit') }}">
+                                @csrf
+                                <input type="hidden" name="tracking_id" value="{{ $request->tracking_id }}">
+                                <button type="submit" class="view-letter-btn"
+                                    style="background: linear-gradient(135deg, #f59e0b, #d97706); margin-top: 1rem;">
+                                    <i data-lucide="square-pen" style="width: 18px; height: 18px;"></i>
+                                    Edit Request
+                                </button>
+                            </form>
                         @endif
 
                         @if($request->status === 'Approved')

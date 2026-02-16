@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Settings;
-use App\Models\Request as RequestModel;
 use App\Models\Template;
 use Illuminate\Http\Request;
 
@@ -18,11 +17,33 @@ class WizardService
             ->pluck('value', 'key')
             ->toArray();
 
+        $templateMode = $allSettings['templateSelectionMode'] ?? 'student_choice';
+        if (!in_array($templateMode, ['student_choice', 'admin_fixed', 'custom_only'], true)) {
+            $templateMode = 'student_choice';
+        }
+
+        $defaultTemplateId = !empty($allSettings['defaultTemplateId']) ? (int) $allSettings['defaultTemplateId'] : null;
+        $allowCustomContent = ($allSettings['allowCustomContent'] ?? 'true') === 'true';
+        if ($templateMode === 'custom_only') {
+            // In custom-only mode, custom content must stay enabled.
+            $allowCustomContent = true;
+        }
+
+        $fields = json_decode($allSettings['formFieldConfig'] ?? '{}', true) ?: [];
+
+        // Critical fields for tracking/OTP should never be hidden or optional.
+        foreach (['student_email', 'verification_token'] as $lockedField) {
+            $fields[$lockedField] = [
+                'visible' => true,
+                'required' => true,
+            ];
+        }
+
         return [
-            'templateMode' => $allSettings['templateSelectionMode'] ?? 'student_choice',
-            'defaultTemplateId' => $allSettings['defaultTemplateId'] ?? null,
-            'allowCustomContent' => ($allSettings['allowCustomContent'] ?? 'true') === 'true',
-            'fields' => json_decode($allSettings['formFieldConfig'] ?? '{}', true) ?: [],
+            'templateMode' => $templateMode,
+            'defaultTemplateId' => $defaultTemplateId,
+            'allowCustomContent' => $allowCustomContent,
+            'fields' => $fields,
         ];
     }
 
@@ -31,11 +52,54 @@ class WizardService
      */
     public function getTemplates(array $formConfig)
     {
-        if ($formConfig['templateMode'] === 'admin_fixed' && $formConfig['defaultTemplateId']) {
-            return Template::where('id', $formConfig['defaultTemplateId'])->get();
+        if (($formConfig['templateMode'] ?? 'student_choice') === 'admin_fixed') {
+            if (empty($formConfig['defaultTemplateId'])) {
+                return Template::whereRaw('1 = 0')->get();
+            }
+
+            return Template::where('id', $formConfig['defaultTemplateId'])
+                ->where('is_active', true)
+                ->get();
         }
 
         return Template::where('is_active', true)->orderBy('name')->get();
+    }
+
+    /**
+     * Resolve content selection safely based on admin form settings.
+     */
+    public function resolveContentData(array $formData, array $formConfig): array
+    {
+        $templateMode = $formConfig['templateMode'] ?? 'student_choice';
+        $allowCustom = (bool) ($formConfig['allowCustomContent'] ?? true);
+        $defaultTemplateId = !empty($formConfig['defaultTemplateId']) ? (int) $formConfig['defaultTemplateId'] : null;
+
+        $contentOption = $formData['content_option'] ?? 'template';
+        if ($templateMode === 'admin_fixed') {
+            $contentOption = 'template';
+        } elseif ($templateMode === 'custom_only') {
+            $contentOption = 'custom';
+        } elseif (!$allowCustom && $contentOption === 'custom') {
+            $contentOption = 'template';
+        }
+
+        $templateId = null;
+        $customContent = null;
+
+        if ($contentOption === 'template') {
+            $templateId = $templateMode === 'admin_fixed'
+                ? $defaultTemplateId
+                : (!empty($formData['template_id']) ? (int) $formData['template_id'] : null);
+        } else {
+            $customContent = trim((string) ($formData['custom_content'] ?? ''));
+            $customContent = $customContent === '' ? null : $customContent;
+        }
+
+        return [
+            'content_option' => $contentOption,
+            'template_id' => $templateId,
+            'custom_content' => $customContent,
+        ];
     }
 
     /**
@@ -62,10 +126,16 @@ class WizardService
 
         // Default required fields
         $defaultRequired = ['student_name', 'last_name', 'student_email', 'gender', 'verification_token', 'training_period'];
+        $lockedRequiredFields = ['student_email', 'verification_token'];
 
         foreach ($fieldMeta as $key => $meta) {
             $isVisible = $fieldConfig[$key]['visible'] ?? true;
             $isRequired = $fieldConfig[$key]['required'] ?? in_array($key, $defaultRequired);
+
+            if (in_array($key, $lockedRequiredFields, true)) {
+                $isVisible = true;
+                $isRequired = true;
+            }
 
             if ($isVisible && $isRequired) {
                 $rules["data.$key"] = 'required|' . $meta['rule'];
@@ -81,15 +151,30 @@ class WizardService
     /**
      * Validate Step 2
      */
-    public function validateStep2(array $formData)
+    public function validateStep2(array $formData, array $formConfig = [])
     {
-        $contentOption = $formData['content_option'] ?? 'template';
+        $resolved = $this->resolveContentData($formData, $formConfig);
+        $contentOption = $resolved['content_option'];
+        $templateMode = $formConfig['templateMode'] ?? 'student_choice';
         $errors = [];
 
-        if ($contentOption === 'template' && empty($formData['template_id'])) {
-            $errors['template'] = 'Please select a template';
+        if ($contentOption === 'template' && empty($resolved['template_id'])) {
+            $errors['template'] = $templateMode === 'admin_fixed'
+                ? 'No fixed template is configured. Please contact the administrator.'
+                : 'Please select a template';
         }
-        if ($contentOption === 'custom' && empty($formData['custom_content'])) {
+        if ($contentOption === 'template' && !empty($resolved['template_id'])) {
+            $templateAvailable = Template::where('id', $resolved['template_id'])
+                ->where('is_active', true)
+                ->exists();
+
+            if (!$templateAvailable) {
+                $errors['template'] = $templateMode === 'admin_fixed'
+                    ? 'Configured fixed template is unavailable. Please contact the administrator.'
+                    : 'Selected template is unavailable. Please choose another template.';
+            }
+        }
+        if ($contentOption === 'custom' && empty($resolved['custom_content'])) {
             $errors['custom_content'] = 'Please enter custom content';
         }
 

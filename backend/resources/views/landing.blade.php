@@ -5,8 +5,8 @@
 @section('styles')
     <style>
         /* ========================================
-                                                                           HERO SECTION
-                                                                           ======================================== */
+                                                                                       HERO SECTION
+                                                                                       ======================================== */
         .hero-section {
             height: calc(100vh - 4.5rem);
             min-height: auto;
@@ -20,8 +20,8 @@
         }
 
         /* ========================================
-                                                                           FLOATING PARTICLES
-                                                                           ======================================== */
+                                                                                       FLOATING PARTICLES
+                                                                                       ======================================== */
         .particles {
             position: absolute;
             inset: 0;
@@ -99,8 +99,8 @@
         }
 
         /* ========================================
-                                                                           CARD DESIGN
-                                                                           ======================================== */
+                                                                                       CARD DESIGN
+                                                                                       ======================================== */
         .landing-card {
             background: var(--glass-bg);
             backdrop-filter: blur(16px);
@@ -118,8 +118,8 @@
         }
 
         /* ========================================
-                                                                           ANIMATED BADGE
-                                                                           ======================================== */
+                                                                                       ANIMATED BADGE
+                                                                                       ======================================== */
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -136,8 +136,8 @@
         }
 
         /* ========================================
-                                                                           HERO TITLE
-                                                                           ======================================== */
+                                                                                       HERO TITLE
+                                                                                       ======================================== */
         .hero-title {
             font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 800;
@@ -164,8 +164,8 @@
         }
 
         /* ========================================
-                                                                           ACTION BUTTONS
-                                                                           ======================================== */
+                                                                                       ACTION BUTTONS
+                                                                                       ======================================== */
         .action-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -235,8 +235,8 @@
         }
 
         /* ========================================
-                                                                           RESPONSIVE
-                                                                           ======================================== */
+                                                                                       RESPONSIVE
+                                                                                       ======================================== */
         @media (max-width: 640px) {
             .landing-card {
                 padding: 2rem 1.5rem;
@@ -345,8 +345,8 @@
         }
 
         /* ========================================
-                                                       RESPONSIVE HEADER & MOBILE MENU
-                                                       ======================================== */
+                                                                   RESPONSIVE HEADER & MOBILE MENU
+                                                                   ======================================== */
         .nav-inner {
             display: flex;
             justify-content: space-between;
@@ -633,6 +633,143 @@
                 font-size: 1.15rem;
             }
         }
+
+        /* ========================================
+                       RAMADAN MODAL STYLES
+                       ======================================== */
+        .ramadan-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s ease;
+        }
+
+        .ramadan-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .ramadan-card {
+            background: #0f172a;
+            /* Dark Slate 900 */
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            /* Amber border */
+            border-radius: 24px;
+            padding: 3rem 2rem;
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px rgba(245, 158, 11, 0.15);
+            overflow: hidden;
+        }
+
+        .ramadan-modal-overlay.active .ramadan-card {
+            transform: scale(1) translateY(0);
+        }
+
+        /* Golden Glow Effect */
+        .ramadan-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(245, 158, 11, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .ramadan-icon-wrapper {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(180, 83, 9, 0.1));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            position: relative;
+        }
+
+        .ramadan-moon-icon {
+            color: #f59e0b;
+            /* Amber 500 */
+            width: 40px;
+            height: 40px;
+            filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4));
+        }
+
+        .ramadan-star {
+            position: absolute;
+            color: #fcd34d;
+            /* Amber 300 */
+            animation: twinkle 3s infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+
+            0%,
+            100% {
+                opacity: 0.5;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
+        .ramadan-title {
+            font-family: 'Times New Roman', serif;
+            /* Or a nicer serif font if available */
+            font-size: 2rem;
+            font-weight: 700;
+            color: #f3f4f6;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #fcd34d, #f59e0b, #fff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 0.05em;
+        }
+
+        .ramadan-text {
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .ramadan-btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        .ramadan-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+            filter: brightness(1.1);
+        }
     </style>
 @endsection
 
@@ -854,7 +991,7 @@
                             <!-- Lucide Icons (Modern Fork of Feather) -->
                             <a href="https://x.com/I_am_Doctor" target="_blank" rel="noopener noreferrer"
                                 class="developer-link">
-                                <span class="dev-name">AAliMD</span> <span class="dev-label"
+                                <span class="dev-name">Dr. AbdulRahman Alzahrani</span> <span class="dev-label"
                                     style="font-style: normal; margin-left: 0.25rem;">🇸🇦</span>
                             </a>
                         </div>
@@ -868,12 +1005,44 @@
     <button class="scroll-to-top" id="scrollToTop" onclick="scrollToTop()" aria-label="Scroll to top">
         <i data-lucide="arrow-up" style="width: 20px; height: 20px;"></i>
     </button>
+
+    <!-- RAMADAN MODAL -->
+    <div class="ramadan-modal-overlay" id="ramadanModal">
+        <div class="ramadan-card">
+            <div class="ramadan-icon-wrapper">
+                <i data-lucide="moon" class="ramadan-moon-icon"></i>
+                <i data-lucide="star" class="ramadan-star"
+                    style="width: 12px; top: 15px; right: 20px; animation-delay: 0s;"></i>
+                <i data-lucide="star" class="ramadan-star"
+                    style="width: 10px; bottom: 20px; left: 15px; animation-delay: 1s;"></i>
+            </div>
+
+            <h2 class="ramadan-title">Ramadan Kareem</h2>
+
+            <p class="ramadan-text">
+                Wishing you a blessed month filled with peace, prosperity, and spiritual growth. May your days be
+                illuminated with light and grace.
+            </p>
+
+            <p style="color: #fcd34d; font-family: 'Dancing Script', cursive; font-size: 1.25rem; margin-top: -1rem; margin-bottom: 1.5rem; opacity: 0.9;">
+                Dr. AbdulRahman Alzahrani
+            </p>
+
+            <button class="ramadan-btn" onclick="closeRamadanModal()">
+                Ramadan Mubarak
+            </button>
+        </div>
+    </div>
 @endsection
 
 @section('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             lucide.createIcons();
+
+            // Check Ramadan Modal
+            checkRamadanModal();
+
             const scrollToTopBtn = document.getElementById('scrollToTop');
 
             window.addEventListener('scroll', function () {
@@ -892,6 +1061,31 @@
                 });
             });
         });
+
+        // Ramadan Modal Logic
+        function checkRamadanModal() {
+            const seen = localStorage.getItem('ramadan_modal_seen_v1'); // v1 allows us to reset it next year by changing key
+            const now = new Date();
+
+            // Logic: Show if never seen OR if seen more than 24 hours ago (optional, currently just once forever/session)
+            // For now, let's make it show once per browser session (removed from storage on close? No, persistent)
+            // Let's stick to "Show once" logic as per plan.
+
+            if (!seen) {
+                // Delay slightly for effect
+                setTimeout(() => {
+                    document.getElementById('ramadanModal').classList.add('active');
+                }, 1000);
+            }
+        }
+
+        function closeRamadanModal() {
+            const modal = document.getElementById('ramadanModal');
+            modal.classList.remove('active');
+
+            // Set flag in localStorage
+            localStorage.setItem('ramadan_modal_seen_v1', 'true');
+        }
 
         // Mobile menu toggle
         function toggleMobileMenu() {

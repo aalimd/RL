@@ -323,7 +323,7 @@
         </div>
 
         <div class="status-filters">
-            @foreach(['All', 'Submitted', 'Under Review', 'Approved', 'Rejected', 'Archived'] as $status)
+            @foreach(['All', 'Submitted', 'Under Review', 'Needs Revision', 'Approved', 'Rejected', 'Archived'] as $status)
                 <a href="{{ route('admin.requests', ['status' => $status, 'search' => request('search'), 'university' => request('university'), 'date_from' => request('date_from'), 'date_to' => request('date_to')]) }}"
                     class="status-btn {{ request('status', 'All') === $status ? 'active' : '' }}">
                     {{ $status }}

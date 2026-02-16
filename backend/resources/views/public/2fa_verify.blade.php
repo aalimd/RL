@@ -285,8 +285,13 @@
             </div>
 
             <h1 class="verify-title">Two-Factor Auth</h1>
-            <p class="verify-text">We've sent a 6-digit verification code to your linked Telegram account. Please enter it
-                below.</p>
+            <p class="verify-text">
+                @if(!empty($deliveryHint))
+                    We've sent a 6-digit verification code to your email ({{ $deliveryHint }}). Please enter it below.
+                @else
+                    We've sent a 6-digit verification code to your email address. Please enter it below.
+                @endif
+            </p>
 
             @if(session('error'))
                 <div class="error-box">
