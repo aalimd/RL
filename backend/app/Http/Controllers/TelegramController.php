@@ -26,17 +26,18 @@ class TelegramController extends Controller
      */
     public function handleWebhook(Request $request)
     {
-        // Security: Verify webhook secret if configured
-        // Security: Verify webhook secret via Header (New Standard)
+        // Security: Fail closed - secret must be configured for webhook processing.
         $webhookSecret = Settings::getValue('telegram_webhook_secret');
+        if (!$webhookSecret) {
+            Log::warning('Telegram webhook rejected: secret not configured');
+            return response('Forbidden', 403);
+        }
 
-        // Strict Check: Check header First
-        if ($webhookSecret) {
-            $headerSecret = $request->header('X-Telegram-Bot-Api-Secret-Token');
-            if ($headerSecret !== $webhookSecret) {
-                Log::warning('Telegram webhook rejected: Invalid secret token header');
-                return response('Forbidden', 403);
-            }
+        // Verify Telegram webhook header using constant-time comparison.
+        $headerSecret = (string) $request->header('X-Telegram-Bot-Api-Secret-Token', '');
+        if (!hash_equals((string) $webhookSecret, $headerSecret)) {
+            Log::warning('Telegram webhook rejected: Invalid secret token header');
+            return response('Forbidden', 403);
         }
 
         $update = $request->all();
@@ -60,8 +61,8 @@ class TelegramController extends Controller
         $chatId = $callback['message']['chat']['id'];
 
         // Verify this allows only authorized chat ID
-        $authorizedChatId = Settings::getValue('telegram_chat_id');
-        if ($chatId != $authorizedChatId) {
+        $authorizedChatId = (string) Settings::getValue('telegram_chat_id', '');
+        if ($authorizedChatId === '' || (string) $chatId !== $authorizedChatId) {
             Log::warning("Unauthorized Telegram attempt from Chat ID: $chatId");
             $this->answerCallback($callbackId, '⛔ Unauthorized');
             return;
@@ -88,6 +89,11 @@ class TelegramController extends Controller
      */
     protected function updateRequestStatus($requestId, $status, $feedbackMessage, $auditAction)
     {
+        $requestId = (int) $requestId;
+        if ($requestId <= 0) {
+            return;
+        }
+
         $req = RequestModel::find($requestId);
         if (!$req)
             return;
@@ -254,8 +260,16 @@ class TelegramController extends Controller
 
         if ($telegramPhone === $requestPhone) {
             $match = true;
-        } elseif (str_ends_with($telegramPhone, substr($requestPhone, -9)) || str_ends_with($requestPhone, substr($telegramPhone, -9))) {
-            $match = true;
+        } else {
+            $requestTail = strlen($requestPhone) > 9 ? substr($requestPhone, -9) : $requestPhone;
+            $telegramTail = strlen($telegramPhone) > 9 ? substr($telegramPhone, -9) : $telegramPhone;
+            if (
+                $requestTail !== '' &&
+                $telegramTail !== '' &&
+                (str_ends_with($telegramPhone, $requestTail) || str_ends_with($requestPhone, $telegramTail))
+            ) {
+                $match = true;
+            }
         }
 
         if ($match) {
@@ -309,8 +323,12 @@ class TelegramController extends Controller
     /**
      * Set Webhook Route (Utility)
      */
-    public function setupWebhook()
+    public function setupWebhook(Request $request)
     {
+        if (!$request->user() || $request->user()->role !== 'admin') {
+            return response()->json(['ok' => false, 'description' => 'Unauthorized'], 403);
+        }
+
         // Get or generate webhook secret
         $webhookSecret = Settings::getValue('telegram_webhook_secret');
         if (!$webhookSecret) {
@@ -340,8 +358,12 @@ class TelegramController extends Controller
     /**
      * Test Notification
      */
-    public function testNotification()
+    public function testNotification(Request $request)
     {
+        if (!$request->user() || $request->user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
         $result = $this->telegram->sendMessage("🔔 This is a test notification from your Recommendation System.");
         return response()->json(['success' => (bool) $result, 'response' => $result]);
     }

@@ -30,8 +30,9 @@ Route::post('/requests', [RequestController::class, 'store'])->middleware('throt
 Route::any('/telegram/webhook', [App\Http\Controllers\TelegramController::class, 'handleWebhook']);
 
 // Protected Routes
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     // Requests
     Route::get('/requests', [RequestController::class, 'index']);
@@ -41,7 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/requests/{id}/archive', [RequestController::class, 'archive']);
 
     // Templates
-    Route::resource('templates', TemplateController::class);
+    Route::apiResource('templates', TemplateController::class);
 
     // Settings
     Route::get('/settings', [SettingsController::class, 'index']);

@@ -123,7 +123,8 @@
                             <label class="form-label">Google Gemini API Key</label>
                             <div style="position: relative;">
                                 <input type="password" name="geminiApiKey" class="form-input"
-                                    value="{{ $settings['geminiApiKey'] ?? '' }}" placeholder="AIzaSy..."
+                                    value=""
+                                    placeholder="••••••••{{ !empty($settings['geminiApiKey']) ? ' (configured)' : '' }}"
                                     style="padding-right: 80px;">
                                 <a href="https://aistudio.google.com/app/apikey" target="_blank"
                                     style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #4f46e5; text-decoration: none; font-weight: 500;">
@@ -161,8 +162,8 @@
                         <div class="form-group">
                             <label class="form-label">Bot Token</label>
                             <input type="password" name="telegram_bot_token" class="form-input"
-                                value="{{ $settings['telegram_bot_token'] ?? '' }}"
-                                placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz">
+                                value=""
+                                placeholder="••••••••{{ !empty($settings['telegram_bot_token']) ? ' (configured)' : '' }}">
                             <small style="color: #6b7280; font-size: 0.75rem;">Get this from @BotFather</small>
                         </div>
 
@@ -444,15 +445,6 @@
             result.innerHTML = '<i data-feather="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Sending test notification...';
             feather.replace();
 
-            fetch('{{ url("/api/telegram/webhook") }}?test=1', { // Using direct webhook EP for testing logic or a dedicated controller method
-                // Actually, better to use a dedicated admin route, but for simplicity let's assume we add a test route or use a simple ajax
-                // Wait, I didn't create a dedicated route for 'testTelegram' in web.php, but I put logic in TelegramController.
-                // Let's create a route for it or use a trick.
-                // I will add a new method in AdminController or TelegramController exposed to admin web.
-            });
-
-            // Correction: I should call a proper endpoint. Let's fix this in next step or use what we have.
-            // I'll assume we'll add /admin/settings/test-telegram route.
             fetch('{{ url("/admin/settings/test-telegram") }}', {
                 method: 'POST',
                 headers: {

@@ -33,7 +33,7 @@ class CheckRole
         $user = auth()->user();
 
         // Check if user has one of the allowed roles
-        if (!in_array($user->role, $roles)) {
+        if (!in_array($user->role, $roles, true)) {
             abort(403, 'You do not have permission to access this page.');
         }
 

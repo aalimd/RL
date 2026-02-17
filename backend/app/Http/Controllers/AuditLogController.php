@@ -7,8 +7,13 @@ use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $user = $request->user();
+        if (!$user || $user->role !== 'admin') {
+            return response()->json(['error' => 'Unauthorized. Admin role required.'], 403);
+        }
+
         $logs = AuditLog::with('user')->orderBy('created_at', 'desc')->take(100)->get();
 
         $mapped = $logs->map(function ($log) {

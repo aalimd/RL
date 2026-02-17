@@ -385,7 +385,8 @@ class AdminController extends Controller
             $query->whereDate('created_at', '<=', $dateTo);
         }
 
-        $requests = $query->get();
+        $exportQuery = clone $query;
+        $exportCount = (clone $query)->count();
 
         // Generate CSV
         $filename = 'requests_' . date('Y-m-d_His') . '.csv';
@@ -394,7 +395,7 @@ class AdminController extends Controller
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ];
 
-        $callback = function () use ($requests) {
+        $callback = function () use ($exportQuery) {
             $file = fopen('php://output', 'w');
             // UTF-8 BOM for Excel compatibility
             fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
@@ -413,17 +414,17 @@ class AdminController extends Controller
             ]);
 
             // Data rows
-            foreach ($requests as $req) {
+            foreach ($exportQuery->cursor() as $req) {
                 fputcsv($file, [
-                    $req->tracking_id,
-                    $req->student_name,
-                    $req->student_email,
-                    $req->university ?? '',
-                    $req->purpose ?? '',
-                    $req->status,
-                    $req->deadline ? date('Y-m-d', strtotime($req->deadline)) : '',
-                    $req->created_at->format('Y-m-d H:i'),
-                    $req->updated_at->format('Y-m-d H:i')
+                    $this->sanitizeCsvCell($req->tracking_id),
+                    $this->sanitizeCsvCell($req->student_name),
+                    $this->sanitizeCsvCell($req->student_email),
+                    $this->sanitizeCsvCell($req->university ?? ''),
+                    $this->sanitizeCsvCell($req->purpose ?? ''),
+                    $this->sanitizeCsvCell($req->status),
+                    $this->sanitizeCsvCell($req->deadline ? date('Y-m-d', strtotime($req->deadline)) : ''),
+                    $this->sanitizeCsvCell($req->created_at->format('Y-m-d H:i')),
+                    $this->sanitizeCsvCell($req->updated_at->format('Y-m-d H:i'))
                 ]);
             }
 
@@ -436,7 +437,7 @@ class AdminController extends Controller
             'action' => 'export_requests',
             'target_type' => 'requests',
             'target_id' => null,
-            'details' => json_encode(['count' => $requests->count(), 'filters' => $request->all()]),
+            'details' => json_encode(['count' => $exportCount, 'filters' => $request->all()]),
             'ip_address' => $request->ip(),
         ]);
 
@@ -504,11 +505,36 @@ class AdminController extends Controller
             'is_active' => 'boolean',
         ]);
 
+        $newRole = $validated['role'];
+        $newIsActive = $request->has('is_active');
+        $isSelfUpdate = $user->id === Auth::id();
+
+        if ($isSelfUpdate && ($newRole !== 'admin' || !$newIsActive)) {
+            return redirect()->route('admin.users')
+                ->with('error', 'You cannot remove your own admin access or deactivate your account.');
+        }
+
+        $demotingOrDeactivatingActiveAdmin = $user->role === 'admin'
+            && (bool) $user->is_active
+            && ($newRole !== 'admin' || !$newIsActive);
+
+        if ($demotingOrDeactivatingActiveAdmin) {
+            $otherActiveAdmins = User::where('role', 'admin')
+                ->where('is_active', true)
+                ->where('id', '!=', $user->id)
+                ->count();
+
+            if ($otherActiveAdmins === 0) {
+                return redirect()->route('admin.users')
+                    ->with('error', 'At least one active admin account must remain.');
+            }
+        }
+
         $user->name = $validated['name'];
         $user->email = $validated['email'];
         $user->username = $validated['username'];
-        $user->role = $validated['role'];
-        $user->is_active = $request->has('is_active');
+        $user->role = $newRole;
+        $user->is_active = $newIsActive;
 
         if (!empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
@@ -533,6 +559,18 @@ class AdminController extends Controller
         // Prevent self-deletion
         if ($user->id === Auth::id()) {
             return redirect()->route('admin.users')->with('error', 'You cannot delete your own account!');
+        }
+
+        if ($user->role === 'admin' && (bool) $user->is_active) {
+            $otherActiveAdmins = User::where('role', 'admin')
+                ->where('is_active', true)
+                ->where('id', '!=', $user->id)
+                ->count();
+
+            if ($otherActiveAdmins === 0) {
+                return redirect()->route('admin.users')
+                    ->with('error', 'At least one active admin account must remain.');
+            }
         }
 
         $user->delete();
@@ -830,6 +868,10 @@ class AdminController extends Controller
      */
     public function settings()
     {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Only admins can access settings.');
+        }
+
         $settings = $this->getSettings();
 
         return view('admin.settings', compact('settings'));
@@ -877,6 +919,7 @@ class AdminController extends Controller
 
         $response = new StreamedResponse(function () {
             $handle = fopen('php://output', 'w');
+            $pdo = DB::connection()->getPdo();
 
             // Header info
             fwrite($handle, "-- Database Backup\n");
@@ -889,29 +932,47 @@ class AdminController extends Controller
             $tables = array_map('reset', $tables);
 
             foreach ($tables as $table) {
-                // Structure
-                fwrite($handle, "-- Table structure for `$table`\n");
-                fwrite($handle, "DROP TABLE IF EXISTS `$table`;\n");
+                $escapedTable = $this->escapeSqlIdentifier((string) $table);
 
-                $createTable = DB::select("SHOW CREATE TABLE `$table`")[0]->{'Create Table'};
+                // Structure
+                fwrite($handle, "-- Table structure for `{$escapedTable}`\n");
+                fwrite($handle, "DROP TABLE IF EXISTS `{$escapedTable}`;\n");
+
+                $createTableResult = DB::select("SHOW CREATE TABLE `{$escapedTable}`");
+                if (!isset($createTableResult[0])) {
+                    continue;
+                }
+
+                $createTableParts = array_values((array) $createTableResult[0]);
+                $createTable = $createTableParts[1] ?? null;
+                if (!$createTable) {
+                    continue;
+                }
+
                 fwrite($handle, $createTable . ";\n\n");
 
                 // Data
-                fwrite($handle, "-- Dumping data for `$table`\n");
+                fwrite($handle, "-- Dumping data for `{$escapedTable}`\n");
 
-                // Use cursor to avoid memory issues
-                DB::table($table)->orderBy('id')->chunk(100, function ($rows) use ($handle, $table) {
-                    foreach ($rows as $row) {
-                        $values = array_map(function ($value) {
-                            if (is_null($value))
-                                return 'NULL';
-                            return "'" . addslashes($value) . "'";
-                        }, (array) $row);
+                $columns = DB::connection()->getSchemaBuilder()->getColumnListing((string) $table);
+                if (empty($columns)) {
+                    fwrite($handle, "\n");
+                    continue;
+                }
 
-                        $sql = "INSERT INTO `$table` VALUES (" . implode(', ', $values) . ");\n";
-                        fwrite($handle, $sql);
+                $escapedColumns = array_map(fn($column) => '`' . $this->escapeSqlIdentifier((string) $column) . '`', $columns);
+                $columnList = implode(', ', $escapedColumns);
+
+                foreach (DB::table($table)->select($columns)->cursor() as $row) {
+                    $rowData = (array) $row;
+                    $values = [];
+                    foreach ($columns as $column) {
+                        $values[] = $this->quoteSqlValue($pdo, $rowData[$column] ?? null);
                     }
-                });
+
+                    $sql = "INSERT INTO `{$escapedTable}` ({$columnList}) VALUES (" . implode(', ', $values) . ");\n";
+                    fwrite($handle, $sql);
+                }
 
                 fwrite($handle, "\n");
             }
@@ -930,6 +991,10 @@ class AdminController extends Controller
      */
     public function auditLogs()
     {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Only admins can view audit logs.');
+        }
+
         $settings = $this->getSettings();
         $logs = AuditLog::with('user')
             ->orderBy('created_at', 'desc')
@@ -958,6 +1023,11 @@ class AdminController extends Controller
                 // Handle checkbox
                 if ($key === 'maintenanceMode') {
                     $value = $request->has('maintenanceMode') ? 'true' : 'false';
+                }
+
+                // Keep existing key if left blank in the settings form.
+                if ($key === 'geminiApiKey' && empty($value)) {
+                    continue;
                 }
 
                 Settings::updateOrCreate(['key' => $key], ['value' => $value]);
@@ -1223,14 +1293,34 @@ class AdminController extends Controller
             return response()->json(['message' => 'No active template found'], 404);
         }
 
+        $sanitizeImageUrl = static function ($value): ?string {
+            $value = trim((string) $value);
+            if ($value === '') {
+                return null;
+            }
+
+            return preg_match('/^(https?:\/\/|data:image\/)/i', $value) ? $value : null;
+        };
+
+        $signature = $content['signature'] ?? [];
+
         return response()->json([
             'success' => true,
             'layout' => $content['layout'],
-            'header' => $content['header'],
-            'body' => $content['body'],
-            'footer' => $content['footer'],
-            'signature' => $content['signature'],
-            'qrCode' => $content['qrCode'] ?? '',
+            'header' => $this->letterService->sanitizeHtml($content['header'] ?? ''),
+            'body' => $this->letterService->sanitizeHtml($content['body'] ?? ''),
+            'footer' => $this->letterService->sanitizeHtml($content['footer'] ?? ''),
+            'signature' => [
+                'name' => strip_tags((string) ($signature['name'] ?? '')),
+                'title' => strip_tags((string) ($signature['title'] ?? '')),
+                'image' => $sanitizeImageUrl($signature['image'] ?? null),
+                'stamp' => $sanitizeImageUrl($signature['stamp'] ?? null),
+                'institution' => strip_tags((string) ($signature['institution'] ?? '')),
+                'department' => strip_tags((string) ($signature['department'] ?? '')),
+                'email' => strip_tags((string) ($signature['email'] ?? '')),
+                'phone' => strip_tags((string) ($signature['phone'] ?? '')),
+            ],
+            'qrCode' => $this->letterService->sanitizeHtml($content['qrCode'] ?? ''),
         ]);
     }
     /**
@@ -1240,7 +1330,7 @@ class AdminController extends Controller
     {
         // Security: Only admin/editor can download documents
         $user = Auth::user();
-        if (!$user || !in_array($user->role, ['admin', 'editor'])) {
+        if (!$user || !in_array($user->role, ['admin', 'editor'], true)) {
             abort(403, 'You do not have permission to download documents.');
         }
 
@@ -1673,5 +1763,60 @@ class AdminController extends Controller
             $i++;
         }
         return round($bytes, 2) . ' ' . $units[$i];
+    }
+
+    /**
+     * Protect CSV exports against spreadsheet formula injection.
+     */
+    private function sanitizeCsvCell($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        if (is_scalar($value)) {
+            $stringValue = (string) $value;
+        } else {
+            $stringValue = json_encode($value, JSON_UNESCAPED_UNICODE) ?: '';
+        }
+
+        $trimmed = ltrim($stringValue);
+        if ($trimmed !== '' && preg_match('/^[=\+\-@]/', $trimmed) === 1) {
+            return "'" . $stringValue;
+        }
+
+        return $stringValue;
+    }
+
+    /**
+     * Escape SQL identifier (table/column) for MySQL-style dumps.
+     */
+    private function escapeSqlIdentifier(string $identifier): string
+    {
+        return str_replace('`', '``', $identifier);
+    }
+
+    /**
+     * Quote SQL values safely using PDO.
+     */
+    private function quoteSqlValue(\PDO $pdo, $value): string
+    {
+        if ($value === null) {
+            return 'NULL';
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $pdo->quote($value->format('Y-m-d H:i:s'));
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+
+        return $pdo->quote((string) $value);
     }
 }

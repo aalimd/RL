@@ -5,8 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Settings;
 
 class MailConfigServiceProvider extends ServiceProvider
 {
@@ -35,8 +35,7 @@ class MailConfigServiceProvider extends ServiceProvider
             }
             // Retrieve all mail settings in one query
             // keys: smtpHost, smtpPort, smtpUsername, smtpPassword, smtpEncryption, mailFromAddress, mailFromName
-            $mailSettings = DB::table('settings')
-                ->whereIn('key', [
+            $mailSettings = Settings::whereIn('key', [
                     'smtpHost',
                     'smtpPort',
                     'smtpUsername',
@@ -45,7 +44,10 @@ class MailConfigServiceProvider extends ServiceProvider
                     'mailFromAddress',
                     'mailFromName'
                 ])
-                ->pluck('value', 'key');
+                ->get()
+                ->mapWithKeys(function (Settings $setting) {
+                    return [$setting->key => $setting->value];
+                });
 
             if ($mailSettings->isNotEmpty()) {
                 $useSmtp = config('mail.default') === 'smtp';

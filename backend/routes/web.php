@@ -32,7 +32,7 @@ Route::get('/tracking/verify', [PageController::class, 'show2FAVerify'])->name('
 Route::post('/tracking/verify', [PageController::class, 'handle2FAVerify'])->middleware('throttle:5,1')->name('public.tracking.verify.post');
 
 // Admin Panel (protected by auth)
-Route::middleware(['auth', 'twofactor'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'active', 'twofactor'])->prefix('admin')->name('admin.')->group(function () {
 
     // ============================================
     // Routes accessible by ALL authenticated users (admin, editor, viewer)
@@ -44,14 +44,14 @@ Route::middleware(['auth', 'twofactor'])->prefix('admin')->name('admin.')->group
     Route::get('/requests/{id}/preview', [AdminController::class, 'previewLetter'])->name('requests.preview');
     Route::get('/analytics', [AdminController::class, 'analytics'])->name('analytics');
     Route::get('/templates', [AdminController::class, 'templates'])->name('templates');
-    Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+    Route::get('/settings', [AdminController::class, 'settings'])->middleware('role:admin')->name('settings');
     Route::get('/appearance', [AdminController::class, 'appearance'])->name('appearance');
-    Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs');
+    Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->middleware('role:admin')->name('audit-logs');
     Route::get('/form-settings', [AdminController::class, 'formSettings'])->name('form-settings');
 
     // Telegram Admin Actions
-    Route::post('/settings/test-telegram', [App\Http\Controllers\TelegramController::class, 'testNotification'])->name('settings.test-telegram');
-    Route::post('/settings/setup-webhook', [App\Http\Controllers\TelegramController::class, 'setupWebhook'])->name('settings.setup-webhook');
+    Route::post('/settings/test-telegram', [App\Http\Controllers\TelegramController::class, 'testNotification'])->middleware('role:admin')->name('settings.test-telegram');
+    Route::post('/settings/setup-webhook', [App\Http\Controllers\TelegramController::class, 'setupWebhook'])->middleware('role:admin')->name('settings.setup-webhook');
 
     // ============================================
     // Routes for ADMIN and EDITOR only

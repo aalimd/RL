@@ -31,7 +31,7 @@ class CheckMaintenance
         if ($maintenanceMode === 'true') {
             // 3. Allow Authenticated Admins/Editors to bypass
             $user = Auth::user();
-            if ($user && in_array($user->role, ['admin', 'editor'])) {
+            if ($user && in_array($user->role, ['admin', 'editor'], true)) {
                 return $next($request);
             }
 

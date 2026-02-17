@@ -1330,11 +1330,13 @@
 
             <div class="nav-section">
                 <div class="nav-section-title">Management</div>
-                <a href="{{ route('admin.users') }}"
-                    class="nav-item {{ request()->routeIs('admin.users') ? 'active' : '' }}">
-                    <i data-feather="users"></i>
-                    <span>Users</span>
-                </a>
+                @if(auth()->user()->role === 'admin')
+                    <a href="{{ route('admin.users') }}"
+                        class="nav-item {{ request()->routeIs('admin.users') ? 'active' : '' }}">
+                        <i data-feather="users"></i>
+                        <span>Users</span>
+                    </a>
+                @endif
                 <a href="{{ route('admin.templates') }}"
                     class="nav-item {{ request()->routeIs('admin.templates') ? 'active' : '' }}">
                     <i data-feather="layout"></i>
@@ -1344,11 +1346,13 @@
 
             <div class="nav-section">
                 <div class="nav-section-title">Settings</div>
-                <a href="{{ route('admin.settings') }}"
-                    class="nav-item {{ request()->routeIs('admin.settings') ? 'active' : '' }}">
-                    <i data-feather="settings"></i>
-                    <span>General</span>
-                </a>
+                @if(auth()->user()->role === 'admin')
+                    <a href="{{ route('admin.settings') }}"
+                        class="nav-item {{ request()->routeIs('admin.settings') ? 'active' : '' }}">
+                        <i data-feather="settings"></i>
+                        <span>General</span>
+                    </a>
+                @endif
                 <a href="{{ route('admin.appearance') }}"
                     class="nav-item {{ request()->routeIs('admin.appearance') ? 'active' : '' }}">
                     <i data-feather="pen-tool"></i>
@@ -1359,11 +1363,13 @@
                     <i data-feather="activity"></i>
                     <span>Audit Logs</span>
                 </a>
-                <a href="{{ route('admin.form-settings') }}"
-                    class="nav-item {{ request()->routeIs('admin.form-settings') ? 'active' : '' }}">
-                    <i data-feather="clipboard"></i>
-                    <span>Form Settings</span>
-                </a>
+                @if(auth()->user()->role === 'admin')
+                    <a href="{{ route('admin.form-settings') }}"
+                        class="nav-item {{ request()->routeIs('admin.form-settings') ? 'active' : '' }}">
+                        <i data-feather="clipboard"></i>
+                        <span>Form Settings</span>
+                    </a>
+                @endif
                 <a href="{{ route('admin.settings.security') }}"
                     class="nav-item {{ request()->routeIs('admin.settings.security') ? 'active' : '' }}">
                     <i data-feather="shield"></i>
@@ -1376,11 +1382,13 @@
                         <span>System Tools</span>
                     </a>
                 @endif
-                <a href="{{ route('admin.email-templates.index') }}"
-                    class="nav-item {{ request()->routeIs('admin.email-templates.*') ? 'active' : '' }}">
-                    <i data-feather="mail"></i>
-                    <span>Email Templates</span>
-                </a>
+                @if(auth()->user()->role === 'admin')
+                    <a href="{{ route('admin.email-templates.index') }}"
+                        class="nav-item {{ request()->routeIs('admin.email-templates.*') ? 'active' : '' }}">
+                        <i data-feather="mail"></i>
+                        <span>Email Templates</span>
+                    </a>
+                @endif
             </div>
 
             <div class="nav-section"
@@ -1433,10 +1441,12 @@
                             <span>{{ auth()->user()->email ?? '' }}</span>
                         </div>
 
-                        <a href="{{ route('admin.settings') }}" class="dropdown-item">
-                            <i data-feather="settings"></i>
-                            <span>Settings</span>
-                        </a>
+                        @if(auth()->user()->role === 'admin')
+                            <a href="{{ route('admin.settings') }}" class="dropdown-item">
+                                <i data-feather="settings"></i>
+                                <span>Settings</span>
+                            </a>
+                        @endif
                         <a href="{{ route('admin.settings.security') }}" class="dropdown-item">
                             <i data-feather="shield"></i>
                             <span>Security (2FA)</span>

@@ -68,7 +68,11 @@ class AuthController extends Controller
     // POST /api/auth/logout
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $token = $request->user()?->currentAccessToken();
+        if ($token) {
+            $token->delete();
+        }
+
         return response()->json(['message' => 'Logged out']);
     }
 }

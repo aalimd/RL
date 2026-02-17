@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
-use App\Models\User;
 
 class TwoFactorController extends Controller
 {
@@ -53,12 +52,9 @@ class TwoFactorController extends Controller
         } else {
             // Email Logic
             $code = (string) random_int(100000, 999999);
-            $request->session()->put('2fa_setup_code', $code);
+            $request->session()->put('2fa_setup_code_hash', Hash::make($code));
+            $request->session()->put('2fa_setup_expires_at', now()->addMinutes(10)->timestamp);
             $request->session()->put('2fa_setup_method', 'email');
-
-            // TODO: Implement actual Email Notification
-            // Check if Mailable exists, otherwise simple raw mail or log for now?
-            // Since this is critical, I should create a dynamic Mailable or use standard Mail::raw
 
             try {
                 Mail::raw("Your 2FA Code is: $code", function ($message) use ($user) {
@@ -98,7 +94,7 @@ class TwoFactorController extends Controller
 
             if ($valid) {
                 $user->forceFill([
-                    'two_factor_secret' => encrypt($secret),
+                    'two_factor_secret' => $secret,
                     'two_factor_method' => 'app',
                     'two_factor_confirmed_at' => now(),
                 ])->save();
@@ -109,15 +105,21 @@ class TwoFactorController extends Controller
                 return response()->json(['success' => true]);
             }
         } elseif ($method === 'email') {
-            $sessionCode = session('2fa_setup_code');
+            $sessionCodeHash = session('2fa_setup_code_hash');
+            $setupExpiresAt = (int) session('2fa_setup_expires_at', 0);
 
-            if ($sessionCode && $sessionCode === $code) {
+            if (!$sessionCodeHash || $setupExpiresAt < now()->timestamp) {
+                session()->forget(['2fa_setup_code_hash', '2fa_setup_expires_at', '2fa_setup_method']);
+                return response()->json(['message' => 'Verification session expired. Please try setup again.'], 422);
+            }
+
+            if (Hash::check($code, $sessionCodeHash)) {
                 $user->forceFill([
                     'two_factor_method' => 'email',
                     'two_factor_confirmed_at' => now(),
                 ])->save();
 
-                session()->forget(['2fa_setup_code', '2fa_setup_method']);
+                session()->forget(['2fa_setup_code_hash', '2fa_setup_expires_at', '2fa_setup_method']);
                 session()->put('2fa_verified', true);
 
                 return response()->json(['success' => true]);
@@ -139,7 +141,10 @@ class TwoFactorController extends Controller
             'two_factor_confirmed_at' => null,
             'two_factor_method' => null,
             'two_factor_email_code' => null,
+            'two_factor_expires_at' => null,
         ])->save();
+
+        $request->session()->forget(['2fa_verified']);
 
         return back()->with('success', 'Two-Factor Authentication disabled.');
     }
@@ -161,30 +166,15 @@ class TwoFactorController extends Controller
             return redirect('/admin/dashboard');
         }
 
-        // If email method, send code automatically on load? Or ask user to click send?
-        // Let's send automatically if method is email
-        if ($user->two_factor_method === 'email' && !session('2fa_email_sent')) {
-            $code = (string) random_int(100000, 999999);
-            // Store encrypted code in DB or session. DB is better for persistence across requests if session driver is weak
-            // But session is fine.
-            $user->forceFill([
-                'two_factor_email_code' => $code, // Encrypt/Hash not essential for short lived OTP unless strict security
-                // Wait, User model casts it to nothing special in my migration, just string. I should encrypt it or hash it.
-                // But for comparison I need raw. Let's start with session for simplicity.
-            ])->save();
-
-            // Actually, let's use the DB column I created
-            $user->two_factor_email_code = $code;
-            $user->save();
-
-            try {
-                Mail::raw("Your Login Code: $code", function ($message) use ($user) {
-                    $message->to($user->email)->subject('Login Verification Code');
-                });
-                session()->flash('success', 'A verification code has been sent to your email.');
-                session()->put('2fa_email_sent', true);
-            } catch (\Exception $e) {
-                session()->flash('error', 'Failed to send email code.');
+        // Send a code when no valid unexpired code exists.
+        if ($user->two_factor_method === 'email') {
+            $codeExpired = !$user->two_factor_expires_at || now()->greaterThan($user->two_factor_expires_at);
+            if (!$user->two_factor_email_code || $codeExpired) {
+                if ($this->issueEmailLoginCode($user)) {
+                    session()->flash('success', 'A verification code has been sent to your email.');
+                } else {
+                    session()->flash('error', 'Failed to send email code.');
+                }
             }
         }
 
@@ -205,8 +195,11 @@ class TwoFactorController extends Controller
 
         if ($user->two_factor_method === 'app') {
             $google2fa = app('pragmarx.google2fa');
-            // decrypt secret
-            $secret = decrypt($user->two_factor_secret);
+            // The model cast already decrypts this value for us.
+            $secret = $user->two_factor_secret;
+            if (!$secret) {
+                return back()->withErrors(['code' => 'Two-factor configuration is invalid. Please set it up again.']);
+            }
             $valid = $google2fa->verifyKey($secret, $code);
 
             if ($valid) {
@@ -214,11 +207,22 @@ class TwoFactorController extends Controller
                 return redirect('/admin/dashboard');
             }
         } elseif ($user->two_factor_method === 'email') {
-            if ($user->two_factor_email_code === $code) {
+            if (!$user->two_factor_email_code || !$user->two_factor_expires_at || now()->greaterThan($user->two_factor_expires_at)) {
+                $user->forceFill([
+                    'two_factor_email_code' => null,
+                    'two_factor_expires_at' => null,
+                ])->save();
+
+                return back()->withErrors(['code' => 'Verification code expired. Please request a new code.']);
+            }
+
+            if (Hash::check($code, $user->two_factor_email_code)) {
                 $request->session()->put('2fa_verified', true);
-                // Clear code
-                $user->two_factor_email_code = null;
-                $user->save();
+                $user->forceFill([
+                    'two_factor_email_code' => null,
+                    'two_factor_expires_at' => null,
+                ])->save();
+
                 return redirect('/admin/dashboard');
             }
         }
@@ -234,20 +238,37 @@ class TwoFactorController extends Controller
         $user = auth()->user();
 
         if ($user->two_factor_method === 'email') {
-            $code = (string) random_int(100000, 999999);
-            $user->two_factor_email_code = $code;
-            $user->save();
-
-            try {
-                Mail::raw("Your Login Code: $code", function ($message) use ($user) {
-                    $message->to($user->email)->subject('Login Verification Code');
-                });
+            if ($this->issueEmailLoginCode($user)) {
                 return back()->with('success', 'Code resent successfully.');
-            } catch (\Exception $e) {
-                return back()->with('error', 'Failed to send email.');
             }
+
+            return back()->with('error', 'Failed to send email.');
         }
 
         return back();
+    }
+
+    private function issueEmailLoginCode($user): bool
+    {
+        $code = (string) random_int(100000, 999999);
+        $user->forceFill([
+            'two_factor_email_code' => Hash::make($code),
+            'two_factor_expires_at' => now()->addMinutes(10),
+        ])->save();
+
+        try {
+            Mail::raw("Your Login Code: $code", function ($message) use ($user) {
+                $message->to($user->email)->subject('Login Verification Code');
+            });
+
+            return true;
+        } catch (\Exception $e) {
+            $user->forceFill([
+                'two_factor_email_code' => null,
+                'two_factor_expires_at' => null,
+            ])->save();
+
+            return false;
+        }
     }
 }

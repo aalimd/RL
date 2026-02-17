@@ -24,6 +24,12 @@ class RequestController extends Controller
     // GET /api/requests
     public function index(Request $request)
     {
+        $user = $request->user();
+        if (!$this->canManageRequests($user)) {
+            return response()->json(['error' => 'Unauthorized. Admin or Editor role required.'], 403);
+        }
+
+        $includeSecrets = $this->canViewSensitiveTokens($user);
         $query = RequestModel::query();
 
         // Search
@@ -42,12 +48,13 @@ class RequestController extends Controller
         }
 
         // Pagination
-        $perPage = $request->input('limit', 10);
+        $perPage = (int) $request->input('limit', 10);
+        $perPage = max(1, min($perPage, 100));
         $requests = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         // Required Response Format for matching Frontend
         return response()->json([
-            'requests' => $this->mapBackendToFrontend($requests->items()),
+            'requests' => $this->mapBackendToFrontend($requests->items(), $includeSecrets),
             'total' => $requests->total(),
             'page' => $requests->currentPage(),
             'totalPages' => $requests->lastPage(),
@@ -74,8 +81,6 @@ class RequestController extends Controller
                 'customContent' => 'nullable|string',
                 'contentOption' => 'nullable|in:template,custom',
                 'formData' => 'nullable|array',
-                'verificationToken' => 'nullable|string|max:100',
-                'verifyToken' => 'nullable|string|max:64',
                 // File validation
                 'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048'
             ]);
@@ -122,8 +127,9 @@ class RequestController extends Controller
                 'custom_content' => $validated['customContent'] ?? null,
                 'content_option' => $validated['contentOption'] ?? null,
                 'form_data' => !empty($formData) ? $formData : null,
-                'verify_token' => $validated['verifyToken'] ?? Str::random(32), // For QR code verification
-                'verification_token' => $validated['verificationToken'] ?? Str::random(60), // For Student Tracking
+                // Security: Always generate tokens server-side.
+                'verify_token' => Str::random(32), // For QR code verification
+                'verification_token' => Str::random(60), // For Student Tracking
                 'status' => 'Submitted'
             ];
 
@@ -138,7 +144,7 @@ class RequestController extends Controller
                 $mimeType = $finfo->file($request->file('document')->getPathname());
                 $allowedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
 
-                if (!in_array($mimeType, $allowedMimes)) {
+                if (!in_array($mimeType, $allowedMimes, true)) {
                     return response()->json(['error' => 'Invalid file type (MIME mismatch).'], 400);
                 }
 
@@ -185,15 +191,26 @@ class RequestController extends Controller
     }
 
     // GET /api/requests/{id}
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        $user = $request->user();
+        if (!$this->canManageRequests($user)) {
+            return response()->json(['error' => 'Unauthorized. Admin or Editor role required.'], 403);
+        }
+
+        $includeSecrets = $this->canViewSensitiveTokens($user);
         $req = RequestModel::findOrFail($id);
-        return response()->json($this->mapBackendToFrontend([$req])[0]);
+        return response()->json($this->mapBackendToFrontend([$req], $includeSecrets)[0]);
     }
 
     // PUT /api/requests/{id}
     public function update(Request $request, $id)
     {
+        $user = $request->user();
+        if (!$this->canManageRequests($user)) {
+            return response()->json(['error' => 'Unauthorized. Admin or Editor role required.'], 403);
+        }
+
         $req = RequestModel::findOrFail($id);
 
         $validated = $request->validate([
@@ -214,6 +231,10 @@ class RequestController extends Controller
             'verifyToken' => 'sometimes|nullable|string|max:64',
             'formData' => 'sometimes|nullable|array',
         ]);
+
+        if (($user->role ?? null) !== 'admin') {
+            unset($validated['verificationToken'], $validated['verifyToken']);
+        }
 
         $data = [];
         if (array_key_exists('studentName', $validated))
@@ -288,7 +309,7 @@ class RequestController extends Controller
         }
 
         $req->update($data);
-        return response()->json($this->mapBackendToFrontend([$req])[0]);
+        return response()->json($this->mapBackendToFrontend([$req], $this->canViewSensitiveTokens($user))[0]);
     }
 
     // PUT /api/requests/{id}/status
@@ -296,7 +317,7 @@ class RequestController extends Controller
     {
         // Security: Only admin and editor can update status
         $user = $request->user();
-        if (!$user || !in_array($user->role, ['admin', 'editor'])) {
+        if (!$user || !in_array($user->role, ['admin', 'editor'], true)) {
             return response()->json(['error' => 'Unauthorized. Admin or Editor role required.'], 403);
         }
 
@@ -325,7 +346,7 @@ class RequestController extends Controller
             'ip_address' => $request->ip()
         ]);
 
-        return response()->json($this->mapBackendToFrontend([$req])[0]);
+        return response()->json($this->mapBackendToFrontend([$req], $this->canViewSensitiveTokens($user))[0]);
     }
 
     // PUT /api/requests/{id}/archive
@@ -352,12 +373,12 @@ class RequestController extends Controller
     }
 
     // Mapping Helper
-    private function mapBackendToFrontend($items)
+    private function mapBackendToFrontend($items, bool $includeSecrets = false)
     {
-        return array_map(function ($item) {
+        return array_map(function ($item) use ($includeSecrets) {
             // If item is array, cast to object if needed, or just array access
             // Eloquent models are objects.
-            return [
+            $mapped = [
                 'id' => $item['id'],
                 'trackingId' => $item['tracking_id'],
                 'studentName' => $item['student_name'],
@@ -374,8 +395,6 @@ class RequestController extends Controller
                 'templateId' => $item['template_id'],
                 'contentOption' => $item['content_option'],
                 'customContent' => $item['custom_content'],
-                'verifyToken' => $item['verify_token'],
-                'verificationToken' => $item['verification_token'],
                 'adminMessage' => $item['admin_message'],
                 'formData' => $item['form_data'],
                 'documentPath' => $item['document_path'],
@@ -384,6 +403,23 @@ class RequestController extends Controller
                 'updatedAt' => $item['updated_at'],
                 // Add more as needed
             ];
+
+            if ($includeSecrets) {
+                $mapped['verifyToken'] = $item['verify_token'];
+                $mapped['verificationToken'] = $item['verification_token'];
+            }
+
+            return $mapped;
         }, $items);
+    }
+
+    private function canManageRequests($user): bool
+    {
+        return $user && in_array($user->role, ['admin', 'editor'], true);
+    }
+
+    private function canViewSensitiveTokens($user): bool
+    {
+        return $user && $user->role === 'admin';
     }
 }

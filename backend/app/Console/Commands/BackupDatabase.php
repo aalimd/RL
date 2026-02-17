@@ -59,6 +59,7 @@ class BackupDatabase extends Command
 
         try {
             $handle = fopen($tempPath, 'w');
+            $pdo = DB::connection()->getPdo();
 
             // Header info
             fwrite($handle, "-- Database Backup\n");
@@ -73,28 +74,48 @@ class BackupDatabase extends Command
             $bar->start();
 
             foreach ($tables as $table) {
-                // Structure
-                fwrite($handle, "-- Table structure for `$table`\n");
-                fwrite($handle, "DROP TABLE IF EXISTS `$table`;\n");
+                $escapedTable = $this->escapeSqlIdentifier((string) $table);
 
-                $createTable = DB::select("SHOW CREATE TABLE `$table`")[0]->{'Create Table'};
+                // Structure
+                fwrite($handle, "-- Table structure for `{$escapedTable}`\n");
+                fwrite($handle, "DROP TABLE IF EXISTS `{$escapedTable}`;\n");
+
+                $createTableResult = DB::select("SHOW CREATE TABLE `{$escapedTable}`");
+                if (!isset($createTableResult[0])) {
+                    continue;
+                }
+
+                $createTableParts = array_values((array) $createTableResult[0]);
+                $createTable = $createTableParts[1] ?? null;
+                if (!$createTable) {
+                    continue;
+                }
+
                 fwrite($handle, $createTable . ";\n\n");
 
                 // Data
-                fwrite($handle, "-- Dumping data for `$table`\n");
+                fwrite($handle, "-- Dumping data for `{$escapedTable}`\n");
 
-                DB::table($table)->orderBy('id')->chunk(100, function ($rows) use ($handle, $table) {
-                    foreach ($rows as $row) {
-                        $values = array_map(function ($value) {
-                            if (is_null($value))
-                                return 'NULL';
-                            return "'" . addslashes($value) . "'";
-                        }, (array) $row);
+                $columns = DB::connection()->getSchemaBuilder()->getColumnListing((string) $table);
+                if (empty($columns)) {
+                    fwrite($handle, "\n");
+                    $bar->advance();
+                    continue;
+                }
 
-                        $sql = "INSERT INTO `$table` VALUES (" . implode(', ', $values) . ");\n";
-                        fwrite($handle, $sql);
+                $escapedColumns = array_map(fn($column) => '`' . $this->escapeSqlIdentifier((string) $column) . '`', $columns);
+                $columnList = implode(', ', $escapedColumns);
+
+                foreach (DB::table($table)->select($columns)->cursor() as $row) {
+                    $rowData = (array) $row;
+                    $values = [];
+                    foreach ($columns as $column) {
+                        $values[] = $this->quoteSqlValue($pdo, $rowData[$column] ?? null);
                     }
-                });
+
+                    $sql = "INSERT INTO `{$escapedTable}` ({$columnList}) VALUES (" . implode(', ', $values) . ");\n";
+                    fwrite($handle, $sql);
+                }
 
                 fwrite($handle, "\n");
                 $bar->advance();
@@ -132,5 +153,37 @@ class BackupDatabase extends Command
 
             return 1;
         }
+    }
+
+    /**
+     * Escape SQL identifier (table/column) for MySQL-style dumps.
+     */
+    private function escapeSqlIdentifier(string $identifier): string
+    {
+        return str_replace('`', '``', $identifier);
+    }
+
+    /**
+     * Quote SQL values safely using PDO.
+     */
+    private function quoteSqlValue(\PDO $pdo, $value): string
+    {
+        if ($value === null) {
+            return 'NULL';
+        }
+
+        if ($value instanceof \DateTimeInterface) {
+            return $pdo->quote($value->format('Y-m-d H:i:s'));
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+
+        return $pdo->quote((string) $value);
     }
 }

@@ -7,7 +7,7 @@
 session_start();
 
 // Check if already installed
-if (file_exists(__DIR__ . '/../backend/.env') && !isset($_GET['force'])) {
+if (file_exists(__DIR__ . '/../backend/.env')) {
     $envContent = file_get_contents(__DIR__ . '/../backend/.env');
     if (strpos($envContent, 'INSTALLED=true') !== false) {
         header('Location: ../');
@@ -92,16 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
 
         case 'skip_email':
-            // Use ZeptoMail defaults
-            $_SESSION['install']['email'] = [
-                'smtp_host' => 'smtp.zeptomail.com',
-                'smtp_port' => '587',
-                'smtp_user' => 'emailapikey',
-                'smtp_pass' => 'wSsVR61yrBPyC6p9yjSlJec4ywhSVVmkQRgrjFH37XP6SPiT9Mdqw0bGAwL0FfBKGTY/FjMS8b98nBoG0mcO29olz1kJCSiF9mqRe1U4J3x17qnvhDzKWGtdlxePKY4Lxgtrn2FgEckl+g==',
-                'smtp_encryption' => 'tls',
-                'mail_from' => 'noreply@aamd.sa',
-                'mail_name' => 'Dr. Alzahrani EM'
-            ];
+            // Skip SMTP setup (application will use log mailer until configured in admin settings)
+            $_SESSION['install']['email'] = null;
             header('Location: ?step=5');
             exit;
 
@@ -580,8 +572,8 @@ $allRequirementsMet = !in_array(false, $requirements, true);
             <?php elseif ($step == 4): ?>
                 <!-- Step 4: Email Settings -->
                 <h2 style="margin-bottom: 1rem;">Email Configuration</h2>
-                <p style="color: #6b7280; margin-bottom: 1.5rem;">SMTP settings are pre-configured for ZeptoMail. You can
-                    modify them or skip to use these defaults.</p>
+                <p style="color: #6b7280; margin-bottom: 1.5rem;">Configure SMTP now, or skip this step and set it later from
+                    the admin panel.</p>
 
                 <form method="POST">
                     <input type="hidden" name="action" value="email">
@@ -589,7 +581,7 @@ $allRequirementsMet = !in_array(false, $requirements, true);
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">SMTP Host</label>
-                            <input type="text" name="smtp_host" class="form-input" value="smtp.zeptomail.com">
+                            <input type="text" name="smtp_host" class="form-input" value="">
                         </div>
                         <div class="form-group">
                             <label class="form-label">SMTP Port</label>
@@ -600,12 +592,11 @@ $allRequirementsMet = !in_array(false, $requirements, true);
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">SMTP Username</label>
-                            <input type="text" name="smtp_user" class="form-input" value="emailapikey">
+                            <input type="text" name="smtp_user" class="form-input" value="">
                         </div>
                         <div class="form-group">
                             <label class="form-label">SMTP Password</label>
-                            <input type="password" name="smtp_pass" class="form-input"
-                                value="wSsVR61yrBPyC6p9yjSlJec4ywhSVVmkQRgrjFH37XP6SPiT9Mdqw0bGAwL0FfBKGTY/FjMS8b98nBoG0mcO29olz1kJCSiF9mqRe1U4J3x17qnvhDzKWGtdlxePKY4Lxgtrn2FgEckl+g==">
+                            <input type="password" name="smtp_pass" class="form-input" value="">
                         </div>
                     </div>
 
@@ -621,16 +612,16 @@ $allRequirementsMet = !in_array(false, $requirements, true);
                     <div class="grid-2">
                         <div class="form-group">
                             <label class="form-label">From Email</label>
-                            <input type="email" name="mail_from" class="form-input" value="noreply@aamd.sa">
+                            <input type="email" name="mail_from" class="form-input" value="">
                         </div>
                         <div class="form-group">
                             <label class="form-label">From Name</label>
-                            <input type="text" name="mail_name" class="form-input" value="Dr. Alzahrani EM">
+                            <input type="text" name="mail_name" class="form-input" value="">
                         </div>
                     </div>
 
                     <div class="actions">
-                        <button type="submit" name="action" value="skip_email" class="btn btn-secondary">Use Defaults &
+                        <button type="submit" name="action" value="skip_email" class="btn btn-secondary">Skip For Now &
                             Continue</button>
                         <button type="submit" class="btn btn-primary">Save Changes & Continue →</button>
                     </div>

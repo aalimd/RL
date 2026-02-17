@@ -27,7 +27,11 @@ class MailConfigProvider extends ServiceProvider
                     'smtpEncryption',
                     'mailFromAddress',
                     'mailFromName'
-                ])->pluck('value', 'key')->toArray();
+                ])->get()
+                    ->mapWithKeys(function (Settings $setting) {
+                        return [$setting->key => $setting->value];
+                    })
+                    ->toArray();
             });
 
             $useSmtp = config('mail.default') === 'smtp';

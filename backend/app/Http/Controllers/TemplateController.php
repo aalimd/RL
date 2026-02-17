@@ -16,8 +16,12 @@ class TemplateController extends Controller
     }
 
     // GET /api/templates
-    public function index()
+    public function index(Request $request)
     {
+        if (!$this->canViewTemplates($request->user())) {
+            return response()->json(['error' => 'Unauthorized. Admin or Editor role required.'], 403);
+        }
+
         try {
             return response()->json(Template::orderBy('created_at', 'desc')->get());
         } catch (\Exception $e) {
@@ -27,8 +31,12 @@ class TemplateController extends Controller
     }
 
     // GET /api/templates/{id}
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        if (!$this->canViewTemplates($request->user())) {
+            return response()->json(['error' => 'Unauthorized. Admin or Editor role required.'], 403);
+        }
+
         try {
             $template = Template::findOrFail($id);
             return response()->json($template);
@@ -43,9 +51,7 @@ class TemplateController extends Controller
     // POST /api/templates
     public function store(Request $request)
     {
-        // Security: Only admin and editor can create templates
-        $user = $request->user();
-        if (!$user || !in_array($user->role, ['admin', 'editor'])) {
+        if (!$this->canManageTemplates($request->user())) {
             return response()->json(['error' => 'Unauthorized. Admin or Editor role required.'], 403);
         }
 
@@ -68,7 +74,7 @@ class TemplateController extends Controller
                 'layoutSettings' => 'nullable|array',
             ]);
 
-            $data = $this->mapFrontendToBackend($request->all());
+            $data = $this->mapFrontendToBackend($validated);
 
             // Sanitize Content
             $data['header_content'] = $this->letterService->sanitizeHtml($data['header_content'] ?? '');
@@ -100,9 +106,7 @@ class TemplateController extends Controller
     // PUT /api/templates/{id}
     public function update(Request $request, $id)
     {
-        // Security: Only admin and editor can update templates
-        $user = $request->user();
-        if (!$user || !in_array($user->role, ['admin', 'editor'])) {
+        if (!$this->canManageTemplates($request->user())) {
             return response()->json(['error' => 'Unauthorized. Admin or Editor role required.'], 403);
         }
 
@@ -127,7 +131,7 @@ class TemplateController extends Controller
                 'layoutSettings' => 'nullable|array',
             ]);
 
-            $data = $this->mapFrontendToBackend($request->all());
+            $data = $this->mapFrontendToBackend($validated);
 
             // Sanitize Content
             $data['header_content'] = $this->letterService->sanitizeHtml($data['header_content'] ?? '');
@@ -221,5 +225,15 @@ class TemplateController extends Controller
             }
         }
         return $output;
+    }
+
+    private function canViewTemplates($user): bool
+    {
+        return $user && in_array($user->role, ['admin', 'editor'], true);
+    }
+
+    private function canManageTemplates($user): bool
+    {
+        return $this->canViewTemplates($user);
     }
 }

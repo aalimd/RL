@@ -15,7 +15,7 @@ class AiService
     public function __construct()
     {
         // Fetch API key dynamically and trim whitespace
-        $this->apiKey = trim(Settings::where('key', 'geminiApiKey')->value('value') ?? '');
+        $this->apiKey = trim((string) Settings::getValue('geminiApiKey', ''));
     }
 
     /**

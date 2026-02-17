@@ -54,10 +54,11 @@ class SettingsController extends Controller
         ];
 
         $data = $request->except(['_token']);
+        $updatedKeys = [];
 
         foreach ($data as $key => $value) {
             // Only allow whitelisted keys
-            if (!in_array($key, $allowedKeys)) {
+            if (!in_array($key, $allowedKeys, true)) {
                 continue;
             }
             Settings::updateOrCreate(

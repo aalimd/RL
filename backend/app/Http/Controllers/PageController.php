@@ -217,6 +217,10 @@ class PageController extends Controller
             return back()->withErrors(['loginIdentifier' => 'Invalid credentials'])->withInput();
         }
 
+        if (!$user->is_active) {
+            return back()->withErrors(['loginIdentifier' => 'Account is deactivated. Please contact support.'])->withInput();
+        }
+
         // Log user in
         auth()->login($user);
         $request->session()->regenerate();
@@ -653,7 +657,7 @@ class PageController extends Controller
 
         // Always Enforce 2FA/OTP for Security
         // Generate 6-digit OTP
-        $otp = rand(100000, 999999);
+        $otp = random_int(100000, 999999);
 
         // Store in session with expiry (5 mins)
         session([
@@ -875,14 +879,13 @@ class PageController extends Controller
         }
 
         $content = $this->letterService->generateLetterContent($request, $template);
-        $allowedTags = '<p><br><b><i><u><strong><em><table><thead><tbody><tr><th><td><ul><ol><li><img><span><div><h1><h2><h3><h4><h5><h6><font><center><blockquote><hr><a>';
 
         $data = [
             'request' => $request,
             'layout' => $content['layout'],
-            'header' => strip_tags($content['header'], $allowedTags),
-            'body' => strip_tags($content['body'], $allowedTags),
-            'footer' => strip_tags($content['footer'], $allowedTags),
+            'header' => $this->letterService->sanitizeHtml($content['header']),
+            'body' => $this->letterService->sanitizeHtml($content['body']),
+            'footer' => $this->letterService->sanitizeHtml($content['footer']),
             'signature' => $content['signature'],
             'qrCode' => $content['qrCode'] ?? '',
         ];

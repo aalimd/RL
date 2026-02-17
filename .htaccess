@@ -1,8 +1,17 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block access to /install directory
+    # Block installer, backend source tree, and hidden files
     RewriteRule ^install/ - [F,L]
+    RewriteRule ^backend/ - [F,L,NC]
+    RewriteRule (^|/)\. - [F,L]
+
+    # Block direct access to operational/debug scripts
+    RewriteRule ^(fix_perms(?:_v2)?\.php|test_write\.php)$ - [F,L,NC]
+
+    # Block downloadable database dumps and source archives in web root
+    RewriteRule \.(?:sql|zip)$ - [F,L,NC]
+
     # RewriteBase /
     
     # Handle Authorization Header
