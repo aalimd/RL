@@ -3,7 +3,7 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -16,13 +16,16 @@ class RequestStatusUpdated extends Mailable
 
     public RequestModel $request;
     public string $trackingUrl;
+    public ?string $renderedBody;
     protected $template;
 
     public function __construct(RequestModel $request)
     {
         $this->request = $request;
         $this->trackingUrl = url('/track/' . $request->tracking_id);
-        $this->template = \App\Models\EmailTemplate::where('name', 'request_status_updated')->first();
+        $this->template = \App\Models\EmailTemplate::where('name', 'request_status_updated')->first()
+            ?? \App\Models\EmailTemplate::where('name', 'request_status_update')->first();
+        $this->renderedBody = $this->template ? $this->replaceVariables($this->template->body) : null;
     }
 
     public function envelope(): Envelope
@@ -39,6 +42,7 @@ class RequestStatusUpdated extends Mailable
             with: [
                 'request' => $this->request,
                 'trackingUrl' => $this->trackingUrl,
+                'body' => $this->renderedBody,
             ],
         );
     }
@@ -50,6 +54,8 @@ class RequestStatusUpdated extends Mailable
             '{status}' => ucfirst($this->request->status),
             '{admin_message}' => $this->request->admin_message ?? '',
             '{tracking_link}' => $this->trackingUrl,
+            '{tracking_id}' => $this->request->tracking_id,
+            '{request_id}' => (string) $this->request->id,
         ];
         return str_replace(array_keys($vars), array_values($vars), $content);
     }

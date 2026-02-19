@@ -95,7 +95,6 @@ Route::middleware(['auth', 'active', 'twofactor'])->prefix('admin')->name('admin
         Route::post('/settings/backup', [AdminController::class, 'downloadDatabaseBackup'])->name('settings.backup');
 
         // Email Templates
-        // Email Templates
         Route::get('/email-templates', [App\Http\Controllers\Admin\EmailTemplateController::class, 'index'])->name('email-templates.index');
         Route::get('/email-templates/{id}/edit', [App\Http\Controllers\Admin\EmailTemplateController::class, 'edit'])->name('email-templates.edit');
         Route::put('/email-templates/{id}', [App\Http\Controllers\Admin\EmailTemplateController::class, 'update'])->name('email-templates.update');

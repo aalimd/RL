@@ -42,12 +42,7 @@ class LetterService
     public function generateLetterContent(Request $request, ?Template $template = null): array
     {
         $formData = [];
-        try {
-            $formData = $request->form_data ?? [];
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            Log::error('Decryption failed for request ' . $request->id . ': ' . $e->getMessage());
-            $formData = [];
-        }
+        $formData = $request->form_data ?? [];
         $templateId = $formData['template_id'] ?? null;
 
         // Resolve Template
@@ -103,11 +98,7 @@ class LetterService
         $bodyContent = $replaceVars($template->body_content ?? $template->content);
         $footerContent = $replaceVars($template->footer_content);
 
-        // Auto-apply gender pronouns based on student's gender
-        $gender = !empty($formData['gender']) ? $formData['gender'] : 'male';
-        $headerContent = $this->applyGenderPronouns($headerContent, $gender);
-        $bodyContent = $this->applyGenderPronouns($bodyContent, $gender);
-        $footerContent = $this->applyGenderPronouns($footerContent, $gender);
+
 
 
 
@@ -160,11 +151,7 @@ class LetterService
      */
     public function getVariables(Request $request): array
     {
-        try {
-            $formData = $request->form_data ?? [];
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            $formData = [];
-        }
+        $formData = $request->form_data ?? [];
 
         $rotationMonthFormatted = '';
         if (isset($formData['rotationMonth'])) {
@@ -256,38 +243,7 @@ class LetterService
         ];
     }
 
-    /**
-     * Apply gender-specific pronoun replacements
-     * Uses word boundaries to avoid partial word replacements (e.g., "history")
-     */
-    private function applyGenderPronouns(?string $text, string $gender): string
-    {
-        if (!$text || strtolower($gender) !== 'female') {
-            return $text ?? '';
-        }
 
-        // Pronoun mapping: male → female (using word boundaries for safety)
-        $replacements = [
-            // Lowercase
-            '/\bhe\b/' => 'she',
-            '/\bhim\b/' => 'her',
-            '/\bhis\b/' => 'her',
-            '/\bhimself\b/' => 'herself',
-            // Capitalized (for sentence starts)
-            '/\bHe\b/' => 'She',
-            '/\bHim\b/' => 'Her',
-            '/\bHis\b/' => 'Her',
-            '/\bHimself\b/' => 'Herself',
-            // Titles
-            '/\bMr\./' => 'Ms.',
-        ];
-
-        foreach ($replacements as $pattern => $replacement) {
-            $text = preg_replace($pattern, $replacement, $text);
-        }
-
-        return $text;
-    }
 
     /**
      * Generate QR Code HTML

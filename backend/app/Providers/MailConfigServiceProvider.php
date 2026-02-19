@@ -50,7 +50,6 @@ class MailConfigServiceProvider extends ServiceProvider
                 });
 
             if ($mailSettings->isNotEmpty()) {
-                $useSmtp = config('mail.default') === 'smtp';
                 $config = [
                     'transport' => 'smtp',
                     'host' => $mailSettings['smtpHost'] ?? config('mail.mailers.smtp.host'),
@@ -61,9 +60,9 @@ class MailConfigServiceProvider extends ServiceProvider
                     'timeout' => null,
                 ];
 
-                if ($useSmtp) {
-                    Config::set('mail.mailers.smtp', array_merge(config('mail.mailers.smtp', []), $config));
-                }
+                // Always merge SMTP settings from DB so they also apply when default mailer
+                // is "failover" and SMTP is one of the fallback transports.
+                Config::set('mail.mailers.smtp', array_merge(config('mail.mailers.smtp', []), $config));
 
                 // Set From Address
                 if (isset($mailSettings['mailFromAddress'])) {

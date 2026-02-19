@@ -15,6 +15,8 @@ class Template extends Model
     protected $casts = [
         'layout_settings' => 'array',
         'is_active' => 'boolean',
+        'draft_data' => 'array',
+        'last_draft_saved_at' => 'datetime',
     ];
 
     public function requests()

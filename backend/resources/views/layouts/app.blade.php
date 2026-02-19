@@ -1,3 +1,6 @@
+@php
+    $settings = $settings ?? [];
+@endphp
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 
@@ -139,7 +142,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: var(--font-main);
+            font-family: var(--font-family);
         }
 
         h1, h2, h3, h4, h5, h6, .hero-title {

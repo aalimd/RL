@@ -22,6 +22,7 @@ if (config('app.env') === 'production') {
 
 // Public Routes
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
+//    // DISABLED: Registration is admin-only. See PageController login notes.
 // Route::post('/auth/register', [AuthController::class, 'register']); // DISABLED: Critical Security Risk. Use Admin Panel to create users.
 Route::get('/settings/public', [SettingsController::class, 'publicSettings']);
 Route::post('/requests', [RequestController::class, 'store'])->middleware('throttle:10,1'); // Public submission - Rate limited

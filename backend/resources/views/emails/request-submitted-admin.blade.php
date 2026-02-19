@@ -93,39 +93,43 @@
             <h1>📬 New Recommendation Request</h1>
         </div>
         <div class="content">
-            <p>A new recommendation letter request has been submitted and requires your attention.</p>
+            @if(isset($body) && $body)
+                {!! $body !!}
+            @else
+                <p>A new recommendation letter request has been submitted and requires your attention.</p>
 
-            <div class="info-box">
-                <div class="info-row">
-                    <span class="info-label">Tracking ID:</span>
-                    <span class="info-value"><strong>{{ $request->tracking_id }}</strong></span>
+                <div class="info-box">
+                    <div class="info-row">
+                        <span class="info-label">Tracking ID:</span>
+                        <span class="info-value"><strong>{{ $request->tracking_id }}</strong></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Student Name:</span>
+                        <span class="info-value">{{ $request->student_name }} {{ $request->middle_name }}
+                            {{ $request->last_name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">{{ $request->student_email }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">University:</span>
+                        <span class="info-value">{{ $request->university ?? 'Not specified' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Purpose:</span>
+                        <span class="info-value">{{ $request->purpose ?? 'Not specified' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Submitted:</span>
+                        <span class="info-value">{{ $request->created_at->format('M d, Y H:i') }}</span>
+                    </div>
                 </div>
-                <div class="info-row">
-                    <span class="info-label">Student Name:</span>
-                    <span class="info-value">{{ $request->student_name }} {{ $request->middle_name }}
-                        {{ $request->last_name }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Email:</span>
-                    <span class="info-value">{{ $request->student_email }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">University:</span>
-                    <span class="info-value">{{ $request->university ?? 'Not specified' }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Purpose:</span>
-                    <span class="info-value">{{ $request->purpose ?? 'Not specified' }}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Submitted:</span>
-                    <span class="info-value">{{ $request->created_at->format('M d, Y H:i') }}</span>
-                </div>
-            </div>
 
-            <p style="text-align: center;">
-                <a href="{{ $detailsUrl }}" class="btn">Review Request</a>
-            </p>
+                <p style="text-align: center;">
+                    <a href="{{ $detailsUrl }}" class="btn">Review Request</a>
+                </p>
+            @endif
         </div>
         <div class="footer">
             <p>This is an automated notification from the Recommendation System.</p>

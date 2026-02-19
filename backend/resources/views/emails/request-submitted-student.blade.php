@@ -83,27 +83,31 @@
             <h1>✓ Request Received</h1>
         </div>
         <div class="content">
-            <p>Dear <strong>{{ $request->student_name }}</strong>,</p>
+            @if(isset($body) && $body)
+                {!! $body !!}
+            @else
+                <p>Dear <strong>{{ $request->student_name }}</strong>,</p>
 
-            <p>Thank you for submitting your recommendation letter request. Your request has been successfully received
-                and is now pending review.</p>
+                <p>Thank you for submitting your recommendation letter request. Your request has been successfully received
+                    and is now pending review.</p>
 
-            <div class="tracking-box">
-                <p style="margin: 0 0 10px 0; color: #666;">Your Tracking ID:</p>
-                <div class="tracking-id">{{ $request->tracking_id }}</div>
-                <p style="margin: 15px 0 0 0; font-size: 14px; color: #666;">Keep this ID safe to track your request
-                    status.</p>
-            </div>
+                <div class="tracking-box">
+                    <p style="margin: 0 0 10px 0; color: #666;">Your Tracking ID:</p>
+                    <div class="tracking-id">{{ $request->tracking_id }}</div>
+                    <p style="margin: 15px 0 0 0; font-size: 14px; color: #666;">Keep this ID safe to track your request
+                        status.</p>
+                </div>
 
-            <p>You can track the status of your request at any time using the button below:</p>
+                <p>You can track the status of your request at any time using the button below:</p>
 
-            <p style="text-align: center;">
-                <a href="{{ $trackingUrl }}" class="btn">Track Your Request</a>
-            </p>
+                <p style="text-align: center;">
+                    <a href="{{ $trackingUrl }}" class="btn">Track Your Request</a>
+                </p>
 
-            <p style="margin-top: 30px;">If you have any questions, please don't hesitate to contact us.</p>
+                <p style="margin-top: 30px;">If you have any questions, please don't hesitate to contact us.</p>
 
-            <p>Best regards,<br>Dr. Alzahrani EM</p>
+                <p>Best regards,<br>Dr. Alzahrani EM</p>
+            @endif
         </div>
         <div class="footer">
             <p>This is an automated message. Please do not reply directly to this email.</p>

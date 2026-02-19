@@ -83,24 +83,28 @@
             <h1>🔔 Request Status Updated</h1>
         </div>
         <div class="content">
-            <p>Dear <strong>{{ $request->student_name }}</strong>,</p>
+            @if(isset($body) && $body)
+                {!! $body !!}
+            @else
+                <p>Dear <strong>{{ $request->student_name }}</strong>,</p>
 
-            <p>We wanted to let you know that there has been an update to your recommendation letter request.</p>
+                <p>We wanted to let you know that there has been an update to your recommendation letter request.</p>
 
-            <div class="tracking-box">
-                <p style="margin: 0 0 10px 0; color: #666;">Your Tracking ID:</p>
-                <div class="tracking-id">{{ $request->tracking_id }}</div>
-            </div>
+                <div class="tracking-box">
+                    <p style="margin: 0 0 10px 0; color: #666;">Your Tracking ID:</p>
+                    <div class="tracking-id">{{ $request->tracking_id }}</div>
+                </div>
 
-            <p>To view the current status of your request and any updates, please use the button below:</p>
+                <p>To view the current status of your request and any updates, please use the button below:</p>
 
-            <p style="text-align: center;">
-                <a href="{{ $trackingUrl }}" class="btn">Check Your Request Status</a>
-            </p>
+                <p style="text-align: center;">
+                    <a href="{{ $trackingUrl }}" class="btn">Check Your Request Status</a>
+                </p>
 
-            <p style="margin-top: 30px;">Thank you for your patience.</p>
+                <p style="margin-top: 30px;">Thank you for your patience.</p>
 
-            <p>Best regards,<br>Dr. Alzahrani EM</p>
+                <p>Best regards,<br>Dr. Alzahrani EM</p>
+            @endif
         </div>
         <div class="footer">
             <p>This is an automated message. Please do not reply directly to this email.</p>

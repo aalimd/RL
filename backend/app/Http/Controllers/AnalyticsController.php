@@ -16,7 +16,9 @@ class AnalyticsController extends Controller
         }
 
         $total = RequestModel::count();
-        $pending = RequestModel::where('status', 'Under Review')->orWhere('status', 'Submitted')->count();
+        $pending = RequestModel::where(function ($q) {
+            $q->where('status', 'Under Review')->orWhere('status', 'Submitted');
+        })->count();
         $approved = RequestModel::where('status', 'Approved')->count();
         $rejected = RequestModel::where('status', 'Rejected')->count();
 
@@ -26,9 +28,11 @@ class AnalyticsController extends Controller
             DB::raw("DATE_FORMAT(created_at, '%Y-%m') as month_name")
         )
             ->groupBy('month_name')
-            ->orderBy('month_name', 'asc')
+            ->orderBy('month_name', 'desc')
             ->limit(6)
-            ->get();
+            ->get()
+            ->sortBy('month_name')
+            ->values();
 
         $monthlyTrends = $monthly->map(function ($row) {
             return ['month' => $row->month_name, 'count' => $row->count];

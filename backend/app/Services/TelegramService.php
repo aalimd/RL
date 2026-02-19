@@ -110,7 +110,7 @@ class TelegramService
 
         // Always add View Details button, ensuring HTTPS manually if needed
         $detailsUrl = url("/admin/requests/{$request->id}");
-        $detailsUrl = url("/admin/requests/{$request->id}");
+
 
         // Ensure HTTPS for production URLs (exclude localhost)
         $isLocalhost = str_contains($detailsUrl, 'localhost') || str_contains($detailsUrl, '127.0.0.1');
@@ -145,8 +145,14 @@ class TelegramService
         }
 
         $response = Http::post($this->apiUrl . $this->botToken . '/setWebhook', $data);
+        $result = $response->json();
 
-        return $response->json();
+        Log::info('Telegram setWebhook API response:', [
+            'status' => $response->status(),
+            'body' => $result
+        ]);
+
+        return $result;
     }
 
     /**

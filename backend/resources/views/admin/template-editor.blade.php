@@ -982,7 +982,24 @@
     // State
     let currentEditor = 'headerEditor';
     let hasChanges = false;
+    let hasUnsyncedDraft = false;
+    let autoSaveInFlight = false;
+    const autoSaveIntervalMs = 30000;
     let editors = {};
+    const autosaveUrl = @json(isset($template) ? route('admin.templates.autosave', $template->id) : null);
+
+    function setAutoSaveStatus(message, isError = false) {
+        const statusEl = document.getElementById('autoSaveStatus');
+        if (!statusEl) return;
+        statusEl.textContent = message;
+        statusEl.style.color = isError ? '#b91c1c' : '';
+    }
+
+    function markDirty() {
+        hasChanges = true;
+        hasUnsyncedDraft = true;
+        setAutoSaveStatus('Unsaved changes');
+    }
     
     // Sanitize HTML
     function sanitize(html) {
@@ -1018,8 +1035,7 @@
                 
                 editor.on('change keyup', function() {
                     editor.save();
-                    hasChanges = true;
-                    document.getElementById('autoSaveStatus').textContent = 'Unsaved changes';
+                    markDirty();
                     updatePreview();
                 });
                 
@@ -1033,6 +1049,12 @@
     // Initialize
     document.addEventListener('DOMContentLoaded', function() {
         feather.replace();
+
+        if (autosaveUrl) {
+            setAutoSaveStatus('Auto-save enabled');
+        } else {
+            setAutoSaveStatus('Save template to enable auto-save');
+        }
         
         // Initialize TinyMCE
         initTinyMCE();
@@ -1058,10 +1080,9 @@
         });
         
         // Listen for non-TinyMCE input changes
-        document.querySelectorAll('input:not(.tox-textfield), select').forEach(el => {
+        document.querySelectorAll('input:not(.tox-textfield), select, textarea').forEach(el => {
             el.addEventListener('input', function() {
-                hasChanges = true;
-                document.getElementById('autoSaveStatus').textContent = 'Unsaved changes';
+                markDirty();
                 updatePreview();
             });
         });
@@ -1074,6 +1095,8 @@
                 reader.onload = function(e) {
                     document.getElementById('logoBase64').value = e.target.result;
                     document.getElementById('logoStatus').textContent = '✓ Logo uploaded';
+                    markDirty();
+                    updatePreview();
                 };
                 reader.readAsDataURL(file);
             }
@@ -1094,7 +1117,16 @@
         document.getElementById('templateForm').addEventListener('submit', function() {
             tinymce.triggerSave();
             hasChanges = false;
+            hasUnsyncedDraft = false;
         });
+
+        if (autosaveUrl) {
+            setInterval(function() {
+                if (hasUnsyncedDraft && !autoSaveInFlight) {
+                    saveDraft();
+                }
+            }, autoSaveIntervalMs);
+        }
     });
     
     // Insert variable into current editor
@@ -1108,8 +1140,7 @@
         if (editor) {
             // Insert as plain text to avoid HTML encoding issues
             editor.execCommand('mceInsertContent', false, tag);
-            hasChanges = true;
-            document.getElementById('autoSaveStatus').textContent = 'Unsaved changes';
+            markDirty();
             updatePreview();
         } else {
             // Fallback for non-TinyMCE fields
@@ -1121,7 +1152,7 @@
                 textarea.value = text.substring(0, start) + tag + text.substring(end);
                 textarea.selectionStart = textarea.selectionEnd = start + tag.length;
                 textarea.focus();
-                hasChanges = true;
+                markDirty();
                 updatePreview();
             }
         }
@@ -1154,8 +1185,46 @@
         } else {
             document.getElementById('headerEditor').value = html;
         }
-        hasChanges = true;
+        markDirty();
         updatePreview();
+    }
+
+    async function saveDraft() {
+        if (!autosaveUrl) return;
+
+        autoSaveInFlight = true;
+        setAutoSaveStatus('Saving draft...');
+
+        try {
+            tinymce.triggerSave();
+            const form = document.getElementById('templateForm');
+            const formData = new FormData(form);
+            formData.delete('_method');
+
+            const response = await fetch(autosaveUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': formData.get('_token') || '',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData,
+                credentials: 'same-origin'
+            });
+
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok || !payload.success) {
+                throw new Error(payload.message || 'Auto-save failed');
+            }
+
+            hasUnsyncedDraft = false;
+            const savedAt = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            setAutoSaveStatus(`Draft saved at ${savedAt}`);
+        } catch (error) {
+            setAutoSaveStatus('Auto-save failed', true);
+        } finally {
+            autoSaveInFlight = false;
+        }
     }
     
     // Update preview
@@ -1285,8 +1354,7 @@
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('change', function() {
-                hasChanges = true;
-                document.getElementById('autoSaveStatus').textContent = 'Unsaved changes';
+                markDirty();
             });
         }
     });

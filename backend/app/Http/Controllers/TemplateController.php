@@ -88,7 +88,8 @@ class TemplateController extends Controller
                 \App\Models\AuditLog::create([
                     'user_id' => auth()->id(),
                     'action' => 'api_create_template',
-                    'details' => "Created template: " . $template->name
+                    'details' => "Created template: " . $template->name,
+                    'ip_address' => request()->ip(),
                 ]);
             } catch (\Exception $e) {
                 \Log::error('Audit log failed during template creation: ' . $e->getMessage());
@@ -145,7 +146,8 @@ class TemplateController extends Controller
                 \App\Models\AuditLog::create([
                     'user_id' => auth()->id(),
                     'action' => 'api_update_template',
-                    'details' => "Updated template: " . $template->name
+                    'details' => "Updated template: " . $template->name,
+                    'ip_address' => request()->ip(),
                 ]);
             } catch (\Exception $e) {
                 \Log::error('Audit log failed during template update: ' . $e->getMessage());
@@ -180,7 +182,8 @@ class TemplateController extends Controller
                 \App\Models\AuditLog::create([
                     'user_id' => auth()->id(),
                     'action' => 'api_delete_template',
-                    'details' => "Deleted template: " . $template->name
+                    'details' => "Deleted template: " . $template->name,
+                    'ip_address' => request()->ip(),
                 ]);
             } catch (\Exception $e) {
                 \Log::error('Audit log failed during template deletion: ' . $e->getMessage());
@@ -220,7 +223,7 @@ class TemplateController extends Controller
 
         $output = [];
         foreach ($map as $front => $back) {
-            if (isset($input[$front])) {
+            if (array_key_exists($front, $input)) {
                 $output[$back] = $input[$front];
             }
         }

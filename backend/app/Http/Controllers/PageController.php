@@ -172,7 +172,7 @@ class PageController extends Controller
             'verification_token' => $requestModel->verification_token,
             'training_period' => $requestModel->training_period,
             'purpose' => $requestModel->purpose,
-            'deadline' => $requestModel->deadline ? $requestModel->deadline->format('Y-m-d') : null,
+            'deadline' => ($requestModel->deadline instanceof \DateTimeInterface) ? $requestModel->deadline->format('Y-m-d') : null,
             'content_option' => $requestModel->content_option ?? (!empty($requestModel->custom_content) ? 'custom' : 'template'),
             'custom_content' => $requestModel->custom_content,
             'template_id' => $requestModel->template_id,
@@ -726,7 +726,16 @@ class PageController extends Controller
         $expires = session('2fa_expires');
         $requestId = session('2fa_request_id');
 
-        if (!$sessionOtp || !$requestId || now()->greaterThan($expires)) {
+        $isExpired = true;
+        if ($expires) {
+            try {
+                $isExpired = now()->greaterThan(\Illuminate\Support\Carbon::parse($expires));
+            } catch (\Throwable $e) {
+                $isExpired = true;
+            }
+        }
+
+        if (!$sessionOtp || !$requestId || $isExpired) {
             session()->forget(['2fa_otp', '2fa_expires', '2fa_request_id', '2fa_tracking_id', '2fa_delivery_method', '2fa_delivery_hint']);
             return back()->with('error', 'Session expired. Please try tracking again.');
         }
@@ -796,18 +805,13 @@ class PageController extends Controller
             $formData = [];
         }
 
+        $template = null;
         if ($templateId) {
             $template = \App\Models\Template::find($templateId);
         }
 
-        // Fallback to template_id column or active template
-        if (!isset($template) || !$template) {
-            if ($request->template_id) {
-                $template = \App\Models\Template::find($request->template_id);
-            }
-        }
-        if (!isset($template) || !$template) {
-            $template = \App\Models\Template::where('is_active', true)->first();
+        if (!$template) {
+            $template = $this->resolveTemplate($request);
         }
 
         if (!$template) {
@@ -833,9 +837,6 @@ class PageController extends Controller
     /**
      * Download letter as PDF
      */
-    /**
-     * Download letter as PDF
-     */
     public function downloadPdf($tracking_id, Request $httpRequest)
     {
         // Fix 7: Search by tracking_id
@@ -854,24 +855,16 @@ class PageController extends Controller
 
         // Get Template
         $templateId = null;
-        try {
-            $formData = $request->form_data ?? [];
-            $templateId = $formData['template_id'] ?? null;
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            $formData = [];
-        }
+        $formData = $request->form_data ?? [];
+        $templateId = $formData['template_id'] ?? null;
 
+        $template = null;
         if ($templateId) {
             $template = \App\Models\Template::find($templateId);
         }
 
-        if (!isset($template) || !$template) {
-            if ($request->template_id) {
-                $template = \App\Models\Template::find($request->template_id);
-            }
-        }
-        if (!isset($template) || !$template) {
-            $template = \App\Models\Template::where('is_active', true)->first();
+        if (!$template) {
+            $template = $this->resolveTemplate($request);
         }
 
         if (!$template) {
@@ -908,5 +901,22 @@ class PageController extends Controller
             \Illuminate\Support\Facades\Log::error('PDF Generation Failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to generate PDF. Please try again later.');
         }
+    }
+
+    /**
+     * Helper to resolve template from request or defaults
+     */
+    private function resolveTemplate(\App\Models\Request $request)
+    {
+        $template = null;
+        if ($request->template_id) {
+            $template = \App\Models\Template::find($request->template_id);
+        }
+
+        if (!$template) {
+            $template = \App\Models\Template::where('is_active', true)->first();
+        }
+
+        return $template;
     }
 }

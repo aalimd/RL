@@ -50,7 +50,15 @@ class SettingsController extends Controller
             'trackingRejectedMessage',
             'trackingPendingMessage',
             'trackingRevisionMessage',
-            'trackingReviewMessage'
+            'trackingReviewMessage',
+            // API/Logic Keys
+            'geminiApiKey',
+            'telegram_bot_token',
+            'telegram_chat_id',
+            'templateSelectionMode',
+            'defaultTemplateId',
+            'allowCustomContent',
+            'formFieldConfig',
         ];
 
         $data = $request->except(['_token']);
@@ -66,6 +74,10 @@ class SettingsController extends Controller
                 ['value' => $value]
             );
             $updatedKeys[] = $key;
+        }
+
+        if (in_array('maintenanceMode', $updatedKeys, true)) {
+            cache()->forget('maintenance_mode');
         }
 
         if (!empty($updatedKeys)) {

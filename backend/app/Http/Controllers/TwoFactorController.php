@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Settings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
@@ -14,14 +15,19 @@ class TwoFactorController extends Controller
     public function index()
     {
         $user = auth()->user();
+        $settings = $this->getLayoutSettings();
         if ($user->two_factor_confirmed_at) {
             return view('admin.settings.security', [
+                'settings' => $settings,
                 'enabled' => true,
                 'method' => $user->two_factor_method
             ]);
         }
 
-        return view('admin.settings.security', ['enabled' => false]);
+        return view('admin.settings.security', [
+            'settings' => $settings,
+            'enabled' => false,
+        ]);
     }
 
     /**
@@ -178,7 +184,10 @@ class TwoFactorController extends Controller
             }
         }
 
-        return view('auth.verify-2fa', ['method' => $user->two_factor_method]);
+        return view('auth.verify-2fa', [
+            'method' => $user->two_factor_method,
+            'settings' => $this->getLayoutSettings(),
+        ]);
     }
 
     /**
@@ -270,5 +279,10 @@ class TwoFactorController extends Controller
 
             return false;
         }
+    }
+
+    private function getLayoutSettings(): array
+    {
+        return Settings::all()->pluck('value', 'key')->toArray();
     }
 }

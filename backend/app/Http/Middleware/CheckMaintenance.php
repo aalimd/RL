@@ -26,7 +26,9 @@ class CheckMaintenance
         // We use cache to avoid hitting DB on every single request if possible, 
         // but for simplicity & reliability in this setup, direct DB query is fine for now 
         // or we trust the Settings model might cache internally if optimized later.
-        $maintenanceMode = Settings::where('key', 'maintenanceMode')->value('value');
+        $maintenanceMode = cache()->remember('maintenance_mode', 60, function () {
+            return Settings::where('key', 'maintenanceMode')->value('value');
+        });
 
         if ($maintenanceMode === 'true') {
             // 3. Allow Authenticated Admins/Editors to bypass

@@ -1032,6 +1032,11 @@ class AdminController extends Controller
 
                 Settings::updateOrCreate(['key' => $key], ['value' => $value]);
             }
+
+            // Clear maintenance mode cache if it was updated
+            if ($request->has('maintenanceMode') || $request->has('maintenanceMessage')) {
+                cache()->forget('maintenance_mode');
+            }
         } elseif ($request->has('telegram_bot_token') || $request->has('telegram_chat_id')) {
             // Processing Telegram Settings
             $keys = ['telegram_bot_token', 'telegram_chat_id'];
@@ -1068,7 +1073,7 @@ class AdminController extends Controller
             }
 
             // Clear mail settings cache
-            cache()->forget('mail_settings');
+            // cache()->forget('mail_settings');
         }
 
         return redirect()->route('admin.settings')->with('success', 'Settings updated successfully!');
@@ -1554,19 +1559,19 @@ class AdminController extends Controller
     </p>
 
     <p style="margin-bottom: 15px; text-align: justify; line-height: 1.6;">
-        This letter is to certify that <strong>Dr. {{studentName}}</strong> completed a rotation in the Emergency Department at King Abdulaziz Medical City, Jeddah (MNGHA) during <strong>{{rotationMonth}}</strong> as part of his medical internship.
+        This letter is to certify that <strong>Dr. {{studentName}}</strong> completed a rotation in the Emergency Department at King Abdulaziz Medical City, Jeddah (MNGHA) during <strong>{{rotationMonth}}</strong> as part of {{his}} medical internship.
     </p>
 
     <p style="margin-bottom: 15px; text-align: justify; line-height: 1.6;">
-        Throughout his rotation, Dr. {{studentName}} demonstrated solid medical knowledge and a consistently professional attitude. He was diligent, dependable, and showed a clear commitment to learning and patient care. He interacted effectively with patients, residents, consultants, nursing staff, and other members of the healthcare team.
+        Throughout {{his}} rotation, Dr. {{studentName}} demonstrated solid medical knowledge and a consistently professional attitude. {{He}} was diligent, dependable, and showed a clear commitment to learning and patient care. {{He}} interacted effectively with patients, residents, consultants, nursing staff, and other members of the healthcare team.
     </p>
 
     <p style="margin-bottom: 15px; text-align: justify; line-height: 1.6;">
-        Dr. {{studentName}} displayed particular interest in Emergency Medicine, with good situational awareness, appropriate prioritization, and the ability to work efficiently in a fast-paced environment. He was receptive to feedback and showed continuous improvement during his time in the department.
+        Dr. {{studentName}} displayed particular interest in Emergency Medicine, with good situational awareness, appropriate prioritization, and the ability to work efficiently in a fast-paced environment. {{He}} was receptive to feedback and showed continuous improvement during {{his}} time in the department.
     </p>
 
     <p style="margin-bottom: 20px; text-align: justify; line-height: 1.6;">
-        Based on his performance, work ethic, and interpersonal skills, I believe Dr. {{studentName}} would be a valuable addition to any training program or institution he joins. I recommend him without reservation for the specialty he chooses to pursue.
+        Based on {{his}} performance, work ethic, and interpersonal skills, I believe Dr. {{studentName}} would be a valuable addition to any training program or institution {{he}} joins. I recommend {{him}} without reservation for the specialty {{he}} chooses to pursue.
     </p>
 </div>';
 

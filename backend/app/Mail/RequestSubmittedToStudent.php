@@ -3,7 +3,7 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
+
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -16,6 +16,7 @@ class RequestSubmittedToStudent extends Mailable
 
     public RequestModel $request;
     public string $trackingUrl;
+    public ?string $renderedBody;
     protected $template;
 
     public function __construct(RequestModel $request)
@@ -23,6 +24,7 @@ class RequestSubmittedToStudent extends Mailable
         $this->request = $request;
         $this->trackingUrl = url('/track/' . $request->tracking_id);
         $this->template = \App\Models\EmailTemplate::where('name', 'request_submitted_student')->first();
+        $this->renderedBody = $this->template ? $this->replaceVariables($this->template->body) : null;
     }
 
     public function envelope(): Envelope
@@ -39,6 +41,7 @@ class RequestSubmittedToStudent extends Mailable
             with: [
                 'request' => $this->request,
                 'trackingUrl' => $this->trackingUrl,
+                'body' => $this->renderedBody,
             ],
         );
     }
@@ -48,6 +51,8 @@ class RequestSubmittedToStudent extends Mailable
         $vars = [
             '{student_name}' => $this->request->student_name,
             '{tracking_id}' => $this->request->tracking_id,
+            '{request_id}' => (string) $this->request->id,
+            '{tracking_link}' => $this->trackingUrl,
             '{university}' => $this->request->university ?? 'Our University',
         ];
         return str_replace(array_keys($vars), array_values($vars), $content);

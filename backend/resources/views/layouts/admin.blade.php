@@ -1,4 +1,5 @@
 @php
+    $settings = $settings ?? [];
     $locale = app()->getLocale();
     $dir = $locale === 'ar' || ($settings['siteLanguage'] ?? 'en') === 'ar' ? 'rtl' : 'ltr';
 @endphp

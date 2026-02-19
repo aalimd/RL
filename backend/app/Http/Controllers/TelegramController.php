@@ -78,6 +78,7 @@ class TelegramController extends Controller
             $this->updateRequestStatus(substr($data, 15), 'Needs Revision', '🔄 Marked Needs Revision!', 'telegram_revision_request');
         } else {
             $this->answerCallback($callbackId);
+            return;
         }
 
         // Always answer callback to stop loading animation
@@ -119,6 +120,7 @@ class TelegramController extends Controller
         \App\Models\AuditLog::create([
             'action' => $auditAction,
             'details' => "$status request #{$req->id} ({$req->tracking_id}) via Telegram",
+            'ip_address' => request()->ip(), // Capture webhook IP (Telegram server)
         ]);
 
         // Send feedback to Admin via Telegram
@@ -349,8 +351,17 @@ class TelegramController extends Controller
             $url = str_replace('http://', 'https://', $url);
         }
 
+        Log::info('Setting up Telegram Webhook:', [
+            'url' => $url,
+            'has_secret' => !empty($webhookSecret)
+        ]);
+
         // Set Webhook with Secret Token Header
         $result = $this->telegram->setWebhook($url, $webhookSecret);
+
+        if (isset($result['ok']) && !$result['ok']) {
+            Log::error('Telegram setWebhook failed:', $result);
+        }
 
         return response()->json($result);
     }
