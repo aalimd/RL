@@ -84,11 +84,16 @@ return [
 
         'failover' => [
             'transport' => 'failover',
-            'mailers' => [
-                'zeptomail',
-                'smtp',
-                'log',
-            ],
+            // Default excludes "log" to avoid silently "sending" without delivery.
+            // Override with MAIL_FAILOVER_MAILERS if needed, e.g. "zeptomail,smtp,log".
+            'mailers' => (static function () {
+                $mailers = array_values(array_filter(array_map(
+                    'trim',
+                    explode(',', (string) env('MAIL_FAILOVER_MAILERS', 'zeptomail,smtp'))
+                )));
+
+                return $mailers === [] ? ['zeptomail', 'smtp'] : $mailers;
+            })(),
         ],
 
         'roundrobin' => [

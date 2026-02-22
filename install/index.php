@@ -201,12 +201,16 @@ function generateEnvFile($db, $site, $email = null)
 {
     $appKey = 'base64:' . base64_encode(random_bytes(32));
     $appUrl = rtrim($site['url'], '/') ?: 'http://localhost';
-    $mailMailer = $email ? 'smtp' : 'log';
+    $mailMailer = $email ? 'failover' : 'log';
     $mailHost = $email['smtp_host'] ?? '';
     $mailPort = $email['smtp_port'] ?? '';
     $mailUsername = $email['smtp_user'] ?? '';
     $mailPassword = $email['smtp_pass'] ?? '';
-    $mailEncryption = $email['smtp_encryption'] ?? '';
+    $mailScheme = match ($email['smtp_encryption'] ?? '') {
+        'tls' => 'smtp',
+        'ssl' => 'smtps',
+        default => '',
+    };
     $mailFromAddress = $email['mail_from'] ?? '';
     $mailFromName = $email['mail_name'] ?? '';
 
@@ -227,6 +231,7 @@ DB_USERNAME={$db['user']}
 DB_PASSWORD={$db['pass']}
 
 SESSION_DRIVER=file
+CACHE_STORE=file
 CACHE_DRIVER=file
 QUEUE_CONNECTION=sync
 
@@ -235,7 +240,7 @@ MAIL_HOST={$mailHost}
 MAIL_PORT={$mailPort}
 MAIL_USERNAME={$mailUsername}
 MAIL_PASSWORD="{$mailPassword}"
-MAIL_ENCRYPTION={$mailEncryption}
+MAIL_SCHEME={$mailScheme}
 MAIL_FROM_ADDRESS={$mailFromAddress}
 MAIL_FROM_NAME="{$mailFromName}"
 ENV;
@@ -572,7 +577,8 @@ $allRequirementsMet = !in_array(false, $requirements, true);
             <?php elseif ($step == 4): ?>
                 <!-- Step 4: Email Settings -->
                 <h2 style="margin-bottom: 1rem;">Email Configuration</h2>
-                <p style="color: #6b7280; margin-bottom: 1.5rem;">Configure SMTP now, or skip this step and set it later from
+                <p style="color: #6b7280; margin-bottom: 1.5rem;">Configure SMTP now, or skip this step and set it later
+                    from
                     the admin panel.</p>
 
                 <form method="POST">

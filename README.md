@@ -111,12 +111,15 @@ Configure email in: Admin Panel → Settings → Email Settings
 
 ### 500 Internal Server Error
 - Check `backend/storage/logs/laravel.log` for errors
+- If `LOG_CHANNEL=errorlog`, check your server PHP/Apache error log instead.
 - Ensure storage folder is writable: `chmod -R 775 backend/storage`
+- Ensure cache store is file-based on shared hosting: `CACHE_STORE=file`
 
 ### Email Not Sending
 - Verify SMTP settings in Admin → Settings
 - Check spam folder
 - Test with "Send Test Email" button
+- In production, set `MAIL_FAILOVER_MAILERS=zeptomail,smtp` (avoid `log` fallback for real delivery)
 
 ### Page Not Found
 - Ensure mod_rewrite is enabled

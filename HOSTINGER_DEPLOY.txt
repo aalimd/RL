@@ -25,6 +25,13 @@ Updated: Jan 29, 2026
    - Import the file: `/install/database/fresh_install.sql` via phpMyAdmin.
    - Rename `backend/.env.example` to `backend/.env`.
    - Edit `.env` and fill in DB credentials and URL.
+   - Use these production-safe values:
+     APP_ENV=production
+     APP_DEBUG=false
+     SESSION_DRIVER=file
+     CACHE_STORE=file
+     QUEUE_CONNECTION=sync
+     MAIL_FAILOVER_MAILERS=zeptomail,smtp
    - Run `php artisan key:generate` (via SSH) or manually set APP_KEY if you can't access SSH.
 
 5. IMPORTANT PERMISSIONS (Fix 500 Errors)
@@ -42,7 +49,11 @@ Updated: Jan 29, 2026
 7. AUTOMATION & QUEUES
    - The system is designed to work without complex queue workers for basic emails.
    - If emails are slow, configure a Cron Job for `php artisan schedule:run`.
+   - After each deploy, run `php artisan optimize:clear`.
 
 TROUBLESHOOTING
 - "500 Internal Server Error": Almost always folder permissions (Step 5).
 - "Class not found": Run `composer install --optimize-autoloader --no-dev` if you have SSH.
+- "Cache table error" (e.g. SQL on `cache` table): set `CACHE_STORE=file` in `backend/.env`.
+- "Emails appear successful but are not delivered": make sure `MAIL_FAILOVER_MAILERS` does not end with `log` in production.
+- "No laravel.log file": if `LOG_CHANNEL=errorlog`, check hosting PHP/Apache error logs.

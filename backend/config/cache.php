@@ -15,7 +15,8 @@ return [
     |
     */
 
-    'default' => env('CACHE_STORE', 'database'),
+    // Backward compatible with older installs that still set CACHE_DRIVER.
+    'default' => env('CACHE_STORE', env('CACHE_DRIVER', 'database')),
 
     /*
     |--------------------------------------------------------------------------
