@@ -122,8 +122,7 @@
                         <div class="form-group">
                             <label class="form-label">Google Gemini API Key</label>
                             <div style="position: relative;">
-                                <input type="password" name="geminiApiKey" class="form-input"
-                                    value=""
+                                <input type="password" name="geminiApiKey" class="form-input" value=""
                                     placeholder="••••••••{{ !empty($settings['geminiApiKey']) ? ' (configured)' : '' }}"
                                     style="padding-right: 80px;">
                                 <a href="https://aistudio.google.com/app/apikey" target="_blank"
@@ -161,8 +160,7 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label class="form-label">Bot Token</label>
-                            <input type="password" name="telegram_bot_token" class="form-input"
-                                value=""
+                            <input type="password" name="telegram_bot_token" class="form-input" value=""
                                 placeholder="••••••••{{ !empty($settings['telegram_bot_token']) ? ' (configured)' : '' }}">
                             <small style="color: #6b7280; font-size: 0.75rem;">Get this from @BotFather</small>
                         </div>
@@ -237,11 +235,13 @@
                             <label class="form-label">Encryption</label>
                             <select name="smtpEncryption" class="form-select">
                                 <option value="tls" {{ ($settings['smtpEncryption'] ?? 'tls') === 'tls' ? 'selected' : '' }}>
-                                    TLS
+                                    STARTTLS (Port 587)
                                 </option>
-                                <option value="ssl" {{ ($settings['smtpEncryption'] ?? '') === 'ssl' ? 'selected' : '' }}>SSL
+                                <option value="ssl" {{ ($settings['smtpEncryption'] ?? '') === 'ssl' ? 'selected' : '' }}>
+                                    SSL/TLS (Port 465)
                                 </option>
-                                <option value="" {{ ($settings['smtpEncryption'] ?? '') === '' ? 'selected' : '' }}>None
+                                <option value="" {{ ($settings['smtpEncryption'] ?? '') === '' ? 'selected' : '' }}>
+                                    None
                                 </option>
                             </select>
                         </div>

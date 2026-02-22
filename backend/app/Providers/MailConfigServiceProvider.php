@@ -54,7 +54,11 @@ class MailConfigServiceProvider extends ServiceProvider
                     'transport' => 'smtp',
                     'host' => $mailSettings['smtpHost'] ?? config('mail.mailers.smtp.host'),
                     'port' => $mailSettings['smtpPort'] ?? config('mail.mailers.smtp.port'),
-                    'encryption' => $mailSettings['smtpEncryption'] ?? config('mail.mailers.smtp.encryption'),
+                    'scheme' => match ($mailSettings['smtpEncryption'] ?? null) {
+                        'tls' => 'smtp',
+                        'ssl' => 'smtps',
+                        default => null,
+                    } ?? config('mail.mailers.smtp.scheme'),
                     'username' => $mailSettings['smtpUsername'] ?? config('mail.mailers.smtp.username'),
                     'password' => $mailSettings['smtpPassword'] ?? config('mail.mailers.smtp.password'),
                     'timeout' => null,
