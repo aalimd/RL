@@ -23,8 +23,7 @@ class RequestStatusUpdated extends Mailable
     {
         $this->request = $request;
         $this->trackingUrl = url('/track/' . $request->tracking_id);
-        $this->template = \App\Models\EmailTemplate::where('name', 'request_status_updated')->first()
-            ?? \App\Models\EmailTemplate::where('name', 'request_status_update')->first();
+        $this->template = \App\Models\EmailTemplate::whereIn('name', ['request_status_updated', 'request_status_update'])->first();
         $this->renderedBody = $this->template ? $this->replaceVariables($this->template->body) : null;
     }
 

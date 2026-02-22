@@ -36,14 +36,14 @@ class MailConfigServiceProvider extends ServiceProvider
             // Retrieve all mail settings in one query
             // keys: smtpHost, smtpPort, smtpUsername, smtpPassword, smtpEncryption, mailFromAddress, mailFromName
             $mailSettings = Settings::whereIn('key', [
-                    'smtpHost',
-                    'smtpPort',
-                    'smtpUsername',
-                    'smtpPassword',
-                    'smtpEncryption',
-                    'mailFromAddress',
-                    'mailFromName'
-                ])
+                'smtpHost',
+                'smtpPort',
+                'smtpUsername',
+                'smtpPassword',
+                'smtpEncryption',
+                'mailFromAddress',
+                'mailFromName'
+            ])
                 ->get()
                 ->mapWithKeys(function (Settings $setting) {
                     return [$setting->key => $setting->value];
@@ -54,7 +54,7 @@ class MailConfigServiceProvider extends ServiceProvider
                     'transport' => 'smtp',
                     'host' => $mailSettings['smtpHost'] ?? config('mail.mailers.smtp.host'),
                     'port' => $mailSettings['smtpPort'] ?? config('mail.mailers.smtp.port'),
-                    'encryption' => $mailSettings['smtpEncryption'] ?? config('mail.mailers.smtp.encryption'),
+                    'scheme' => $mailSettings['smtpEncryption'] ?? config('mail.mailers.smtp.scheme'),
                     'username' => $mailSettings['smtpUsername'] ?? config('mail.mailers.smtp.username'),
                     'password' => $mailSettings['smtpPassword'] ?? config('mail.mailers.smtp.password'),
                     'timeout' => null,

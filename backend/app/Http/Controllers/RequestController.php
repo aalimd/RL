@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use App\Mail\RequestSubmittedToStudent;
 use App\Mail\RequestSubmittedToAdmin;
+use App\Mail\RequestStatusUpdated;
 
 class RequestController extends Controller
 {
@@ -338,6 +339,34 @@ class RequestController extends Controller
             $req->admin_message = $validated['adminMessage'];
         }
         $req->save();
+
+        // Send email notification to student about status update
+        try {
+            Mail::to($req->student_email)->send(new RequestStatusUpdated($req));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('API status update email failed: ' . $e->getMessage());
+        }
+
+        // Send Telegram Notification to Student (if subscribed)
+        if ($req->telegram_chat_id) {
+            $statusStr = $validated['status'];
+            $studentMsg = "🔔 <b>Update on your Request</b>\n\n";
+            $studentMsg .= "Your request status has been updated to: <b>$statusStr</b>\n";
+
+            if ($statusStr === 'Approved') {
+                $studentMsg .= "✅ Congratulations! Check your email for the recommendation letter.";
+            } elseif ($statusStr === 'Rejected') {
+                $studentMsg .= "❌ We are sorry, but your request has been declined. Check your email for details.";
+            } elseif ($statusStr === 'Needs Revision') {
+                $studentMsg .= "📝 Additional information is needed. Please check your email.";
+            }
+
+            try {
+                $this->telegramService->sendMessageToChat($req->telegram_chat_id, $studentMsg);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Failed to send Telegram update to student from API: " . $e->getMessage());
+            }
+        }
 
         AuditLog::create([
             'action' => 'UPDATE_STATUS',

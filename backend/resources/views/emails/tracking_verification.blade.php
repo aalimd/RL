@@ -63,7 +63,7 @@
                 {{ $otp }}
             </div>
 
-            <p>This code will expire in 10 minutes. If you did not request this code, please ignore this email.</p>
+            <p>This code will expire in 5 minutes. If you did not request this code, please ignore this email.</p>
         @endif
 
         <div class="footer">

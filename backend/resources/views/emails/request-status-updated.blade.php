@@ -103,7 +103,7 @@
 
                 <p style="margin-top: 30px;">Thank you for your patience.</p>
 
-                <p>Best regards,<br>Dr. Alzahrani EM</p>
+                <p>Best regards,<br>{{ config('mail.from.name', 'Dr. Alzahrani EM') }}</p>
             @endif
         </div>
         <div class="footer">

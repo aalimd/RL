@@ -455,14 +455,13 @@ class PageController extends Controller
 
                 try {
                     $admins = User::where('role', 'admin')->get();
-                    $adminLink = url('/admin/requests/' . $updatedRequest->id);
                     foreach ($admins as $admin) {
-                        Mail::raw(
-                            "Request {$updatedRequest->tracking_id} has been revised by the student and is ready for review.\n\nOpen: {$adminLink}",
-                            function ($message) use ($admin, $updatedRequest) {
-                                $message->to($admin->email)->subject("Revised Request Submitted: {$updatedRequest->tracking_id}");
-                            }
-                        );
+                        try {
+                            Mail::to($admin->email)
+                                ->send(new RequestSubmittedToAdmin($updatedRequest));
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::error('Revision resubmission email failed for admin ' . $admin->email . ': ' . $e->getMessage());
+                        }
                     }
                 } catch (\Exception $e) {
                     \Log::error('Revision resubmission email notification failed: ' . $e->getMessage());

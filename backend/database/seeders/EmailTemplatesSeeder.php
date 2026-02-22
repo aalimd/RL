@@ -34,7 +34,7 @@ class EmailTemplatesSeeder extends Seeder
             [
                 'name' => 'tracking_verification',
                 'subject' => 'Verification Code - {tracking_id}',
-                'body' => '<p>Hello <strong>{student_name}</strong>,</p><p>To access the details of your request <strong>#{tracking_id}</strong>, please use the verification code below:</p><div style="background: #ffffff; border: 2px dashed #007bff; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #007bff; margin: 20px 0; border-radius: 5px;">{otp}</div><p>This code will expire in 10 minutes. If you did not request this code, please ignore this email.</p>',
+                'body' => '<p>Hello <strong>{student_name}</strong>,</p><p>To access the details of your request <strong>#{tracking_id}</strong>, please use the verification code below:</p><div style="background: #ffffff; border: 2px dashed #007bff; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #007bff; margin: 20px 0; border-radius: 5px;">{otp}</div><p>This code will expire in 5 minutes. If you did not request this code, please ignore this email.</p>',
                 'variables' => ['student_name', 'tracking_id', 'otp']
             ]
         ];

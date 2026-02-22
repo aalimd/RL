@@ -106,7 +106,7 @@
 
                 <p style="margin-top: 30px;">If you have any questions, please don't hesitate to contact us.</p>
 
-                <p>Best regards,<br>Dr. Alzahrani EM</p>
+                <p>Best regards,<br>{{ config('mail.from.name', 'Dr. Alzahrani EM') }}</p>
             @endif
         </div>
         <div class="footer">
