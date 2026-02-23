@@ -216,25 +216,18 @@
                             @if(!empty($signature['stamp']))
                                 <img src="{{ $signature['stamp'] }}" alt="Official Stamp" class="stamp-image">
                             @endif
-
-                            {{-- QR Code moved to signature section --}}
-                            @if(!empty($qrCode))
-                                <div style="margin-top: 10px;">
-                                    {!! $qrCode !!}
-                                </div>
-                            @endif
                         </td>
                     </tr>
                 </table>
             </div>
         @endif
 
-        {{-- QR Code Automatic Display --}}
-        {{-- @if(!empty($qrCode))
-        <div class="letter-qrcode" style="margin-top: 15px;">
-            {!! $qrCode !!}
-        </div>
-        @endif --}}
+        {{-- QR Code - Always displayed independently of signature --}}
+        @if(!empty($qrCode))
+            <div style="text-align: right; margin-top: 10px;">
+                {!! $qrCode !!}
+            </div>
+        @endif
 
         {{-- Digital Footer Verification Strip --}}
         @if($layout['footer']['enabled'] ?? true)

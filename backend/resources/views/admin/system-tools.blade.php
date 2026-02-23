@@ -45,18 +45,19 @@
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
 
                 <!-- Update Database -->
-                <div style="background: #f9fafb; border-radius: 0.75rem; padding: 1.5rem; border: 1px solid #e5e7eb;">
+                <div
+                    style="background: var(--bg-color); border-radius: 0.75rem; padding: 1.5rem; border: 1px solid var(--border-color);">
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
                         <div
-                            style="width: 40px; height: 40px; border-radius: 0.5rem; background: #eff6ff; display: flex; align-items: center; justify-content: center; color: #3b82f6;">
+                            style="width: 40px; height: 40px; border-radius: 0.5rem; background: var(--info-bg, rgba(59, 130, 246, 0.1)); display: flex; align-items: center; justify-content: center; color: var(--info-text, #3b82f6);">
                             <i data-feather="database"></i>
                         </div>
                         <div>
                             <h4 style="margin: 0; font-size: 1rem; font-weight: 600;">Update Database</h4>
-                            <p style="margin: 0; font-size: 0.75rem; color: #6b7280;">Run pending migrations</p>
+                            <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Run pending migrations</p>
                         </div>
                     </div>
-                    <p style="font-size: 0.875rem; color: #4b5563; margin-bottom: 1rem;">
+                    <p style="font-size: 0.875rem; color: var(--text-main); margin-bottom: 1rem;">
                         Applies any pending database changes. Your data is safe.
                     </p>
                     <button onclick="confirmMigrate()" class="btn btn-primary" style="width: 100%;">
@@ -66,21 +67,24 @@
                 </div>
 
                 <!-- Clear Cache -->
-                <div style="background: #f9fafb; border-radius: 0.75rem; padding: 1.5rem; border: 1px solid #e5e7eb;">
+                <div
+                    style="background: var(--bg-color); border-radius: 0.75rem; padding: 1.5rem; border: 1px solid var(--border-color);">
                     <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
                         <div
-                            style="width: 40px; height: 40px; border-radius: 0.5rem; background: #ecfdf5; display: flex; align-items: center; justify-content: center; color: #10b981;">
+                            style="width: 40px; height: 40px; border-radius: 0.5rem; background: var(--success-bg); display: flex; align-items: center; justify-content: center; color: var(--success-text);">
                             <i data-feather="refresh-cw"></i>
                         </div>
                         <div>
                             <h4 style="margin: 0; font-size: 1rem; font-weight: 600;">Clear Cache</h4>
-                            <p style="margin: 0; font-size: 0.75rem; color: #6b7280;">Clear config, route & view cache</p>
+                            <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Clear config, route & view
+                                cache</p>
                         </div>
                     </div>
-                    <p style="font-size: 0.875rem; color: #4b5563; margin-bottom: 1rem;">
+                    <p style="font-size: 0.875rem; color: var(--text-main); margin-bottom: 1rem;">
                         Clears cached files to reflect recent code changes.
                     </p>
-                    <button onclick="clearCache()" class="btn btn-primary" style="width: 100%; background: #10b981;">
+                    <button onclick="clearCache()" class="btn btn-primary"
+                        style="width: 100%; background: var(--success-text, #10b981); border-color: var(--success-border, #10b981);">
                         <i data-feather="trash-2"></i>
                         Clear Cache
                     </button>
@@ -102,7 +106,7 @@
             <span style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">Required for scheduled backups</span>
         </div>
         <div class="card-body">
-            <p style="margin-bottom: 1rem; color: #4b5563;">
+            <p style="margin-bottom: 1rem; color: var(--text-main);">
                 To enable automated weekly backups, please copy the command below and add it to your
                 <strong>Hostinger Control Panel > Advanced > Cron Jobs</strong>.
             </p>
@@ -116,7 +120,7 @@
                 </button>
             </div>
 
-            <div style="margin-top: 1rem; font-size: 0.875rem; color: #6b7280;">
+            <div style="margin-top: 1rem; font-size: 0.875rem; color: var(--text-muted);">
                 <i data-feather="info" style="width: 14px; height: 14px; vertical-align: middle;"></i>
                 Set the schedule to <strong>Once Per Minute</strong> (* * * * *) in Hostinger.
             </div>
@@ -175,9 +179,9 @@
             </div>
             <div class="modal-body">
                 <div
-                    style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
-                    <strong style="color: #92400e;">⚠️ Important</strong>
-                    <p style="margin: 0.5rem 0 0; color: #92400e; font-size: 0.875rem;">
+                    style="background: var(--warning-bg); border: 1px solid var(--warning-border); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+                    <strong style="color: var(--warning-text);">⚠️ Important</strong>
+                    <p style="margin: 0.5rem 0 0; color: var(--warning-text); font-size: 0.875rem;">
                         It's recommended to backup your database before running migrations. Your existing data will NOT be
                         deleted.
                     </p>

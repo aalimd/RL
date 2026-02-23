@@ -81,6 +81,7 @@ class RequestController extends Controller
                 'templateId' => 'nullable|integer|exists:templates,id',
                 'customContent' => 'nullable|string',
                 'contentOption' => 'nullable|in:template,custom',
+                'verificationToken' => 'nullable|string|max:100',
                 'formData' => 'nullable|array',
                 // File validation
                 'document' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048'
@@ -111,6 +112,14 @@ class RequestController extends Controller
             if (!array_key_exists('content_option', $formData) && !empty($validated['contentOption'])) {
                 $formData['content_option'] = $validated['contentOption'];
             }
+            if (!array_key_exists('verification_token', $formData) && !empty($validated['verificationToken'])) {
+                $formData['verification_token'] = trim((string) $validated['verificationToken']);
+            }
+
+            $verificationToken = trim((string) ($validated['verificationToken'] ?? ''));
+            if ($verificationToken === '') {
+                $verificationToken = Str::random(60);
+            }
 
             $data = [
                 'tracking_id' => $trackingId,
@@ -128,9 +137,10 @@ class RequestController extends Controller
                 'custom_content' => $validated['customContent'] ?? null,
                 'content_option' => $validated['contentOption'] ?? null,
                 'form_data' => !empty($formData) ? $formData : null,
-                // Security: Always generate tokens server-side.
+                // verify_token is always server-generated for verification links.
                 'verify_token' => Str::random(32), // For QR code verification
-                'verification_token' => Str::random(60), // For Student Tracking
+                // Use provided tracking identity when supplied, fallback to generated.
+                'verification_token' => $verificationToken, // For Student Tracking
                 'status' => 'Submitted'
             ];
 
@@ -181,7 +191,11 @@ class RequestController extends Controller
                 \Illuminate\Support\Facades\Log::error('API Request Email notification failed: ' . $e->getMessage());
             }
 
-            return response()->json($this->mapBackendToFrontend([$newRequest])[0], 201);
+            $payload = $this->mapBackendToFrontend([$newRequest])[0];
+            // Expose tracking credential to the creating client so it can be stored client-side.
+            $payload['verificationToken'] = $newRequest->verification_token;
+
+            return response()->json($payload, 201);
 
         } catch (ValidationException $e) {
             throw $e;

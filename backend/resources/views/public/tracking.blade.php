@@ -205,18 +205,24 @@
         .form-input {
             width: 100%;
             padding: 1rem 1.25rem;
-            border: 2px solid var(--border-color);
+            border: 1px solid var(--border-color);
             border-radius: 1rem;
             font-size: 1rem;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
             background: var(--input-bg);
             color: var(--text-primary);
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+        }
+
+        html.dark .form-input {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.2);
         }
 
         .form-input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.02);
             transform: translateY(-1px);
         }
 
@@ -231,17 +237,36 @@
             font-size: 1.125rem;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 10px 25px -5px rgba(var(--primary-rgb), 0.4);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .track-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transform: skewX(-20deg);
+            transition: all 0.5s ease;
+        }
+
+        .track-btn:hover::after {
+            left: 150%;
         }
 
         .track-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 20px 35px -8px rgba(99, 102, 241, 0.5);
+            box-shadow: 0 20px 35px -8px rgba(var(--primary-rgb), 0.5);
             opacity: 0.95;
+            color: white;
         }
 
         .track-btn:active {
@@ -447,8 +472,8 @@
         }
 
         .timeline-item.completed .timeline-marker {
-            background: #10b981;
-            border-color: #10b981;
+            background: var(--success, #10b981);
+            border-color: var(--success, #10b981);
             color: white;
             box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
         }
@@ -457,7 +482,33 @@
             background: var(--bg-secondary);
             border-color: var(--primary);
             color: var(--primary);
-            box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+            box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.15);
+        }
+
+        .timeline-item.active .timeline-marker::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 50%;
+            border: 2px solid var(--primary);
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+            pointer-events: none;
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.9);
+                opacity: 0.8;
+            }
+
+            70%,
+            100% {
+                transform: scale(1.4);
+                opacity: 0;
+            }
         }
 
         .timeline-item.completed::after {
@@ -467,7 +518,7 @@
             top: 44px;
             bottom: -20px;
             width: 3px;
-            background: #10b981;
+            background: var(--success, #10b981);
             z-index: 1;
         }
 
@@ -736,11 +787,11 @@
                             <span class="result-title">Request Status</span>
                             <span
                                 class="status-badge 
-                                                                                                                                                                            @if($request->status === 'Approved') status-approved
-                                                                                                                                                                            @elseif($request->status === 'Rejected') status-rejected
-                                                                                                                                                                            @elseif($request->status === 'Needs Revision') status-revision
-                                                                                                                                                                            @elseif($request->status === 'Under Review') status-review
-                                                                                                                                                                            @else status-pending @endif">
+                                                                                                                                                                                    @if($request->status === 'Approved') status-approved
+                                                                                                                                                                                    @elseif($request->status === 'Rejected') status-rejected
+                                                                                                                                                                                    @elseif($request->status === 'Needs Revision') status-revision
+                                                                                                                                                                                    @elseif($request->status === 'Under Review') status-review
+                                                                                                                                                                                    @else status-pending @endif">
                                 {{ $request->status }}
                             </span>
                             </span>

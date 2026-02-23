@@ -22,7 +22,7 @@
         </div>
     @endif
     @if($errors->any())
-        <div style="background: #fff7ed; color: #9a3412; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #fed7aa;">
+        <div style="background: var(--warning-bg); color: var(--warning-text); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid var(--warning-border);">
             <div style="font-weight: 600; margin-bottom: 0.5rem;">Please fix the following:</div>
             <ul style="margin: 0; padding-left: 1.25rem;">
                 @foreach($errors->all() as $error)
@@ -40,7 +40,7 @@
         <div class="card" style="margin-bottom: 1.5rem;">
             <div class="card-header">
                 <h3>Template Selection Mode</h3>
-                <span style="font-size: 0.875rem; color: #6b7280;">Control how students select or receive templates</span>
+                <span style="font-size: 0.875rem; color: var(--text-muted);">Control how students select or receive templates</span>
             </div>
             <div class="card-body">
                 <div style="display: grid; gap: 1rem; max-width: 600px;">
@@ -69,7 +69,7 @@
                                 </option>
                             @endforeach
                         </select>
-                        <small style="display: block; margin-top: 0.4rem; color: #6b7280;">
+                        <small style="display: block; margin-top: 0.4rem; color: var(--text-muted);">
                             Required when mode is <strong>Fixed Template</strong>.
                         </small>
                     </div>
@@ -82,7 +82,7 @@
                         @endif
                         <label for="allowCustomContent">Allow students to write custom content</label>
                     </div>
-                    <small id="allowCustomContentHint" style="color: #6b7280;">
+                    <small id="allowCustomContentHint" style="color: var(--text-muted);">
                         {{ $forceCustom ? 'Custom Content Only mode forces this option to stay enabled.' : '' }}
                     </small>
                 </div>
@@ -93,7 +93,7 @@
         <div class="card">
             <div class="card-header">
                 <h3>Form Fields Configuration</h3>
-                <span style="font-size: 0.875rem; color: #6b7280;">Control visibility and requirement status of each field</span>
+                <span style="font-size: 0.875rem; color: var(--text-muted);">Control visibility and requirement status of each field</span>
             </div>
             <div class="card-body">
                 <div style="overflow-x: auto;">
@@ -146,7 +146,7 @@
                                     <td style="padding: 0.75rem 1rem;">
                                         {{ $fieldLabel }}
                                         @if($isLocked)
-                                            <small style="display: block; color: #6b7280;">Locked for secure tracking</small>
+                                            <small style="display: block; color: var(--text-muted);">Locked for secure tracking</small>
                                         @endif
                                     </td>
                                     <td style="text-align: center; padding: 0.75rem 1rem;">

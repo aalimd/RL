@@ -21,9 +21,11 @@
         .search-box input {
             width: 100%;
             padding: 0.75rem 1rem 0.75rem 2.75rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
             border-radius: 0.5rem;
             font-size: 0.875rem;
+            color: var(--text-main);
         }
 
         .search-box svg {
@@ -31,7 +33,7 @@
             left: 0.875rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #9ca3af;
+            color: var(--text-muted);
             width: 18px;
             height: 18px;
         }
@@ -52,20 +54,20 @@
 
         .filter-input {
             padding: 0.5rem 0.75rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--border-color);
             border-radius: 0.5rem;
             font-size: 0.875rem;
             min-width: 160px;
-            background: #fff;
-            color: #374151;
+            background: var(--input-bg);
+            color: var(--text-main);
         }
 
         .btn-reset {
             padding: 0.5rem 0.75rem;
             border-radius: 0.5rem;
-            border: 1px solid #e5e7eb;
-            background: white;
-            color: #374151;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-main);
             cursor: pointer;
         }
 
@@ -74,15 +76,15 @@
             border-radius: 9999px;
             font-size: 0.875rem;
             font-weight: 500;
-            border: 1px solid #e5e7eb;
-            background: white;
-            color: #374151;
+            border: 1px solid var(--border-color);
+            background: transparent;
+            color: var(--text-main);
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .status-btn:hover {
-            background: #f9fafb;
+            background: var(--bg-color);
         }
 
         .status-btn.active {
@@ -93,7 +95,7 @@
 
         .results-info {
             font-size: 0.875rem;
-            color: #6b7280;
+            color: var(--text-muted);
             margin-bottom: 1rem;
         }
 
@@ -107,25 +109,25 @@
         }
 
         .data-table th {
-            background: #f9fafb;
+            background: var(--bg-color);
             padding: 0.75rem 1rem;
             text-align: left;
             font-size: 0.75rem;
             font-weight: 600;
-            color: #6b7280;
+            color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-color);
         }
 
         .data-table td {
             padding: 1rem;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-color);
             font-size: 0.875rem;
         }
 
         .data-table tbody tr:hover {
-            background: #f9fafb;
+            background: var(--bg-color);
         }
 
         .tracking-id {
@@ -133,24 +135,24 @@
             font-size: 0.875rem;
             font-weight: 600;
             color: var(--primary, #4f46e5);
-            background: #eef2ff;
+            background: rgba(var(--primary-rgb, 79, 70, 229), 0.1);
             padding: 0.25rem 0.5rem;
             border-radius: 0.25rem;
         }
 
         .student-info .name {
             font-weight: 500;
-            color: #111827;
+            color: var(--text-main);
         }
 
         .student-info .email {
             font-size: 0.75rem;
-            color: #6b7280;
+            color: var(--text-muted);
         }
 
         .student-info .university {
             font-size: 0.75rem;
-            color: #9ca3af;
+            color: var(--text-muted);
         }
 
         .actions-cell {
@@ -168,7 +170,7 @@
         }
 
         .action-btn:hover {
-            background: #f3f4f6;
+            background: var(--bg-color);
         }
 
         .action-btn.view {
@@ -176,11 +178,11 @@
         }
 
         .action-btn.approve {
-            color: #10b981;
+            color: var(--success-text);
         }
 
         .action-btn.reject {
-            color: #ef4444;
+            color: var(--error-text);
         }
 
         .pagination {
@@ -188,13 +190,13 @@
             justify-content: space-between;
             align-items: center;
             padding: 1rem;
-            border-top: 1px solid #e5e7eb;
-            background: #f9fafb;
+            border-top: 1px solid var(--border-color);
+            background: transparent;
         }
 
         .pagination-info {
             font-size: 0.875rem;
-            color: #6b7280;
+            color: var(--text-muted);
         }
 
         .pagination-buttons {
@@ -205,16 +207,16 @@
         .pagination-buttons a,
         .pagination-buttons span {
             padding: 0.5rem 0.75rem;
-            border: 1px solid #e5e7eb;
+            border: 1px solid var(--border-color);
             border-radius: 0.375rem;
             font-size: 0.875rem;
             text-decoration: none;
-            color: #374151;
-            background: white;
+            color: var(--text-main);
+            background: var(--card-bg);
         }
 
         .pagination-buttons a:hover {
-            background: #f3f4f6;
+            background: var(--bg-color);
         }
 
         .pagination-buttons .current {
@@ -226,7 +228,7 @@
         .empty-state {
             text-align: center;
             padding: 3rem;
-            color: #6b7280;
+            color: var(--text-muted);
         }
 
         .empty-state svg {
@@ -301,7 +303,7 @@
             width: 1.125rem;
             height: 1.125rem;
             border-radius: 0.25rem;
-            border: 1px solid #d1d5db;
+            border: 1px solid var(--border-color);
             cursor: pointer;
         }
     </style>

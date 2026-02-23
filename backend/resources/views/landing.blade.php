@@ -5,8 +5,8 @@
 @section('styles')
     <style>
         /* ========================================
-                                                                                       HERO SECTION
-                                                                                       ======================================== */
+                                                                                               HERO SECTION
+                                                                                               ======================================== */
         .hero-section {
             height: calc(100vh - 4.5rem);
             min-height: auto;
@@ -20,8 +20,8 @@
         }
 
         /* ========================================
-                                                                                       FLOATING PARTICLES
-                                                                                       ======================================== */
+                                                                                               FLOATING PARTICLES
+                                                                                               ======================================== */
         .particles {
             position: absolute;
             inset: 0;
@@ -99,8 +99,8 @@
         }
 
         /* ========================================
-                                                                                       CARD DESIGN
-                                                                                       ======================================== */
+                                                                                               CARD DESIGN
+                                                                                               ======================================== */
         .landing-card {
             background: var(--glass-bg);
             backdrop-filter: blur(16px);
@@ -118,8 +118,8 @@
         }
 
         /* ========================================
-                                                                                       ANIMATED BADGE
-                                                                                       ======================================== */
+                                                                                               ANIMATED BADGE
+                                                                                               ======================================== */
         .hero-badge {
             display: inline-flex;
             align-items: center;
@@ -136,8 +136,8 @@
         }
 
         /* ========================================
-                                                                                       HERO TITLE
-                                                                                       ======================================== */
+                                                                                               HERO TITLE
+                                                                                               ======================================== */
         .hero-title {
             font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 800;
@@ -164,8 +164,8 @@
         }
 
         /* ========================================
-                                                                                       ACTION BUTTONS
-                                                                                       ======================================== */
+                                                                                               ACTION BUTTONS
+                                                                                               ======================================== */
         .action-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -223,6 +223,26 @@
             color: var(--text-muted);
         }
 
+        /* Tracking Action Icon Special Style */
+        .action-card.tracking-card .action-icon {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 10px 20px -5px rgba(var(--primary-rgb, 99, 102, 241), 0.5);
+            animation: float-icon 3s ease-in-out infinite;
+        }
+
+        @keyframes float-icon {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+
         /* New Request Special Style */
         .action-card.primary {
             background: linear-gradient(135deg, var(--bg-secondary) 0%, rgba(99, 102, 241, 0.05) 100%);
@@ -232,11 +252,12 @@
             background: var(--btn-gradient);
             color: white;
             box-shadow: 0 8px 16px -4px rgba(var(--primary-rgb, 99, 102, 241), 0.4);
+            animation: float-icon 3s ease-in-out infinite 0.5s; /* Added 0.5s delay to offset animations somewhat */
         }
 
         /* ========================================
-                                                                                       RESPONSIVE
-                                                                                       ======================================== */
+                                                                                               RESPONSIVE
+                                                                                               ======================================== */
         @media (max-width: 640px) {
             .landing-card {
                 padding: 2rem 1.5rem;
@@ -345,8 +366,8 @@
         }
 
         /* ========================================
-                                                                   RESPONSIVE HEADER & MOBILE MENU
-                                                                   ======================================== */
+                                                                           RESPONSIVE HEADER & MOBILE MENU
+                                                                           ======================================== */
         .nav-inner {
             display: flex;
             justify-content: space-between;
@@ -635,8 +656,8 @@
         }
 
         /* ========================================
-                       RAMADAN MODAL STYLES
-                       ======================================== */
+                               RAMADAN MODAL STYLES
+                               ======================================== */
         .ramadan-modal-overlay {
             position: fixed;
             inset: 0;
@@ -958,10 +979,9 @@
                     </a>
 
                     <!-- Track Request -->
-                    <a href="{{ url('/track') }}" class="action-card">
+                    <a href="{{ url('/track') }}" class="action-card tracking-card">
                         <div class="action-icon">
-                            <i data-lucide="{{ $settings['feature2Icon'] ?? 'search' }}"
-                                style="width: 32px; height: 32px;"></i>
+                            <i data-lucide="search" style="width: 32px; height: 32px;"></i>
                         </div>
                         <h3 class="action-title">{{ $settings['heroSecondaryBtn'] ?? 'Track Existing Request' }}</h3>
                         <p class="action-desc">
@@ -1024,7 +1044,8 @@
                 illuminated with light and grace.
             </p>
 
-            <p style="color: #fcd34d; font-family: 'Dancing Script', cursive; font-size: 1.25rem; margin-top: -1rem; margin-bottom: 1.5rem; opacity: 0.9;">
+            <p
+                style="color: #fcd34d; font-family: 'Dancing Script', cursive; font-size: 1.25rem; margin-top: -1rem; margin-bottom: 1.5rem; opacity: 0.9;">
                 Dr. AbdulRahman Alzahrani
             </p>
 

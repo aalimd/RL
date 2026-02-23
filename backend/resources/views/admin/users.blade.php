@@ -4,13 +4,15 @@
 
 @section('content')
     @if(session('success'))
-        <div style="background: var(--success-bg); color: var(--success-text); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid var(--success-border);">
+        <div
+            style="background: var(--success-bg); color: var(--success-text); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid var(--success-border);">
             {{ session('success') }}
         </div>
     @endif
 
     @if($errors->any())
-        <div style="background: var(--error-bg); color: var(--error-text); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid var(--error-border);">
+        <div
+            style="background: var(--error-bg); color: var(--error-text); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid var(--error-border);">
             <ul style="margin: 0; padding-left: 1rem;">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -57,7 +59,8 @@
                                             </div>
                                             <div>
                                                 <div style="font-weight: 500; color: var(--text-main);">
-                                                    {{ $user->name ?? 'No Name' }}</div>
+                                                    {{ $user->name ?? 'No Name' }}
+                                                </div>
                                                 <div style="font-size: 0.75rem; color: var(--text-muted);">{{ $user->email }}</div>
                                             </div>
                                         </div>
@@ -87,8 +90,8 @@
                                                     onsubmit="return confirm('Are you sure you want to delete this user?');">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-ghost" style="padding: 0.5rem; color: #dc2626;"
-                                                        title="Delete">
+                                                    <button type="submit" class="btn btn-ghost"
+                                                        style="padding: 0.5rem; color: var(--error-text);" title="Delete">
                                                         <i data-feather="trash-2" style="width: 16px; height: 16px;"></i>
                                                     </button>
                                                 </form>
@@ -157,7 +160,8 @@
                     </div>
                     <div class="form-group" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                         <input type="checkbox" name="is_active" id="addActive" value="1" checked>
-                        <label for="addActive" style="font-size: 0.875rem; font-weight: 500; color: var(--text-main);">Active Account</label>
+                        <label for="addActive"
+                            style="font-size: 0.875rem; font-weight: 500; color: var(--text-main);">Active Account</label>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -213,7 +217,8 @@
                     </div>
                     <div class="form-group" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
                         <input type="checkbox" name="is_active" id="editActive" value="1">
-                        <label for="editActive" style="font-size: 0.875rem; font-weight: 500; color: var(--text-main);">Active Account</label>
+                        <label for="editActive"
+                            style="font-size: 0.875rem; font-weight: 500; color: var(--text-main);">Active Account</label>
                     </div>
                 </div>
                 <div class="modal-footer">

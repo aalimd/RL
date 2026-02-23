@@ -44,7 +44,7 @@
     @endif
     @if(session('error'))
         <div
-            style="background: #fef2f2; color: #b91c1c; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #fecaca;">
+            style="background: var(--error-bg); color: var(--error-text); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid var(--error-border);">
             {{ session('error') }}
         </div>
     @endif
@@ -53,7 +53,7 @@
             $statusErrors = array_merge($errors->get('status'), $errors->get('admin_message'));
         @endphp
         <div
-            style="background: #fff7ed; color: #9a3412; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid #fed7aa;">
+            style="background: var(--warning-bg); color: var(--warning-text); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid var(--warning-border);">
             <div style="font-weight: 600; margin-bottom: 0.5rem;">Could not update status:</div>
             <ul style="margin: 0; padding-left: 1.25rem;">
                 @foreach($statusErrors as $error)
@@ -66,14 +66,14 @@
         <div class="card-header">
             <div>
                 <h3 style="margin-bottom: 0.25rem;">Request #{{ $request->tracking_id }}</h3>
-                <span style="font-size: 0.875rem; color: #6b7280;">Created
+                <span style="font-size: 0.875rem; color: var(--text-muted);">Created
                     {{ $request->created_at->format('M d, Y H:i') }}</span>
             </div>
             <span class="badge 
-                                                                                @if($request->status === 'Approved') badge-approved
-                                                                                @elseif($request->status === 'Rejected') badge-rejected
-                                                                                @elseif($request->status === 'Needs Revision') badge-revision
-                                                                                @else badge-pending @endif">
+                                                                                    @if($request->status === 'Approved') badge-approved
+                                                                                    @elseif($request->status === 'Rejected') badge-rejected
+                                                                                    @elseif($request->status === 'Needs Revision') badge-revision
+                                                                                    @else badge-pending @endif">
                 {{ $request->status }}
             </span>
         </div>
@@ -82,57 +82,60 @@
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
                 <!-- Student Information -->
                 <div>
-                    <h4 style="font-size: 0.875rem; text-transform: uppercase; color: #6b7280; margin-bottom: 1rem;">Student
+                    <h4
+                        style="font-size: 0.875rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem;">
+                        Student
                         Information</h4>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">First Name</label>
-                        <p style="font-weight: 500; color: #111827;">{{ $request->student_name ?? 'N/A' }}</p>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">First Name</label>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->student_name ?? 'N/A' }}</p>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">Middle Name</label>
-                        <p style="font-weight: 500; color: #111827;">{{ $request->middle_name ?? 'N/A' }}</p>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Middle Name</label>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->middle_name ?? 'N/A' }}</p>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">Last Name</label>
-                        <p style="font-weight: 500; color: #111827;">{{ $request->last_name ?? 'N/A' }}</p>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Last Name</label>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->last_name ?? 'N/A' }}</p>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">Email</label>
-                        <p style="font-weight: 500; color: #111827;">{{ $request->student_email ?? 'N/A' }}</p>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Email</label>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->student_email ?? 'N/A' }}</p>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">University</label>
-                        <p style="font-weight: 500; color: #111827;">{{ $request->university ?? 'N/A' }}</p>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">University</label>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->university ?? 'N/A' }}</p>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">Gender</label>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Gender</label>
                         @php
                             $formData = $request->form_data ?? [];
                             $gender = $formData['gender'] ?? 'male';
                         @endphp
-                        <p style="font-weight: 500; color: #111827;">{{ ucfirst($gender) }}</p>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ ucfirst($gender) }}</p>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">Major</label>
-                        <p style="font-weight: 500; color: #111827;">{{ $request->major ?? ($formData['major'] ?? 'N/A') }}
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Major</label>
+                        <p style="font-weight: 500; color: var(--text-main);">
+                            {{ $request->major ?? ($formData['major'] ?? 'N/A') }}
                         </p>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">Phone Number</label>
-                        <p style="font-weight: 500; color: #111827;">{{ $request->phone ?? 'N/A' }}</p>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Phone Number</label>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->phone ?? 'N/A' }}</p>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">ID Number</label>
-                        <p style="font-family: monospace; font-weight: 500; color: #111827;">
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">ID Number</label>
+                        <p style="font-family: monospace; font-weight: 500; color: var(--text-main);">
                             {{ $request->verification_token ?? 'N/A' }}
                         </p>
                     </div>
@@ -140,23 +143,25 @@
 
                 <!-- Request Details -->
                 <div>
-                    <h4 style="font-size: 0.875rem; text-transform: uppercase; color: #6b7280; margin-bottom: 1rem;">Request
+                    <h4
+                        style="font-size: 0.875rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem;">
+                        Request
                         Details</h4>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">Purpose</label>
-                        <p style="font-weight: 500; color: #111827;">{{ $request->purpose ?? 'N/A' }}</p>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Purpose</label>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->purpose ?? 'N/A' }}</p>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">Training Period</label>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Training Period</label>
                         <p style="font-weight: 500; color: var(--text-main);">
                             {{ $request->training_period ? \Carbon\Carbon::parse($request->training_period . '-01')->format('F, Y') : 'N/A' }}
                         </p>
                     </div>
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">Deadline</label>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Deadline</label>
                         <p style="font-weight: 500; color: var(--text-main);">
                             {{ $request->deadline ? \Carbon\Carbon::parse($request->deadline)->format('M d, Y') : 'N/A' }}
                         </p>
@@ -164,7 +169,7 @@
 
                     @if($request->document_path)
                         <div style="margin-bottom: 1rem;">
-                            <label style="font-size: 0.75rem; color: #9ca3af;">Attachment</label>
+                            <label style="font-size: 0.75rem; color: var(--text-muted);">Attachment</label>
                             <div>
                                 <a href="{{ route('requests.document', $request->id) }}" target="_blank"
                                     class="btn btn-sm btn-white"
@@ -177,8 +182,9 @@
                     @endif
 
                     <div style="margin-bottom: 1rem;">
-                        <label style="font-size: 0.75rem; color: #9ca3af;">Content Option</label>
-                        <p style="font-weight: 500; color: #111827;">{{ $request->content_option ?? 'Auto-Generate' }}</p>
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Content Option</label>
+                        <p style="font-weight: 500; color: var(--text-main);">
+                            {{ $request->content_option ?? 'Auto-Generate' }}</p>
                     </div>
                 </div>
             </div>
@@ -225,19 +231,19 @@
                         <div style="flex: 1; min-width: 250px;">
                             <label id="adminMessageLabel"
                                 style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 500;">Admin
-                                Message <span id="adminMessageHint">{{ $statusValue === 'Needs Revision' ? '(Required for Needs Revision)' : '(Optional)' }}</span></label>
+                                Message <span
+                                    id="adminMessageHint">{{ $statusValue === 'Needs Revision' ? '(Required for Needs Revision)' : '(Optional)' }}</span></label>
                             <textarea id="adminMessageField" name="admin_message" rows="1" class="form-textarea"
                                 style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem; min-height: 42px; height: 42px; line-height: 1.5;"
                                 placeholder="Message to student..." onfocus="this.rows=3; this.style.height='auto'"
-                                onblur="if(this.value==''){this.rows=1; this.style.height='42px'}"
-                                {{ $statusValue === 'Needs Revision' ? 'required' : '' }}>{{ $adminMessageValue }}</textarea>
+                                onblur="if(this.value==''){this.rows=1; this.style.height='42px'}" {{ $statusValue === 'Needs Revision' ? 'required' : '' }}>{{ $adminMessageValue }}</textarea>
                         </div>
 
                         <button type="submit" class="btn btn-primary">Update Status</button>
                     </form>
                 @else
                     <div
-                        style="background: #f9fafb; color: #4b5563; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 0.75rem 1rem;">
+                        style="background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 0.75rem 1rem;">
                         Your account has read-only access. Only admin/editor roles can update request status.
                     </div>
                 @endif
@@ -258,7 +264,7 @@
                         <i data-feather="printer" style="width: 16px; height: 16px;"></i> Print / Save as PDF
                     </button>
                     <button type="button" onclick="closePreviewModal()" class="btn btn-ghost"
-                        style="color: #6b7280; padding: 0.5rem;">
+                        style="color: var(--text-muted); padding: 0.5rem;">
                         <i data-feather="x" style="width: 24px; height: 24px;"></i>
                     </button>
                 </div>
@@ -269,7 +275,7 @@
                 <div id="letterPreviewContent" class="letter-wrapper">
                     <div class="loading-container">
                         <div
-                            style="width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: #4f46e5; border-radius: 50%; animation: spin 1s linear infinite;">
+                            style="width: 40px; height: 40px; border: 3px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;">
                         </div>
                         <span>Generating Letter...</span>
                     </div>
@@ -286,7 +292,7 @@
                 <div class="modal-header">
                     <h3>Edit Request Data</h3>
                     <button type="button" onclick="closeEditModal()" class="btn btn-ghost"
-                        style="color: #6b7280; padding: 0.5rem;">
+                        style="color: var(--text-muted); padding: 0.5rem;">
                         <i data-feather="x" style="width: 24px; height: 24px;"></i>
                     </button>
                 </div>
@@ -295,137 +301,137 @@
                         @csrf
                         @method('PUT')
 
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
-                        <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">First
-                                Name *</label>
-                            <input type="text" name="student_name" class="form-input" value="{{ $request->student_name }}"
-                                required style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">First
+                                    Name *</label>
+                                <input type="text" name="student_name" class="form-input" value="{{ $request->student_name }}"
+                                    required style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;">
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Middle
+                                    Name</label>
+                                <input type="text" name="middle_name" value="{{ $request->middle_name }}"
+                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Last
+                                    Name</label>
+                                <input type="text" name="last_name" value="{{ $request->last_name }}"
+                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Gender
+                                    *</label>
+                                @php
+                                    $formData = $request->form_data ?? [];
+                                    $currentGender = $formData['gender'] ?? 'male';
+                                @endphp
+                                <select name="gender" required
+                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                                    <option value="male" {{ $currentGender === 'male' ? 'selected' : '' }}>Male</option>
+                                    <option value="female" {{ $currentGender === 'female' ? 'selected' : '' }}>Female</option>
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Email
+                                    *</label>
+                                <input type="email" name="student_email" value="{{ $request->student_email }}" required
+                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">University</label>
+                                <input type="text" name="university" value="{{ $request->university }}"
+                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Major</label>
+                                <input type="text" name="major" value="{{ $request->major ?? ($formData['major'] ?? '') }}"
+                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Phone
+                                    Number</label>
+                                <input type="text" name="phone" value="{{ $request->phone }}"
+                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">ID
+                                    Number</label>
+                                <input type="text" name="verification_token" value="{{ $request->verification_token }}"
+                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Training
+                                    Period</label>
+                                <input type="month" name="training_period" value="{{ $request->training_period }}"
+                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Deadline</label>
+                                <input type="date" name="deadline" class="form-input"
+                                    value="{{ $request->deadline ? $request->deadline->format('Y-m-d') : '' }}"
+                                    style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;">
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Purpose</label>
+                                <select name="purpose" class="form-select"
+                                    style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;">
+                                    <option value="">Select Purpose</option>
+                                    <option value="Master's Application" {{ $request->purpose === "Master's Application" ? 'selected' : '' }}>Master's Application</option>
+                                    <option value="PhD Application" {{ $request->purpose === "PhD Application" ? 'selected' : '' }}>PhD Application</option>
+                                    <option value="Job Application" {{ $request->purpose === "Job Application" ? 'selected' : '' }}>Job Application</option>
+                                    <option value="Internship" {{ $request->purpose === "Internship" ? 'selected' : '' }}>
+                                        Internship</option>
+                                    <option value="Scholarship" {{ $request->purpose === "Scholarship" ? 'selected' : '' }}>
+                                        Scholarship</option>
+                                    <option value="Other" {{ $request->purpose === "Other" ? 'selected' : '' }}>Other</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Middle
-                                Name</label>
-                            <input type="text" name="middle_name" value="{{ $request->middle_name }}"
-                                style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <label style="font-size: 0.875rem; font-weight: 500;">Custom Content / Notes</label>
+                                <button type="button" onclick="rewriteWithAi()" class="btn btn-sm btn-secondary"
+                                    style="color: #4f46e5; border-color: #4f46e5; padding: 2px 8px; font-size: 0.75rem;">
+                                    <i data-feather="cpu" style="width: 12px; height: 12px; margin-right: 4px;"></i>
+                                    Rewrite with AI
+                                </button>
+                            </div>
+                            <textarea name="custom_content" id="customContentField" rows="6" class="form-textarea"
+                                style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;"
+                                placeholder="Enter notes here or let AI generate the letter...">{{ $request->custom_content }}</textarea>
                         </div>
 
-                        <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Last
-                                Name</label>
-                            <input type="text" name="last_name" value="{{ $request->last_name }}"
-                                style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Gender
-                                *</label>
-                            @php
-                                $formData = $request->form_data ?? [];
-                                $currentGender = $formData['gender'] ?? 'male';
-                            @endphp
-                            <select name="gender" required
-                                style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-                                <option value="male" {{ $currentGender === 'male' ? 'selected' : '' }}>Male</option>
-                                <option value="female" {{ $currentGender === 'female' ? 'selected' : '' }}>Female</option>
-                            </select>
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Email
-                                *</label>
-                            <input type="email" name="student_email" value="{{ $request->student_email }}" required
-                                style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">University</label>
-                            <input type="text" name="university" value="{{ $request->university }}"
-                                style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Major</label>
-                            <input type="text" name="major" value="{{ $request->major ?? ($formData['major'] ?? '') }}"
-                                style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Phone
-                                Number</label>
-                            <input type="text" name="phone" value="{{ $request->phone }}"
-                                style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">ID
-                                Number</label>
-                            <input type="text" name="verification_token" value="{{ $request->verification_token }}"
-                                style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Training
-                                Period</label>
-                            <input type="month" name="training_period" value="{{ $request->training_period }}"
-                                style="width: 100%; padding: 0.5rem 1rem; border: 1px solid #d1d5db; border-radius: 0.5rem;">
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Deadline</label>
-                            <input type="date" name="deadline" class="form-input"
-                                value="{{ $request->deadline ? $request->deadline->format('Y-m-d') : '' }}"
-                                style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;">
-                        </div>
-
-                        <div style="margin-bottom: 1rem;">
-                            <label
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Purpose</label>
-                            <select name="purpose" class="form-select"
-                                style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;">
-                                <option value="">Select Purpose</option>
-                                <option value="Master's Application" {{ $request->purpose === "Master's Application" ? 'selected' : '' }}>Master's Application</option>
-                                <option value="PhD Application" {{ $request->purpose === "PhD Application" ? 'selected' : '' }}>PhD Application</option>
-                                <option value="Job Application" {{ $request->purpose === "Job Application" ? 'selected' : '' }}>Job Application</option>
-                                <option value="Internship" {{ $request->purpose === "Internship" ? 'selected' : '' }}>
-                                    Internship</option>
-                                <option value="Scholarship" {{ $request->purpose === "Scholarship" ? 'selected' : '' }}>
-                                    Scholarship</option>
-                                <option value="Other" {{ $request->purpose === "Other" ? 'selected' : '' }}>Other</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div style="margin-bottom: 1rem;">
                         <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                            <label style="font-size: 0.875rem; font-weight: 500;">Custom Content / Notes</label>
-                            <button type="button" onclick="rewriteWithAi()" class="btn btn-sm btn-secondary"
-                                style="color: #4f46e5; border-color: #4f46e5; padding: 2px 8px; font-size: 0.75rem;">
-                                <i data-feather="cpu" style="width: 12px; height: 12px; margin-right: 4px;"></i>
-                                Rewrite with AI
-                            </button>
+                            style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+                            <button type="button" onclick="closeEditModal()" class="btn btn-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
                         </div>
-                        <textarea name="custom_content" id="customContentField" rows="6" class="form-textarea"
-                            style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;"
-                            placeholder="Enter notes here or let AI generate the letter...">{{ $request->custom_content }}</textarea>
-                    </div>
-
-                    <div
-                        style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-                        <button type="button" onclick="closeEditModal()" class="btn btn-secondary">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </div>
                     </form>
                 </div>
             </div>
@@ -489,7 +495,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 1rem 1.5rem;
-            border-bottom: 1px solid #e5e7eb;
+            border-bottom: 1px solid var(--border-color);
             background: #f9fafb;
         }
 
@@ -497,7 +503,7 @@
             margin: 0;
             font-size: 1.125rem;
             font-weight: 600;
-            color: #111827;
+            color: var(--text-main);
         }
 
         /* Body - Grey "Desk" Background */
@@ -565,7 +571,7 @@
             justify-content: center;
             height: 100%;
             min-height: 400px;
-            color: #6b7280;
+            color: var(--text-muted);
             gap: 1rem;
         }
     </style>
@@ -586,7 +592,7 @@
             adminMessageHint.textContent = needsRevision ? '(Required for Needs Revision)' : '(Optional)';
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const statusSelect = document.getElementById('statusSelect');
             if (statusSelect) {
                 statusSelect.addEventListener('change', syncStatusForm);
@@ -598,11 +604,11 @@
             document.getElementById('previewModal').style.display = 'flex';
             // Reset and load
             document.getElementById('letterPreviewContent').innerHTML = `
-                                                                            <div class="loading-container">
-                                                                                <div style="width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: #4f46e5; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                                                                                <span>Generating Letter...</span>
-                                                                            </div>
-                                                                        `;
+                                                                                <div class="loading-container">
+                                                                                    <div style="width: 40px; height: 40px; border: 3px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                                                                    <span>Generating Letter...</span>
+                                                                                </div>
+                                                                            `;
             loadPreview();
         }
 
@@ -639,11 +645,11 @@
 
         function showError(msg) {
             document.getElementById('letterPreviewContent').innerHTML = `
-                                                                            <div class="loading-container" style="color: #dc2626;">
-                                                                                <p>Failed to generate preview.</p>
-                                                                                <p style="font-size: 0.875rem;">${msg}</p>
-                                                                            </div>
-                                                                        `;
+                                                                                <div class="loading-container" style="color: #dc2626;">
+                                                                                    <p>Failed to generate preview.</p>
+                                                                                    <p style="font-size: 0.875rem;">${msg}</p>
+                                                                                </div>
+                                                                            `;
         }
 
         function renderLetter(data) {
@@ -658,93 +664,93 @@
 
             // Construct styles for the preview container
             const style = `
-                                                                            width: 210mm;
-                                                                            min-height: 297mm;
-                                                                            padding-top: ${margins.top}mm;
-                                                                            padding-bottom: ${margins.bottom}mm;
-                                                                            padding-left: ${margins.left}mm;
-                                                                            padding-right: ${margins.right}mm;
-                                                                            font-family: "${fontFamily}", "Times New Roman", serif;
-                                                                            font-size: ${fontSize}pt;
-                                                                            direction: ${direction};
-                                                                            border: ${borderStyle};
-                                                                        `;
+                                                                                width: 210mm;
+                                                                                min-height: 297mm;
+                                                                                padding-top: ${margins.top}mm;
+                                                                                padding-bottom: ${margins.bottom}mm;
+                                                                                padding-left: ${margins.left}mm;
+                                                                                padding-right: ${margins.right}mm;
+                                                                                font-family: "${fontFamily}", "Times New Roman", serif;
+                                                                                font-size: ${fontSize}pt;
+                                                                                direction: ${direction};
+                                                                                border: ${borderStyle};
+                                                                            `;
 
             // Footer positioning logic exact match: Math.max((margins.bottom || 25) - 10, 10)
             const footerBottom = Math.max((margins.bottom || 25) - 10, 10);
 
             let html = `
-                                                                            <div class="letter-page" style="${style}">
-                                                                                <!-- Header -->
-                                                                                <div class="letter-header mb-8" style="margin-bottom: 2rem;">
-                                                                                    ${data.header || ''}
-                                                                                </div>
-
-                                                                                <!-- Body -->
-                                                                                <div class="letter-body mb-0" style="margin-bottom: 0; min-height: 200px;">
-                                                                                    ${data.body || ''}
-                                                                                </div>
-
-                                                                                <!-- Signature Section - Matching React Tailwind Classes with Inline Styles -->
-                                                                                <!-- Signature Section - Table Layout -->
-                                                                                <div class="letter-signature" style="margin-top: 3rem; page-break-inside: avoid;">
-                                                                                    <table style="width: 100%; border-collapse: collapse;">
-                                                                                        <tr>
-                                                                                            <!-- Left Column: Signature Details & Image -->
-                                                                                            <td style="vertical-align: top; width: 65%;">
-                                                                                                <div style="font-weight: 700; font-size: 1rem; line-height: 1.5rem;">${data.signature.name || ''}</div>
-
-                                                                                                ${data.signature.title ? `<div style="font-size: 0.875rem; color: #374151;">${data.signature.title}</div>` : ''}
-
-                                                                                                ${data.signature.department || data.signature.institution ? `
-                                                                                                    <div style="margin-top: 5px; font-size: 0.875rem; color: #4b5563;">
-                                                                                                        ${data.signature.department ? `<div>${data.signature.department}</div>` : ''}
-                                                                                                        ${data.signature.institution ? `<div>${data.signature.institution}</div>` : ''}
-                                                                                                    </div>
-                                                                                                ` : ''}
-
-                                                                                                ${data.signature.email || data.signature.phone ? `
-                                                                                                    <div style="margin-top: 8px; font-size: 0.875rem; color: #6b7280;">
-                                                                                                        ${data.signature.email ? `<div>Email: ${data.signature.email}</div>` : ''}
-                                                                                                        ${data.signature.phone ? `<div>Tel: ${data.signature.phone}</div>` : ''}
-                                                                                                    </div>
-                                                                                                ` : ''}
-
-                                                                                                <!-- Signature Image BELOW details -->
-                                                                                                ${data.signature.image ? `
-                                                                                                    <div style="margin-top: 15px;">
-                                                                                                        <img src="${data.signature.image}" alt="Signature" style="height: 4rem; max-width: 150px; display: block;">
-                                                                                                    </div>
-                                                                                                ` : ''}
-                                                                                            </td>
-
-                                                                                            <!-- Right Column: Stamp & QR Code -->
-                                                                                            <td style="vertical-align: top; text-align: right; width: 35%;">
-                                                                                                ${data.signature.stamp ? `
-                                                                                                    <div style="margin-bottom: 15px;">
-                                                                                                        <img src="${data.signature.stamp}" alt="Stamp" style="height: 5rem; opacity: 0.8;">
-                                                                                                    </div>
-                                                                                                ` : ''}
-
-                                                                                                <!-- QR Code -->
-                                                                                                ${data.qrCode ? `
-                                                                                                    <div style="margin-top: 10px;">
-                                                                                                        ${data.qrCode}
-                                                                                                    </div>
-                                                                                                ` : ''}
-                                                                                            </td>
-                                                                                        </tr>
-                                                                                    </table>
-                                                                                </div>
-
-                                                                                <!-- Footer (Absolute) -->
-                                                                                ${data.footer ? `
-                                                                                    <div class="letter-footer" style="position: absolute; bottom: ${footerBottom}mm; left: ${margins.left}mm; right: ${margins.right}mm; text-align: center;">
-                                                                                        ${data.footer}
+                                                                                <div class="letter-page" style="${style}">
+                                                                                    <!-- Header -->
+                                                                                    <div class="letter-header mb-8" style="margin-bottom: 2rem;">
+                                                                                        ${data.header || ''}
                                                                                     </div>
-                                                                                ` : ''}
-                                                                            </div>
-                                                                        `;
+
+                                                                                    <!-- Body -->
+                                                                                    <div class="letter-body mb-0" style="margin-bottom: 0; min-height: 200px;">
+                                                                                        ${data.body || ''}
+                                                                                    </div>
+
+                                                                                    <!-- Signature Section - Matching React Tailwind Classes with Inline Styles -->
+                                                                                    <!-- Signature Section - Table Layout -->
+                                                                                    <div class="letter-signature" style="margin-top: 3rem; page-break-inside: avoid;">
+                                                                                        <table style="width: 100%; border-collapse: collapse;">
+                                                                                            <tr>
+                                                                                                <!-- Left Column: Signature Details & Image -->
+                                                                                                <td style="vertical-align: top; width: 65%;">
+                                                                                                    <div style="font-weight: 700; font-size: 1rem; line-height: 1.5rem;">${data.signature.name || ''}</div>
+
+                                                                                                    ${data.signature.title ? `<div style="font-size: 0.875rem; color: #374151;">${data.signature.title}</div>` : ''}
+
+                                                                                                    ${data.signature.department || data.signature.institution ? `
+                                                                                                        <div style="margin-top: 5px; font-size: 0.875rem; color: #4b5563;">
+                                                                                                            ${data.signature.department ? `<div>${data.signature.department}</div>` : ''}
+                                                                                                            ${data.signature.institution ? `<div>${data.signature.institution}</div>` : ''}
+                                                                                                        </div>
+                                                                                                    ` : ''}
+
+                                                                                                    ${data.signature.email || data.signature.phone ? `
+                                                                                                        <div style="margin-top: 8px; font-size: 0.875rem; color: var(--text-muted);">
+                                                                                                            ${data.signature.email ? `<div>Email: ${data.signature.email}</div>` : ''}
+                                                                                                            ${data.signature.phone ? `<div>Tel: ${data.signature.phone}</div>` : ''}
+                                                                                                        </div>
+                                                                                                    ` : ''}
+
+                                                                                                    <!-- Signature Image BELOW details -->
+                                                                                                    ${data.signature.image ? `
+                                                                                                        <div style="margin-top: 15px;">
+                                                                                                            <img src="${data.signature.image}" alt="Signature" style="height: 4rem; max-width: 150px; display: block;">
+                                                                                                        </div>
+                                                                                                    ` : ''}
+                                                                                                </td>
+
+                                                                                                <!-- Right Column: Stamp & QR Code -->
+                                                                                                <td style="vertical-align: top; text-align: right; width: 35%;">
+                                                                                                    ${data.signature.stamp ? `
+                                                                                                        <div style="margin-bottom: 15px;">
+                                                                                                            <img src="${data.signature.stamp}" alt="Stamp" style="height: 5rem; opacity: 0.8;">
+                                                                                                        </div>
+                                                                                                    ` : ''}
+
+                                                                                                    <!-- QR Code -->
+                                                                                                    ${data.qrCode ? `
+                                                                                                        <div style="margin-top: 10px;">
+                                                                                                            ${data.qrCode}
+                                                                                                        </div>
+                                                                                                    ` : ''}
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        </table>
+                                                                                    </div>
+
+                                                                                    <!-- Footer (Absolute) -->
+                                                                                    ${data.footer ? `
+                                                                                        <div class="letter-footer" style="position: absolute; bottom: ${footerBottom}mm; left: ${margins.left}mm; right: ${margins.right}mm; text-align: center;">
+                                                                                            ${data.footer}
+                                                                                        </div>
+                                                                                    ` : ''}
+                                                                                </div>
+                                                                            `;
 
             document.getElementById('letterPreviewContent').innerHTML = html;
             if (typeof feather !== 'undefined') feather.replace();
@@ -774,102 +780,103 @@
             }
 
             const htmlContent = `
-                                                                            <!DOCTYPE html>
-                                                                            <html>
-                                                                            <head>
-                                                                                <title>Recommendation Letter</title>
-                                                                                <style>
-                                                                                    /* Reset */
-                                                                                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                                                                                <!DOCTYPE html>
+                                                                                <html>
+                                                                                <head>
+                                                                                    <title>Recommendation Letter</title>
+                                                                                    <style>
+                                                                                        /* Reset */
+                                                                                        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-                                                                                    /* Utility Classes Helper (Mini Tailwind) */
-                                                                                    .text-center { text-align: center; }
-                                                                                    .text-right { text-align: right; }
-                                                                                    .text-left { text-align: left; }
-                                                                                    .font-bold { font-weight: bold; }
-                                                                                    .font-semibold { font-weight: 600; }
-                                                                                    .italic { font-style: italic; }
-                                                                                    .underline { text-decoration: underline; }
-                                                                                    .mb-1 { margin-bottom: 0.25rem; }
-                                                                                    .mb-2 { margin-bottom: 0.5rem; }
-                                                                                    .mb-4 { margin-bottom: 1rem; }
-                                                                                    .mt-1 { margin-top: 0.25rem; }
-                                                                                    .mt-2 { margin-top: 0.5rem; }
-                                                                                    .mt-4 { margin-top: 1rem; }
-                                                                                    .w-full { width: 100%; }
-                                                                                    .flex { display: flex; }
-                                                                                    .justify-between { justify-content: space-between; }
-                                                                                    .items-center { align-items: center; }
+                                                                                        /* Utility Classes Helper (Mini Tailwind) */
+                                                                                        .text-center { text-align: center; }
+                                                                                        .text-right { text-align: right; }
+                                                                                        .text-left { text-align: left; }
+                                                                                        .font-bold { font-weight: bold; }
+                                                                                        .font-semibold { font-weight: 600; }
+                                                                                        .italic { font-style: italic; }
+                                                                                        .underline { text-decoration: underline; }
+                                                                                        .mb-1 { margin-bottom: 0.25rem; }
+                                                                                        .mb-2 { margin-bottom: 0.5rem; }
+                                                                                        .mb-4 { margin-bottom: 1rem; }
+                                                                                        .mt-1 { margin-top: 0.25rem; }
+                                                                                        .mt-2 { margin-top: 0.5rem; }
+                                                                                        .mt-4 { margin-top: 1rem; }
+                                                                                        .w-full { width: 100%; }
+                                                                                        .flex { display: flex; }
+                                                                                        .justify-between { justify-content: space-between; }
+                                                                                        .items-center { align-items: center; }
 
-                                                                                    /* Page Setup */
-                                                                                    @page { size: A4 portrait; margin: 0; }
-                                                                                    html, body { width: 210mm; height: 297mm; }
-                                                                                    body {
-                                                                                        font-family: "${fontFamily}", "Times New Roman", serif;
-                                                                                        font-size: ${fontSize}pt;
-                                                                                        line-height: 1.35;
-                                                                                        color: #000;
-                                                                                        background: white;
-                                                                                        -webkit-print-color-adjust: exact !important;
-                                                                                        print-color-adjust: exact !important;
-                                                                                        direction: ${direction};
-                                                                                    }
-                                                                                    .letter-page {
-                                                                                        width: 210mm;
-                                                                                        height: 297mm;
-                                                                                        max-height: 297mm;
-                                                                                        overflow: hidden;
-                                                                                        padding: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;
-                                                                                        position: relative;
-                                                                                        page-break-after: always;
-                                                                                        border: ${borderStyle};
-                                                                                    }
-                                                                                    img { max-width: 100%; height: auto; }
+                                                                                        /* Page Setup */
+                                                                                        @page { size: A4 portrait; margin: 0; }
+                                                                                        html, body { width: 210mm; height: 297mm; }
+                                                                                        body {
+                                                                                            font-family: "${fontFamily}", "Times New Roman", serif;
+                                                                                            font-size: ${fontSize}pt;
+                                                                                            line-height: 1.35;
+                                                                                            color: #000;
+                                                                                            background: white;
+                                                                                            -webkit-print-color-adjust: exact !important;
+                                                                                            print-color-adjust: exact !important;
+                                                                                            direction: ${direction};
+                                                                                        }
+                                                                                        .letter-page {
+                                                                                            width: 210mm;
+                                                                                            height: 297mm;
+                                                                                            max-height: 297mm;
+                                                                                            overflow: hidden;
+                                                                                            padding: ${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm;
+                                                                                            position: relative;
+                                                                                            page-break-after: always;
+                                                                                            border: ${borderStyle};
+                                                                                        }
+                                                                                        img { max-width: 100%; height: auto; }
 
-                                                                                    /* Image Sizing Exact Match */
-                                                                                    img[alt="Signature"] { height: 4rem !important; width: auto !important; margin-bottom: 0.5rem; }
-                                                                                    img[alt="Stamp"] { height: 5rem !important; width: auto !important; }
-                                                                                    img[alt*="Logo"] { width: 80px !important; height: auto !important; }
+                                                                                        /* Image Sizing Exact Match */
+                                                                                        img[alt="Signature"] { height: 4rem !important; width: auto !important; margin-bottom: 0.5rem; }
+                                                                                        img[alt="Stamp"] { height: 5rem !important; width: auto !important; }
+                                                                                        img[alt*="Logo"] { width: 80px !important; height: auto !important; }
 
-                                                                                    .footer-section {
-                                                                                        position: absolute;
-                                                                                        bottom: ${footerBottom}mm;
-                                                                                        left: ${margins.left}mm;
-                                                                                        right: ${margins.right}mm;
-                                                                                        text-align: center;
-                                                                                    }
-                                                                                </style>
-                                                                            </head>
-                                                                            <body>
-                                                                                <div class="letter-page">
-                                                                                    <div class="letter-header" style="margin-bottom: 2rem;">
-                                                                                        ${data.header || ''}
-                                                                                    </div>
-                                                                                    <div class="letter-body" style="margin-bottom: 0;">
-                                                                                        ${data.body || ''}
-                                                                                    </div>
-                                                                                    <div class="letter-signature" style="margin-top: 3rem; page-break-inside: avoid;">
-                                                                                        <div style="margin-bottom: 1rem;">
-                                                                                            <div style="font-weight: 700; font-size: 1rem; line-height: 1.5rem;">${data.signature.name || ''}</div>
-                                                                                            ${data.signature.title ? `<div style="font-size: 0.875rem; color: #374151;">${data.signature.title}</div>` : ''}
-                                                                                            ${data.signature.department ? `<div style="font-size: 0.875rem; color: #4b5563;">${data.signature.department}</div>` : ''}
-                                                                                            ${data.signature.institution ? `<div style="font-size: 0.875rem; color: #4b5563;">${data.signature.institution}</div>` : ''}
-                                                                                            ${data.signature.email ? `<div style="font-size: 0.875rem; color: #6b7280;">Email: ${data.signature.email}</div>` : ''}
-                                                                                            ${data.signature.phone ? `<div style="font-size: 0.875rem; color: #6b7280;">Tel: ${data.signature.phone}</div>` : ''}
+                                                                                        .footer-section {
+                                                                                            position: absolute;
+                                                                                            bottom: ${footerBottom}mm;
+                                                                                            left: ${margins.left}mm;
+                                                                                            right: ${margins.right}mm;
+                                                                                            text-align: center;
+                                                                                        }
+                                                                                    </style>
+                                                                                </head>
+                                                                                <body>
+                                                                                    <div class="letter-page">
+                                                                                        <div class="letter-header" style="margin-bottom: 2rem;">
+                                                                                            ${data.header || ''}
                                                                                         </div>
-                                                                                        ${data.signature.image ? `<img src="${data.signature.image}" alt="Signature">` : ''}
-                                                                                        ${data.signature.stamp ? `<div style="margin-top: 0.5rem;"><img src="${data.signature.stamp}" alt="Stamp"></div>` : ''}
+                                                                                        <div class="letter-body" style="margin-bottom: 0;">
+                                                                                            ${data.body || ''}
+                                                                                        </div>
+                                                                                        <div class="letter-signature" style="margin-top: 3rem; page-break-inside: avoid;">
+                                                                                            <div style="margin-bottom: 1rem;">
+                                                                                                <div style="font-weight: 700; font-size: 1rem; line-height: 1.5rem;">${data.signature.name || ''}</div>
+                                                                                                ${data.signature.title ? `<div style="font-size: 0.875rem; color: #374151;">${data.signature.title}</div>` : ''}
+                                                                                                ${data.signature.department ? `<div style="font-size: 0.875rem; color: #4b5563;">${data.signature.department}</div>` : ''}
+                                                                                                ${data.signature.institution ? `<div style="font-size: 0.875rem; color: #4b5563;">${data.signature.institution}</div>` : ''}
+                                                                                                ${data.signature.email ? `<div style="font-size: 0.875rem; color: #666;">Email: ${data.signature.email}</div>` : ''}
+                                                                                                ${data.signature.phone ? `<div style="font-size: 0.875rem; color: #666;">Tel: ${data.signature.phone}</div>` : ''}
+                                                                                            </div>
+                                                                                            ${data.signature.image ? `<img src="${data.signature.image}" alt="Signature">` : ''}
+                                                                                            ${data.signature.stamp ? `<div style="margin-top: 0.5rem;"><img src="${data.signature.stamp}" alt="Stamp"></div>` : ''}
+                                                                                        </div>
+                                                                                        ${data.qrCode ? `<div style="text-align: right; margin-top: 10px;">${data.qrCode}</div>` : ''}
+                                                                                        ${data.footer ? `<div class="footer-section">${data.footer}</div>` : ''}
                                                                                     </div>
-                                                                                    ${data.footer ? `<div class="footer-section">${data.footer}</div>` : ''}
-                                                                                </div>
-                                                                                <script>
-                                                                                    window.onload = function() {
-                                                                                        setTimeout(function() { window.print(); }, 500);
-                                                                                    }
-                                                                                <\/script>
-                                                                            </body>
-                                                                            </html>
-                                                                        `;
+                                                                                    <script>
+                                                                                        window.onload = function() {
+                                                                                            setTimeout(function() { window.print(); }, 500);
+                                                                                        }
+                                                                                    <\/script>
+                                                                                </body>
+                                                                                </html>
+                                                                            `;
 
             printWindow.document.write(htmlContent);
             printWindow.document.close();

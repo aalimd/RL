@@ -192,7 +192,64 @@ function performInstallation($data)
 
     // Create .env file
     $envContent = generateEnvFile($db, $site, $email);
-    file_put_contents(__DIR__ . '/../backend/.env', $envContent);
+    $envPath = __DIR__ . '/../backend/.env';
+    if (file_put_contents($envPath, $envContent) === false) {
+        return "Failed to create backend/.env file. Please check write permissions.";
+    }
+
+    // Reconcile schema with Laravel migrations after SQL import.
+    // This protects fresh installs from SQL snapshot drift and missing columns/tables.
+    $schemaSyncResult = runPostInstallMigrations($pdo);
+    if ($schemaSyncResult !== true) {
+        return $schemaSyncResult;
+    }
+
+    return true;
+}
+
+/**
+ * Ensure database schema matches current Laravel code after SQL import.
+ *
+ * The installer imports a SQL snapshot for speed, then re-runs migrations to
+ * guarantee all runtime-required columns and tables exist.
+ */
+function runPostInstallMigrations(PDO $pdo)
+{
+    $backendPath = realpath(__DIR__ . '/../backend');
+    if (!$backendPath) {
+        return 'Backend path not found. Could not run post-install migrations.';
+    }
+
+    $autoloadPath = $backendPath . '/vendor/autoload.php';
+    $bootstrapPath = $backendPath . '/bootstrap/app.php';
+
+    if (!file_exists($autoloadPath) || !file_exists($bootstrapPath)) {
+        return 'Laravel dependencies are missing. Please run Composer install in /backend before installation.';
+    }
+
+    try {
+        // Reset migration history so the installer can safely reconcile schema
+        // against the current migration files.
+        $pdo->exec('DELETE FROM migrations');
+        $pdo->exec('ALTER TABLE migrations AUTO_INCREMENT = 1');
+    } catch (Throwable $e) {
+        return 'Failed to prepare migration table: ' . $e->getMessage();
+    }
+
+    try {
+        require_once $autoloadPath;
+        $app = require_once $bootstrapPath;
+        $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
+
+        $exitCode = $kernel->call('migrate', ['--force' => true]);
+        $output = trim((string) $kernel->output());
+
+        if ($exitCode !== 0) {
+            return 'Post-install migration failed: ' . ($output !== '' ? $output : 'Unknown migration error.');
+        }
+    } catch (Throwable $e) {
+        return 'Post-install migration failed: ' . $e->getMessage();
+    }
 
     return true;
 }

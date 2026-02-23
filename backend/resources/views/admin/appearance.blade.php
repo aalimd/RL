@@ -145,7 +145,7 @@
 
                                     <!-- Dropdown Menu -->
                                     <div id="bodyFontPickerDropdown" class="font-dropdown-menu"
-                                        style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0.5rem; max-height: 300px; overflow-y: auto; z-index: 9999; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+                                        style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 0.5rem; max-height: 300px; overflow-y: auto; z-index: 9999; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
 
                                         <!-- Modern Sans (Recommended) -->
                                         <div class="font-group-label"
@@ -234,7 +234,7 @@
 
                                     <!-- Dropdown Menu -->
                                     <div id="fontPickerDropdown" class="font-dropdown-menu"
-                                        style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 0.5rem; max-height: 300px; overflow-y: auto; z-index: 9999; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+                                        style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 0.5rem; max-height: 300px; overflow-y: auto; z-index: 9999; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
 
                                         <!-- Modern Trendy -->
                                         <div class="font-group-label"

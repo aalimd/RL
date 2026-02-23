@@ -94,14 +94,20 @@
     .login-card {
         background: var(--bg-secondary);
         border-radius: 1.5rem;
-        box-shadow: 0 20px 60px -20px var(--shadow-color);
-        padding: 2.5rem;
-        border: 1px solid var(--border-light);
-        animation: slide-up 0.5s ease-out 0.1s backwards;
+        box-shadow: 0 25px 50px -12px var(--shadow-color), inset 0 1px 1px rgba(255,255,255,0.05);
+        padding: 3rem 2.5rem;
+        border: 1px solid var(--border-color);
+        animation: slide-up 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.1s backwards;
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
     }
     
+    .login-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 35px 60px -15px var(--shadow-color);
+    }
+
     @keyframes slide-up {
-        from { opacity: 0; transform: translateY(20px); }
+        from { opacity: 0; transform: translateY(30px); }
         to { opacity: 1; transform: translateY(0); }
     }
     
@@ -135,18 +141,26 @@
     .form-input {
         width: 100%;
         padding: 0.875rem 1rem 0.875rem 2.75rem;
-        border: 2px solid var(--border-color);
+        border: 1px solid var(--border-color);
         border-radius: 0.75rem;
         font-size: 1rem;
-        transition: all 0.2s;
+        transition: all 0.25s ease;
         background: var(--input-bg);
         color: var(--text-primary);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+    }
+
+    html.dark .form-input {
+        border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(0,0,0,0.2);
     }
     
     .form-input:focus {
         outline: none;
         border-color: var(--primary);
-        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+        box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.02);
+        transform: translateY(-1px);
+        background: var(--bg-secondary);
     }
     
     .form-input:focus + .input-icon,
@@ -179,16 +193,16 @@
     /* Login Button */
     .login-btn {
         width: 100%;
-        padding: 1rem;
+        padding: 1.125rem;
         background: linear-gradient(135deg, var(--primary), var(--secondary));
         color: white;
         border: none;
         border-radius: 0.75rem;
         font-weight: 700;
-        font-size: 1rem;
+        font-size: 1.05rem;
         cursor: pointer;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.5);
+        box-shadow: 0 10px 25px -5px rgba(var(--primary-rgb), 0.4);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -199,20 +213,21 @@
     
     .login-btn:hover {
         transform: translateY(-3px);
-        box-shadow: 0 15px 40px -10px rgba(99, 102, 241, 0.6);
+        box-shadow: 0 15px 35px -8px rgba(var(--primary-rgb), 0.5);
+        color: white;
     }
     
-    .login-btn::before {
+    .login-btn::after {
         content: '';
         position: absolute;
-        inset: 0;
-        background: linear-gradient(135deg, transparent, rgba(255,255,255,0.2), transparent);
-        transform: translateX(-100%);
-        transition: transform 0.5s;
+        top: 0; left: -100%; width: 50%; height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        transform: skewX(-20deg);
+        transition: all 0.5s ease;
     }
     
-    .login-btn:hover::before {
-        transform: translateX(100%);
+    .login-btn:hover::after {
+        left: 150%;
     }
     
     .login-btn:disabled {

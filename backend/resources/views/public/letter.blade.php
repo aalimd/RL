@@ -13,12 +13,13 @@
         }
 
         body {
-            background: #e5e7eb;
+            background: #f3f4f6;
             font-family: 'Times New Roman', Times, serif;
             display: flex;
             justify-content: center;
             min-height: 100vh;
-            padding: 2rem 1rem;
+            padding: 3rem 1rem;
+            color: #111827;
         }
 
         .letter-page {
@@ -55,12 +56,13 @@
 
         /* Body Section */
         .letter-body {
-            padding: 0 15mm;
-            line-height: 1.6;
+            padding: 0 16mm;
+            line-height: 1.65;
             text-align: justify;
             flex: 1;
-            font-size: 11pt;
+            font-size: 11.5pt;
             overflow: hidden;
+            color: #111827;
         }
 
         .letter-body .recipient-name {
@@ -131,34 +133,42 @@
         }
 
         .btn {
-            padding: 0.75rem 1.25rem;
-            border-radius: 0.5rem;
+            padding: 0.625rem 1.125rem;
+            border-radius: 9999px;
             font-weight: 600;
-            font-size: 0.875rem;
+            font-size: 0.8125rem;
             text-decoration: none;
             cursor: pointer;
             border: none;
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            transition: all 0.2s;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.9), rgba(99, 102, 241, 0.9));
             color: white;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .btn-secondary {
-            background: white;
+            background: rgba(255, 255, 255, 0.9);
             color: #374151;
-            border: 1px solid #d1d5db;
+            border: 1px solid rgba(209, 213, 219, 0.8);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         .btn:hover {
-            transform: translateY(-1px);
+            transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
 
         /* Print Styles */
@@ -270,16 +280,20 @@
 
     <div class="toolbar no-print">
         <a href="{{ url('/track/' . $request->tracking_id) }}" class="btn btn-secondary">
-            &larr; Back
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6" />
+            </svg>
+            Back
         </a>
-        {{--
-        <a href="{{ route('public.letter.pdf', $request->id) }}" class="btn btn-primary"
-            style="background: linear-gradient(135deg, #059669, #10b981);">
-            📥 Download PDF
-        </a>
-        --}}
         <button onclick="window.print()" class="btn btn-primary">
-            🖨️ Save/Print
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
+            </svg>
+            Save/Print
         </button>
     </div>
 
@@ -356,7 +370,7 @@
                         @endif
                     </td>
 
-                    <!-- Right Column: Stamp & QR Code -->
+                    <!-- Right Column: Stamp -->
                     <td style="vertical-align: top; text-align: right; width: 35%;">
                         @if(!empty($signature['stamp']))
                             <div style="margin-bottom: 15px;">
@@ -364,23 +378,17 @@
                                     style="max-width: 100px; max-height: 100px; height: auto;">
                             </div>
                         @endif
-
-                        @if(!empty($qrCode))
-                            <div style="margin-top: 10px;">
-                                {!! $qrCode !!}
-                            </div>
-                        @endif
                     </td>
                 </tr>
             </table>
         </div>
 
-        {{-- QR Code Automatic Display --}}
-        {{-- @if(!empty($qrCode))
-        <div class="letter-qrcode" style="padding: 0 15mm;">
-            {!! $qrCode !!}
-        </div>
-        @endif --}}
+        {{-- QR Code - Always displayed independently of signature --}}
+        @if(!empty($qrCode))
+            <div style="text-align: right; padding: 0 15mm; margin-top: 10px;">
+                {!! $qrCode !!}
+            </div>
+        @endif
 
         <!-- Footer -->
         <div class="letter-footer">

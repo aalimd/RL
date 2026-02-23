@@ -587,23 +587,28 @@
         }
 
         .stat-card .stat-icon.blue {
-            background: #eff6ff;
+            background: rgba(59, 130, 246, 0.1);
             color: #3b82f6;
         }
 
         .stat-card .stat-icon.yellow {
-            background: #fffbeb;
-            color: #f59e0b;
+            background: var(--warning-bg);
+            color: var(--warning-text);
         }
 
         .stat-card .stat-icon.green {
-            background: #ecfdf5;
-            color: #10b981;
+            background: var(--success-bg);
+            color: var(--success-text);
         }
 
         .stat-card .stat-icon.red {
-            background: #fef2f2;
-            color: #ef4444;
+            background: var(--error-bg);
+            color: var(--error-text);
+        }
+
+        body.dark-mode .stat-card .stat-icon.blue {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
         }
 
         /* Modern Card */
@@ -618,11 +623,11 @@
 
         .card-header {
             padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid #f3f4f6;
+            border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: #ffffff;
+            background: transparent;
         }
 
         .card-header h3 {
@@ -1080,8 +1085,8 @@
             justify-content: space-between;
             align-items: center;
             padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid #f3f4f6;
-            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--card-bg);
         }
 
         .modal-header h3 {
@@ -1089,11 +1094,12 @@
             font-size: 1.25rem;
             /* Larger Header */
             font-weight: 700;
-            color: #111827;
+            color: var(--text-main);
         }
 
         .modal-body {
             padding: 1.5rem;
+            color: var(--text-main);
         }
 
         .modal-footer {
@@ -1101,8 +1107,9 @@
             justify-content: flex-end;
             gap: 0.75rem;
             padding: 1.25rem 1.5rem;
-            background: #f9fafb;
-            border-top: 1px solid #f3f4f6;
+            background: var(--bg-color);
+            /* Matches general BG nicely */
+            border-top: 1px solid var(--border-color);
         }
 
         .toast-container {

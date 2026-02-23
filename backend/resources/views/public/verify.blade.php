@@ -96,8 +96,8 @@
         }
 
         /* ========================================
-                                       GLASS CARD
-                                       ======================================== */
+                                           GLASS CARD
+                                           ======================================== */
         .verify-card {
             max-width: 500px;
             width: 100%;
@@ -108,12 +108,12 @@
 
             /* Standardized Glassmorphism */
             background: var(--glass-bg);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            backdrop-filter: blur(25px) saturate(200%);
+            -webkit-backdrop-filter: blur(25px) saturate(200%);
             border: 1px solid var(--glass-border);
-            box-shadow: 0 25px 50px -12px var(--shadow-color);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            animation: slide-up 0.6s ease-out;
+            box-shadow: 0 25px 50px -12px var(--shadow-color), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: slide-up 0.6s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         @keyframes slide-up {
@@ -171,8 +171,8 @@
         }
 
         /* ========================================
-                                       GLOW EFFECTS
-                                       ======================================== */
+                                           GLOW EFFECTS
+                                           ======================================== */
         .glow-bg {
             position: absolute;
             top: 50%;
@@ -195,8 +195,8 @@
         }
 
         /* ========================================
-                                       HEADER & ICON
-                                       ======================================== */
+                                           HEADER & ICON
+                                           ======================================== */
         .verify-header {
             padding: 2.5rem 2rem 1.5rem;
             text-align: center;
@@ -266,8 +266,8 @@
         }
 
         /* ========================================
-                                       BODY & CONTENT
-                                       ======================================== */
+                                           BODY & CONTENT
+                                           ======================================== */
         .verify-body {
             padding: 2rem;
         }
@@ -276,8 +276,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1rem 0;
-            border-bottom: 1px dashed var(--border-light);
+            padding: 1.25rem 0;
+            border-bottom: 2px dashed var(--border-color);
         }
 
         .info-row:last-child {
@@ -286,14 +286,16 @@
 
         .info-label {
             color: var(--text-muted);
-            font-size: 0.9rem;
-            font-weight: 500;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         .info-value {
             color: var(--text-primary);
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 1.05rem;
             text-align: right;
         }
 
@@ -325,8 +327,8 @@
         }
 
         /* ========================================
-                                       BUTTONS
-                                       ======================================== */
+                                           BUTTONS
+                                           ======================================== */
         .btn-return {
             display: inline-flex;
             align-items: center;
@@ -358,21 +360,22 @@
         /* Pulse Ring Animation */
         .pulse-ring {
             position: absolute;
-            inset: -4px;
+            inset: -8px;
             border-radius: 50%;
             border: 2px solid currentColor;
             opacity: 0;
-            animation: ring-pulse 2s infinite;
+            animation: ring-pulse 2.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
 
         @keyframes ring-pulse {
             0% {
-                transform: scale(0.9);
-                opacity: 0.5;
+                transform: scale(0.85);
+                opacity: 0.6;
             }
 
+            70%,
             100% {
-                transform: scale(1.5);
+                transform: scale(1.4);
                 opacity: 0;
             }
         }

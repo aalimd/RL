@@ -157,6 +157,13 @@
             color: var(--text-muted);
         }
 
+        body.dark-mode .date-filter input {
+            background: var(--input-bg);
+            border-color: var(--border-color);
+            color: var(--text-main);
+            color-scheme: dark;
+        }
+
         body.dark-mode .date-filter span {
             color: var(--text-muted);
         }
@@ -209,16 +216,17 @@
     <!-- Header with Date Filter -->
     <div class="analytics-header">
         <div>
-            <h2 style="font-size: 1.25rem; font-weight: 700; color: #111827; margin-bottom: 0.25rem;">Analytics Dashboard
+            <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Analytics
+                Dashboard
             </h2>
-            <p style="font-size: 0.875rem; color: #6b7280;">
+            <p style="font-size: 0.875rem; color: var(--text-muted);">
                 {{ \Carbon\Carbon::parse($analytics['dateFrom'])->format('M d, Y') }} -
                 {{ \Carbon\Carbon::parse($analytics['dateTo'])->format('M d, Y') }}
             </p>
         </div>
         <form method="GET" class="date-filter">
             <input type="date" name="date_from" value="{{ $analytics['dateFrom'] }}">
-            <span style="color: #9ca3af;">to</span>
+            <span style="color: var(--text-muted);">to</span>
             <input type="date" name="date_to" value="{{ $analytics['dateTo'] }}">
             <button type="submit">
                 <i data-feather="filter" style="width: 14px; height: 14px; margin-right: 0.25rem;"></i>

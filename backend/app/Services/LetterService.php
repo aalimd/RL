@@ -250,8 +250,15 @@ class LetterService
      */
     private function generateQrCodeHtml(Request $request)
     {
+        // Auto-generate verify_token if missing (for older requests)
         if (!$request->verify_token) {
-            return '';
+            try {
+                $request->verify_token = \Illuminate\Support\Str::random(32);
+                $request->saveQuietly();
+            } catch (\Exception $e) {
+                Log::warning('Failed to auto-generate verify_token for request ' . $request->id . ': ' . $e->getMessage());
+                return '';
+            }
         }
 
         $url = route('public.verify', $request->verify_token);

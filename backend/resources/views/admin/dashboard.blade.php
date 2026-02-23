@@ -76,15 +76,16 @@
                                         <div style="font-weight: 500; color: var(--text-main);">
                                             {{ $request->student_name ?? 'N/A' }}
                                         </div>
-                                        <div style="font-size: 0.75rem; color: #6b7280;">{{ $request->purpose ?? 'General' }}
+                                        <div style="font-size: 0.75rem; color: var(--text-muted);">
+                                            {{ $request->purpose ?? 'General' }}
                                         </div>
                                     </td>
                                     <td>
                                         <span class="badge 
-                                                                                    @if($request->status === 'Approved') badge-approved
-                                                                                    @elseif($request->status === 'Rejected') badge-rejected
-                                                                                    @elseif($request->status === 'Under Review') badge-revision
-                                                                                    @else badge-pending @endif">
+                                                                                            @if($request->status === 'Approved') badge-approved
+                                                                                            @elseif($request->status === 'Rejected') badge-rejected
+                                                                                            @elseif($request->status === 'Under Review') badge-revision
+                                                                                            @else badge-pending @endif">
                                             {{ $request->status }}
                                         </span>
                                     </td>
@@ -98,7 +99,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" style="text-align: center; padding: 3rem; color: #6b7280;">
+                                    <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">
                                         <i data-feather="inbox"
                                             style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;"></i>
                                         <p>No recent requests found</p>
@@ -165,7 +166,7 @@
                         style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; gap: 1rem; align-items: flex-start;">
                         <div
                             style="background: var(--input-bg); padding: 0.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color);">
-                            <i data-feather="activity" style="width: 16px; height: 16px; color: #6b7280;"></i>
+                            <i data-feather="activity" style="width: 16px; height: 16px; color: var(--text-muted);"></i>
                         </div>
                         <div>
                             <div style="font-size: 0.875rem; color: var(--text-main); font-weight: 500;">

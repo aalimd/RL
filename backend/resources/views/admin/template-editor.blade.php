@@ -560,6 +560,44 @@
     }
     
 
+    /* ========== DARK MODE OVERRIDES ========== */
+    body.dark-mode .template-editor-page { background: var(--bg-color); }
+    body.dark-mode .te-header { background: var(--card-bg); border-color: var(--border-color); }
+    body.dark-mode .te-back-btn { background: var(--bg-color); color: var(--text-muted); }
+    body.dark-mode .te-back-btn:hover { background: var(--border-color); color: var(--text-main); }
+    body.dark-mode .te-title-input { color: var(--text-main); }
+    body.dark-mode .te-title-input:hover, body.dark-mode .te-title-input:focus { border-color: var(--border-color); background: var(--card-bg); }
+    body.dark-mode .te-status { color: var(--text-muted); }
+    body.dark-mode .te-toggle { background: var(--bg-color); border-color: var(--border-color); color: var(--text-main); }
+    body.dark-mode .te-tabs { background: var(--card-bg); border-color: var(--border-color); }
+    body.dark-mode .te-tab { color: var(--text-muted); }
+    body.dark-mode .te-tab:hover { color: var(--text-main); }
+    body.dark-mode .te-tab.active { color: var(--primary); }
+    body.dark-mode .te-tab.active::after { background: var(--primary); }
+    body.dark-mode .te-editor-panel { background: var(--card-bg); border-color: var(--border-color); }
+    body.dark-mode .te-panel-header { background: var(--bg-color); border-color: var(--border-color); }
+    body.dark-mode .te-panel-title { color: var(--text-muted); }
+    body.dark-mode .te-label { color: var(--text-main); }
+    body.dark-mode .te-input, body.dark-mode .te-textarea { background: var(--bg-color); border-color: var(--border-color); color: var(--text-main); color-scheme: dark; }
+    body.dark-mode .te-input:focus, body.dark-mode .te-textarea:focus { border-color: var(--primary); }
+    body.dark-mode .te-builder-card { background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3); }
+    body.dark-mode .te-builder-title { color: var(--success-text); }
+    body.dark-mode .te-upload-zone { background: var(--bg-color); border-color: rgba(34, 197, 94, 0.3); }
+    body.dark-mode .te-upload-zone:hover { border-color: var(--success-text); background: rgba(34, 197, 94, 0.1); }
+    body.dark-mode .te-upload-zone p { color: var(--success-text); }
+    body.dark-mode .te-builder-input { background: var(--bg-color); border-color: rgba(34, 197, 94, 0.3); color: var(--text-main); }
+    body.dark-mode .te-builder-input:focus { border-color: var(--success-text); }
+    body.dark-mode .te-preview-panel { background: var(--bg-color); }
+    body.dark-mode .te-modal { background: var(--card-bg); }
+    body.dark-mode .te-modal-header { background: var(--bg-color); border-color: var(--border-color); }
+    body.dark-mode .te-modal-title { color: var(--text-main); }
+    body.dark-mode .te-modal-close { background: var(--border-color); color: var(--text-muted); }
+    body.dark-mode .te-modal-close:hover { background: var(--text-muted); color: var(--bg-color); }
+    body.dark-mode .te-variable-bar { background: var(--card-bg); border-color: var(--border-color); }
+    body.dark-mode .te-variable-label { color: var(--text-muted); }
+    body.dark-mode .tox-tinymce { border-color: var(--border-color) !important; }
+    body.dark-mode .tox .tox-toolbar__primary { background: var(--bg-color) !important; }
+    body.dark-mode .te-error-alert { background: var(--error-bg); border-color: var(--error-text); color: var(--error-text); }
 </style>
 @endsection
 

@@ -66,7 +66,8 @@
                                     </label>
                                     <span class="file-upload-name" id="logoFileName">No file chosen</span>
                                 </div>
-                                <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">Recommended size:
+                                <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Recommended
+                                    size:
                                     200x50px. Max: 2MB.</p>
                             </div>
 
@@ -82,7 +83,7 @@
                                     style="{{ empty($settings['logoUrl']) ? 'display: none;' : '' }}"
                                     onerror="this.style.display='none'; this.parentElement.classList.remove('has-image');">
                                 <span class="placeholder-text"
-                                    style="{{ !empty($settings['logoUrl']) ? 'display: none;' : 'color: #9ca3af;' }}">
+                                    style="{{ !empty($settings['logoUrl']) ? 'display: none;' : 'color: var(--text-muted);' }}">
                                     No image selected
                                 </span>
                             </div>
@@ -93,7 +94,8 @@
                         <div style="display: flex; align-items: center; justify-content: space-between;">
                             <div>
                                 <label class="form-label" style="margin-bottom: 0;">Maintenance Mode</label>
-                                <p style="font-size: 0.8rem; color: #6b7280;">Prevent users from accessing the site</p>
+                                <p style="font-size: 0.8rem; color: var(--text-muted);">Prevent users from accessing the
+                                    site</p>
                             </div>
                             <label class="toggle-switch">
                                 <input type="checkbox" name="maintenanceMode" id="maintenanceMode" {{ ($settings['maintenanceMode'] ?? 'false') === 'true' ? 'checked' : '' }}
@@ -108,15 +110,16 @@
                         <label class="form-label">Maintenance Message</label>
                         <textarea name="maintenanceMessage" class="form-textarea" rows="3"
                             placeholder="We are currently upgrading our system...">{{ $settings['maintenanceMessage'] ?? '' }}</textarea>
-                        <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">This message will be displayed to
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">This message will be
+                            displayed to
                             visitors when maintenance mode is active.</p>
                     </div>
 
                     <!-- AI Settings -->
                     <div style="margin: 2rem 0; padding-top: 2rem; border-top: 1px solid var(--border-color);">
                         <h4
-                            style="font-size: 1rem; font-weight: 600; color: #1e293b; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                            <i data-feather="cpu" style="width: 18px; height: 18px; color: #4f46e5;"></i>
+                            style="font-size: 1rem; font-weight: 600; color: var(--text-main); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i data-feather="cpu" style="width: 18px; height: 18px; color: var(--primary);"></i>
                             AI Writing Assistant
                         </h4>
                         <div class="form-group">
@@ -126,7 +129,7 @@
                                     placeholder="••••••••{{ !empty($settings['geminiApiKey']) ? ' (configured)' : '' }}"
                                     style="padding-right: 80px;">
                                 <a href="https://aistudio.google.com/app/apikey" target="_blank"
-                                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: #4f46e5; text-decoration: none; font-weight: 500;">
+                                    style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; color: var(--primary); text-decoration: none; font-weight: 500;">
                                     Get Key &rarr;
                                 </a>
                             </div>
@@ -162,7 +165,7 @@
                             <label class="form-label">Bot Token</label>
                             <input type="password" name="telegram_bot_token" class="form-input" value=""
                                 placeholder="••••••••{{ !empty($settings['telegram_bot_token']) ? ' (configured)' : '' }}">
-                            <small style="color: #6b7280; font-size: 0.75rem;">Get this from @BotFather</small>
+                            <small style="color: var(--text-muted); font-size: 0.75rem;">Get this from @BotFather</small>
                         </div>
 
                         <div class="form-group">
@@ -171,7 +174,7 @@
                                 <input type="text" name="telegram_chat_id" class="form-input"
                                     value="{{ $settings['telegram_chat_id'] ?? '' }}" placeholder="123456789">
                             </div>
-                            <small style="color: #6b7280; font-size: 0.75rem;">Your personal numeric ID</small>
+                            <small style="color: var(--text-muted); font-size: 0.75rem;">Your personal numeric ID</small>
                         </div>
 
                         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
@@ -195,7 +198,8 @@
         <div class="card">
             <div class="card-header">
                 <h3>Email Settings (SMTP)</h3>
-                <span style="font-size: 0.875rem; color: #6b7280;">Configure email delivery for notifications</span>
+                <span style="font-size: 0.875rem; color: var(--text-muted);">Configure email delivery for
+                    notifications</span>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ route('admin.settings.update') }}">
@@ -275,7 +279,7 @@
     </div>
 
     <!-- System Maintenance & Backup -->
-    <div class="card" style="border-color: #6366F1;">
+    <div class="card" style="border-color: var(--primary);">
         <div class="card-header" style="background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%); color: white;">
             <div style="display: flex; align-items: center; gap: 0.5rem;">
                 <i data-feather="database" style="width: 20px; height: 20px;"></i>
@@ -287,12 +291,14 @@
             <div style="display: flex; align-items: center; justify-content: space-between;">
                 <div>
                     <h4 style="font-size: 1rem; margin-bottom: 0.25rem;">Full Database Backup</h4>
-                    <p style="font-size: 0.875rem; color: #6b7280; margin: 0;">
+                    <p style="font-size: 0.875rem; color: var(--text-muted); margin: 0;">
                         Download a complete SQL dump of the database. <br>
-                        <span style="color: #ef4444; font-size: 0.75rem;">Requires password re-confirmation.</span>
+                        <span style="color: var(--error-text); font-size: 0.75rem;">Requires password
+                            re-confirmation.</span>
                     </p>
                 </div>
-                <button type="button" class="btn" style="background: #1e293b; color: white;" onclick="openBackupModal()">
+                <button type="button" class="btn" style="background: var(--bg-color); color: var(--text-main);"
+                    onclick="openBackupModal()">
                     <i data-feather="download-cloud" style="width: 16px; height: 16px;"></i>
                     Download .SQL
                 </button>
@@ -396,8 +402,8 @@
 
             const result = document.getElementById('testEmailResult');
             result.style.display = 'block';
-            result.style.background = '#dbeafe';
-            result.style.color = '#1e40af';
+            result.style.background = 'var(--info-bg, #dbeafe)';
+            result.style.color = 'var(--info-text, #1e40af)';
             result.innerHTML = '<i data-feather="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Sending test email...';
             feather.replace();
 
@@ -413,18 +419,18 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        result.style.background = '#d1fae5';
-                        result.style.color = '#065f46';
+                        result.style.background = 'var(--success-bg)';
+                        result.style.color = 'var(--success-text)';
                         result.innerHTML = '✓ ' + data.message;
                     } else {
-                        result.style.background = '#fee2e2';
-                        result.style.color = '#991b1b';
+                        result.style.background = 'var(--error-bg)';
+                        result.style.color = 'var(--error-text)';
                         result.innerHTML = '✗ Failed: ' + (data.message || 'Unknown error');
                     }
                 })
                 .catch(error => {
-                    result.style.background = '#fee2e2';
-                    result.style.color = '#991b1b';
+                    result.style.background = 'var(--error-bg)';
+                    result.style.color = 'var(--error-text)';
                     result.innerHTML = '✗ Error: ' + error.message;
                 });
         }
@@ -440,8 +446,8 @@
         function testTelegram() {
             const result = document.getElementById('telegramResult');
             result.style.display = 'block';
-            result.style.background = '#dbeafe';
-            result.style.color = '#1e40af';
+            result.style.background = 'var(--info-bg, #dbeafe)';
+            result.style.color = 'var(--info-text, #1e40af)';
             result.innerHTML = '<i data-feather="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Sending test notification...';
             feather.replace();
 
@@ -455,18 +461,18 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        result.style.background = '#d1fae5';
-                        result.style.color = '#065f46';
+                        result.style.background = 'var(--success-bg)';
+                        result.style.color = 'var(--success-text)';
                         result.innerHTML = '✓ ' + (data.response.result ? 'Message sent successfully!' : 'Sent, but check your Telegram.');
                     } else {
-                        result.style.background = '#fee2e2';
-                        result.style.color = '#991b1b';
+                        result.style.background = 'var(--error-bg)';
+                        result.style.color = 'var(--error-text)';
                         result.innerHTML = '✗ Failed: ' + (data.message || 'Check logs');
                     }
                 })
                 .catch(err => {
-                    result.style.background = '#fee2e2';
-                    result.style.color = '#991b1b';
+                    result.style.background = 'var(--error-bg)';
+                    result.style.color = 'var(--error-text)';
                     result.innerHTML = '✗ Error: ' + err.message;
                 });
         }
@@ -486,10 +492,10 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.ok) {
-                        result.style.background = '#d1fae5';
+                        result.style.background = 'var(--success-bg)';
                         result.innerHTML = '✓ Webhook connected successfully!';
                     } else {
-                        result.style.background = '#fee2e2';
+                        result.style.background = 'var(--error-bg)';
                         result.innerHTML = '✗ connection failed: ' + data.description;
                     }
                 });

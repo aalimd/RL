@@ -7,72 +7,78 @@
     <title>Request Received</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #1f2937;
             margin: 0;
             padding: 0;
-            background: #f4f4f4;
+            background: #f3f4f6;
         }
 
         .container {
             max-width: 600px;
-            margin: 20px auto;
-            background: white;
-            border-radius: 8px;
+            margin: 40px auto;
+            background: #ffffff;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
         .header {
-            background: linear-gradient(135deg, #4F46E5, #7C3AED);
-            color: white;
-            padding: 30px;
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            color: #ffffff;
+            padding: 32px;
             text-align: center;
         }
 
         .header h1 {
             margin: 0;
             font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
         }
 
         .content {
-            padding: 30px;
+            padding: 40px 32px;
         }
 
         .tracking-box {
-            background: #f0f9ff;
-            border: 2px solid #4F46E5;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
             border-radius: 8px;
-            padding: 20px;
+            padding: 24px;
             text-align: center;
-            margin: 20px 0;
+            margin: 24px 0;
         }
 
         .tracking-id {
             font-size: 28px;
-            font-weight: bold;
-            color: #4F46E5;
-            font-family: monospace;
-            letter-spacing: 2px;
+            font-weight: 800;
+            color: #1d4ed8;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            letter-spacing: 0.1em;
+            margin-top: 8px;
         }
 
         .btn {
             display: inline-block;
-            background: #4F46E5;
-            color: white;
-            padding: 12px 30px;
+            background: #4f46e5;
+            color: #ffffff;
+            padding: 12px 32px;
             text-decoration: none;
-            border-radius: 6px;
-            margin-top: 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 24px;
+            text-align: center;
         }
 
         .footer {
-            background: #f8f9fa;
-            padding: 20px;
+            background: #f9fafb;
+            padding: 24px;
             text-align: center;
-            font-size: 12px;
-            color: #666;
+            font-size: 13px;
+            color: #6b7280;
+            border-top: 1px solid #e5e7eb;
         }
     </style>
 </head>
