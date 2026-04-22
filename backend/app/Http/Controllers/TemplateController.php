@@ -80,6 +80,9 @@ class TemplateController extends Controller
             $data['header_content'] = $this->letterService->sanitizeHtml($data['header_content'] ?? '');
             $data['body_content'] = $this->letterService->sanitizeHtml($data['body_content'] ?? '');
             $data['footer_content'] = $this->letterService->sanitizeHtml($data['footer_content'] ?? '');
+            $data['content'] = $data['body_content'] ?? null;
+            $data['draft_data'] = null;
+            $data['last_draft_saved_at'] = null;
 
             $template = Template::create($data);
 
@@ -138,6 +141,9 @@ class TemplateController extends Controller
             $data['header_content'] = $this->letterService->sanitizeHtml($data['header_content'] ?? '');
             $data['body_content'] = $this->letterService->sanitizeHtml($data['body_content'] ?? '');
             $data['footer_content'] = $this->letterService->sanitizeHtml($data['footer_content'] ?? '');
+            $data['content'] = $data['body_content'] ?? null;
+            $data['draft_data'] = null;
+            $data['last_draft_saved_at'] = null;
 
             $template->update($data);
 

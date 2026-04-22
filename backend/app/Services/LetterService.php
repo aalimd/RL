@@ -13,6 +13,55 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class LetterService
 {
+    /**
+     * Keep inline styles to a conservative subset that HTMLPurifier handles reliably.
+     */
+    private const SAFE_INLINE_STYLE_PROPERTIES = [
+        'background',
+        'background-color',
+        'border',
+        'border-bottom',
+        'border-collapse',
+        'border-left',
+        'border-right',
+        'border-spacing',
+        'border-top',
+        'clear',
+        'color',
+        'direction',
+        'float',
+        'font',
+        'font-family',
+        'font-size',
+        'font-style',
+        'font-weight',
+        'height',
+        'letter-spacing',
+        'line-height',
+        'list-style-type',
+        'margin',
+        'margin-bottom',
+        'margin-left',
+        'margin-right',
+        'margin-top',
+        'max-height',
+        'max-width',
+        'min-height',
+        'min-width',
+        'padding',
+        'padding-bottom',
+        'padding-left',
+        'padding-right',
+        'padding-top',
+        'text-align',
+        'text-decoration',
+        'text-transform',
+        'vertical-align',
+        'white-space',
+        'width',
+        'word-spacing',
+    ];
+
     private ?HTMLPurifier $purifier = null;
     private ?ArabicText $arabicText = null;
 
@@ -27,7 +76,7 @@ class LetterService
         }
 
         try {
-            return $this->purifier()->purify((string) $html);
+            return $this->purifier()->purify($this->normalizeHtmlForPurifier((string) $html));
         } catch (\Throwable $e) {
             // Fallback: strip dangerous tags but keep basic HTML
             Log::warning('HTMLPurifier failed, using basic sanitization: ' . $e->getMessage());
@@ -49,17 +98,15 @@ class LetterService
         }
 
         $config = HTMLPurifier_Config::createDefault();
-        $config->loadArray((array) config('purifier.settings.default', []));
         $config->set('Core.Encoding', config('purifier.encoding', 'UTF-8'));
         $config->set('Cache.SerializerPath', $cachePath);
         $config->set('Cache.SerializerPermissions', $cacheMode);
-
-        if (!config('purifier.finalize', true)) {
-            $config->autoFinalize = false;
-        }
-
+        $config->set('HTML.Doctype', 'HTML 4.01 Transitional');
+        $config->set('Attr.EnableID', true);
         $config->set('HTML.Allowed', 'p[style|class|id],br,strong,b,em,i,u,ul,ol,li,a[href|target],span[style|class|id],div[style|class|id],h1[style|class|id],h2[style|class|id],h3[style|class|id],h4[style|class|id],h5[style|class|id],h6[style|class|id],img[src|alt|style|width|height|class],table[style|class|border|width|cellpadding|cellspacing],tr[style|class],td[style|class|colspan|rowspan|width|height|align|valign],th[style|class|colspan|rowspan|width|height|align|valign],thead,tbody,tfoot,hr[style|class],font[color|size|face],center,blockquote');
-        $config->set('CSS.AllowedProperties', 'font-size,font-family,font-weight,font-style,text-align,text-decoration,line-height,color,background-color,background,border,border-radius,border-collapse,border-spacing,width,height,min-width,max-width,min-height,max-height,display,padding,margin,float,clear,overflow,position,top,bottom,left,right,z-index,vertical-align,white-space,list-style-type');
+        $config->set('CSS.AllowedProperties', implode(',', self::SAFE_INLINE_STYLE_PROPERTIES));
+        $config->set('URI.AllowedSchemes', ['data' => true, 'http' => true, 'https' => true, 'mailto' => true]);
+        $config->set('AutoFormat.AutoParagraph', true);
         $config->set('AutoFormat.RemoveEmpty', false);
 
         return $this->purifier = new HTMLPurifier($config);
@@ -100,13 +147,11 @@ class LetterService
 
         // Helper to replace signature placeholder
         if ($template->signature_image && $request->status === 'Approved') {
-            $sigImg = '<img src="' . $template->signature_image . '" style="max-height: 80px; display: block; margin-bottom: 5px;" alt="Signature">';
+            $sigImg = '<div style="margin-bottom: 5px;"><img src="' . $template->signature_image . '" style="max-height: 80px;" alt="Signature"></div>';
             $stampImg = '';
             if ($template->stamp_image) {
-                // Stamp usually goes over or next to signature. We'll float it or absolute pos ideally, 
-                // but for simple HTML print, we might just put it next to it.
-                // Or better, just stack them.
-                $stampImg = '<img src="' . $template->stamp_image . '" style="max-height: 100px; display: block; margin-top: -40px; margin-left: 100px; opacity: 0.8;" alt="Stamp">';
+                // Keep stamp positioning simple and purifier-safe so template saves stay predictable.
+                $stampImg = '<div style="margin-top: -40px; margin-left: 100px;"><img src="' . $template->stamp_image . '" style="max-height: 100px;" alt="Stamp"></div>';
             }
             $signatureHtml = '<div class="official-signature">' . $sigImg . $stampImg . '</div>';
 
@@ -115,33 +160,6 @@ class LetterService
         } else {
             $variables['{{signature}}'] = '';
         }
-
-        // Re-bind closure to use updated variables
-        $replaceVars = function ($text) use ($variables) {
-            if (!$text)
-                return '';
-            return str_replace(array_keys($variables), array_values($variables), $text);
-        };
-
-        $headerContent = $replaceVars($template->header_content);
-        $bodyContent = $replaceVars($template->body_content ?? $template->content);
-        $footerContent = $replaceVars($template->footer_content);
-
-
-
-
-
-        // Update signature array for view (this is separate from the {{signature}} content variable)
-        $signature = [
-            'name' => $replaceVars($template->signature_name),
-            'title' => $replaceVars($template->signature_title),
-            'image' => $template->signature_image,
-            'stamp' => $template->stamp_image,
-            'institution' => $template->signature_institution,
-            'department' => $template->signature_department,
-            'email' => $template->signature_email,
-            'phone' => $template->signature_phone
-        ];
 
         // Layout Settings
         $layoutSettings = [];
@@ -161,8 +179,37 @@ class LetterService
         // Layout defaults
         $layoutSettings['margins'] = $layoutSettings['margins'] ?? ['top' => 25, 'bottom' => 25, 'left' => 25, 'right' => 25];
         $layoutSettings['fontSize'] = $layoutSettings['fontSize'] ?? 12;
-        $layoutSettings['fontFamily'] = $layoutSettings['fontFamily'] ?? 'Times New Roman';
-        $layoutSettings['direction'] = $layoutSettings['direction'] ?? 'ltr';
+        $layoutSettings['fontFamily'] = $layoutSettings['fontFamily'] ?? "'Times New Roman', serif";
+        $layoutSettings['language'] = $layoutSettings['language'] ?? ($template->language ?? 'en');
+        $layoutSettings['direction'] = $layoutSettings['direction'] ?? ($layoutSettings['language'] === 'ar' ? 'rtl' : 'ltr');
+
+        $qrCodeEnabled = (bool) ($layoutSettings['qrCode']['enabled'] ?? true);
+        $variables['{{qrCode}}'] = $qrCodeEnabled ? $this->generateQrCodeHtml($request) : '';
+
+        // Re-bind closure to use updated variables
+        $replaceVars = function ($text) use ($variables) {
+            if (!$text) {
+                return '';
+            }
+
+            return str_replace(array_keys($variables), array_values($variables), $text);
+        };
+
+        $headerContent = $replaceVars($template->header_content);
+        $bodyContent = $replaceVars($template->body_content ?? $template->content);
+        $footerContent = $replaceVars($template->footer_content);
+
+        // Update signature array for view (this is separate from the {{signature}} content variable)
+        $signature = [
+            'name' => $replaceVars($template->signature_name),
+            'title' => $replaceVars($template->signature_title),
+            'image' => $template->signature_image,
+            'stamp' => $template->stamp_image,
+            'institution' => $replaceVars($template->signature_institution),
+            'department' => $replaceVars($template->signature_department),
+            'email' => $replaceVars($template->signature_email),
+            'phone' => $replaceVars($template->signature_phone)
+        ];
 
         return [
             'template' => $template,
@@ -171,7 +218,7 @@ class LetterService
             'footer' => $footerContent,
             'signature' => $signature,
             'layout' => $layoutSettings,
-            'qrCode' => $this->generateQrCodeHtml($request),
+            'qrCode' => $qrCodeEnabled ? $this->generateQrCodeHtml($request) : '',
         ];
     }
 
@@ -290,6 +337,47 @@ class LetterService
     private function arabicText(): ArabicText
     {
         return $this->arabicText ??= new ArabicText();
+    }
+
+    private function normalizeHtmlForPurifier(string $html): string
+    {
+        return preg_replace_callback('/\sstyle=(["\'])(.*?)\1/si', function (array $matches) {
+            $sanitizedStyle = $this->sanitizeInlineStyleDeclarations($matches[2] ?? '');
+
+            if ($sanitizedStyle === '') {
+                return '';
+            }
+
+            return ' style="' . htmlspecialchars($sanitizedStyle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '"';
+        }, $html) ?? $html;
+    }
+
+    private function sanitizeInlineStyleDeclarations(string $style): string
+    {
+        $declarations = preg_split('/;(?!base64,)/i', html_entity_decode($style, ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?: [];
+        $normalized = [];
+
+        foreach ($declarations as $declaration) {
+            if (!str_contains($declaration, ':')) {
+                continue;
+            }
+
+            [$property, $value] = array_map('trim', explode(':', $declaration, 2));
+            $property = strtolower($property);
+            $value = preg_replace('/\s+/', ' ', $value ?? '') ?? '';
+
+            if ($property === '' || $value === '') {
+                continue;
+            }
+
+            if (!in_array($property, self::SAFE_INLINE_STYLE_PROPERTIES, true)) {
+                continue;
+            }
+
+            $normalized[] = $property . ': ' . $value;
+        }
+
+        return implode('; ', $normalized);
     }
 
     /**

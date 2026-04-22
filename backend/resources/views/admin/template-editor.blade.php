@@ -607,6 +607,7 @@
     if (isset($template) && $template->layout_settings) {
         $layoutSettings = is_array($template->layout_settings) ? $template->layout_settings : json_decode($template->layout_settings, true) ?? [];
     }
+    $draftLoaded = $draftLoaded ?? false;
 @endphp
 
 <form method="POST" id="templateForm" class="template-editor-page"
@@ -640,7 +641,7 @@
         </div>
         
         <div class="te-header-right">
-            <div class="te-status" id="autoSaveStatus"></div>
+            <div class="te-status" id="autoSaveStatus">{{ $draftLoaded ? 'Unsaved draft restored' : '' }}</div>
             
             <button type="button" class="te-preview-btn" onclick="openPreview()">
                 <i data-feather="eye"></i>
@@ -823,7 +824,9 @@
                         <div class="te-field">
                             <label class="te-label">Page Border</label>
                             <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0; cursor: pointer;">
+                                <input type="hidden" name="layout_settings[border][enabled]" value="0">
                                 <input type="checkbox" name="layout_settings[border][enabled]" id="borderEnabled"
+                                    value="1"
                                     {{ ($layoutSettings['border']['enabled'] ?? false) ? 'checked' : '' }}
                                     onchange="toggleBorderPanel()">
                                 <span>Show border around page</span>
@@ -866,14 +869,16 @@
                                 <!-- Watermark -->
                                 <div style="background: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
                                     <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; cursor: pointer;">
+                                        <input type="hidden" name="layout_settings[watermark][enabled]" value="0">
                                         <input type="checkbox" name="layout_settings[watermark][enabled]" id="watermarkEnabled"
+                                            value="1"
                                             {{ ($layoutSettings['watermark']['enabled'] ?? false) ? 'checked' : '' }}
                                             onchange="document.getElementById('watermarkTextGroup').style.display = this.checked ? 'block' : 'none'">
                                         <span style="font-weight: 600; font-size: 0.85rem;">Enable Digital Watermark</span>
                                     </label>
                                     <div id="watermarkTextGroup" style="display: {{ ($layoutSettings['watermark']['enabled'] ?? false) ? 'block' : 'none' }}; margin-left: 1.5rem;">
                                         <label class="te-label" style="font-size: 0.7rem;">Watermark Text (Default: Tracking ID)</label>
-                                        <input type="text" name="layout_settings[watermark][text]" 
+                                        <input type="text" name="layout_settings[watermark][text]" id="watermarkText"
                                             class="te-input" placeholder="e.g. OFFICIAL COPY"
                                             value="{{ $layoutSettings['watermark']['text'] ?? '' }}">
                                         <p style="font-size: 0.7rem; color: #64748b; margin-top: 4px;">Leaves faint background text to prevent editing.</p>
@@ -897,27 +902,6 @@
                                     </label>
                                     <p style="font-size: 0.7rem; color: #64748b; margin-top: 8px; margin-left: 1.5rem;">Adds a secure footer with direct verification link.</p>
                                 </div>
-                            </div>
-                        </div> 
-                                            min="1" max="10">
-                                    </div>
-                                    <div>
-                                        <label class="te-label" style="font-size: 0.7rem;">Style</label>
-                                        <select name="layout_settings[border][style]" id="borderStyle" class="te-input">
-                                            <option value="solid" {{ ($layoutSettings['border']['style'] ?? 'solid') === 'solid' ? 'selected' : '' }}>Solid</option>
-                                            <option value="double" {{ ($layoutSettings['border']['style'] ?? '') === 'double' ? 'selected' : '' }}>Double</option>
-                                            <option value="dashed" {{ ($layoutSettings['border']['style'] ?? '') === 'dashed' ? 'selected' : '' }}>Dashed</option>
-                                            <option value="dotted" {{ ($layoutSettings['border']['style'] ?? '') === 'dotted' ? 'selected' : '' }}>Dotted</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label class="te-label" style="font-size: 0.7rem;">Color</label>
-                                        <input type="color" name="layout_settings[border][color]" id="borderColor" 
-                                            class="te-input" value="{{ $layoutSettings['border']['color'] ?? '#000000' }}" 
-                                            style="height: 38px; padding: 2px; cursor: pointer;">
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                     
@@ -1025,6 +1009,7 @@
     const autoSaveIntervalMs = 30000;
     let editors = {};
     const autosaveUrl = @json(isset($template) ? route('admin.templates.autosave', $template->id) : null);
+    const draftRestored = @json($draftLoaded);
 
     function setAutoSaveStatus(message, isError = false) {
         const statusEl = document.getElementById('autoSaveStatus');
@@ -1037,6 +1022,41 @@
         hasChanges = true;
         hasUnsyncedDraft = true;
         setAutoSaveStatus('Unsaved changes');
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
+
+    function getFieldValue(id) {
+        return document.getElementById(id)?.value?.trim() || '';
+    }
+
+    function renderPreviewQrBlock() {
+        return `
+            <div style="display: inline-flex; flex-direction: column; align-items: center; gap: 4px;">
+                <div style="width: 70px; height: 70px; border: 2px solid #111827; background:
+                    linear-gradient(90deg, #111827 8%, transparent 8%, transparent 16%, #111827 16%, #111827 24%, transparent 24%, transparent 32%, #111827 32%, #111827 40%, transparent 40%, transparent 48%, #111827 48%, #111827 56%, transparent 56%, transparent 64%, #111827 64%, #111827 72%, transparent 72%, transparent 80%, #111827 80%),
+                    linear-gradient(#111827 8%, transparent 8%, transparent 16%, #111827 16%, #111827 24%, transparent 24%, transparent 32%, #111827 32%, #111827 40%, transparent 40%, transparent 48%, #111827 48%, #111827 56%, transparent 56%, transparent 64%, #111827 64%, #111827 72%, transparent 72%, transparent 80%, #111827 80%);
+                    background-size: 100% 100%; background-color: #fff;"></div>
+                <div style="font-size: 7pt; color: #6b7280;">Scan to Verify</div>
+            </div>
+        `;
+    }
+
+    function applyPreviewVariables(html, dynamicSamples) {
+        let resolved = html || '';
+        Object.entries(dynamicSamples).forEach(([name, value]) => {
+            const placeholder = `${String.fromCharCode(123, 123)}${name}${String.fromCharCode(125, 125)}`;
+            resolved = resolved.split(placeholder).join(value);
+        });
+
+        return resolved;
     }
     
     // Sanitize HTML
@@ -1088,7 +1108,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         feather.replace();
 
-        if (autosaveUrl) {
+        if (draftRestored) {
+            setAutoSaveStatus('Unsaved draft restored');
+        } else if (autosaveUrl) {
             setAutoSaveStatus('Auto-save enabled');
         } else {
             setAutoSaveStatus('Save template to enable auto-save');
@@ -1119,9 +1141,11 @@
         
         // Listen for non-TinyMCE input changes
         document.querySelectorAll('input:not(.tox-textfield), select, textarea').forEach(el => {
-            el.addEventListener('input', function() {
-                markDirty();
-                updatePreview();
+            ['input', 'change'].forEach(eventName => {
+                el.addEventListener(eventName, function() {
+                    markDirty();
+                    updatePreview();
+                });
             });
         });
         
@@ -1288,57 +1312,117 @@
             footer = document.getElementById('footerEditor')?.value || '';
         }
         
-        header = sanitize(header);
-        body = sanitize(body);
-        footer = sanitize(footer);
-        
         const sigName = document.getElementById('sigName')?.value || '';
         const sigTitle = document.getElementById('sigTitle')?.value || '';
         const sigDept = document.getElementById('sigDept')?.value || '';
         const sigInst = document.getElementById('sigInst')?.value || '';
+        const sigEmail = document.getElementById('sigEmail')?.value || '';
+        const sigPhone = document.getElementById('sigPhone')?.value || '';
         const sigImage = document.getElementById('sigImage')?.value || '';
+        const stampImage = document.getElementById('stampImage')?.value || '';
+        const qrEnabled = document.getElementById('qrCodeEnabled')?.checked ?? true;
+        const footerStripEnabled = document.getElementById('footerEnabled')?.checked ?? true;
+        const watermarkEnabled = document.getElementById('watermarkEnabled')?.checked ?? false;
+        const watermarkText = getFieldValue('watermarkText');
+        const fontFamily = getFieldValue('settingFont') || "'Times New Roman', serif";
+        const fontSize = parseFloat(getFieldValue('settingSize') || '12');
+        const language = getFieldValue('settingLang') || 'en';
+        const direction = language === 'ar' ? 'rtl' : 'ltr';
+        const marginTop = parseFloat(document.querySelector('[name="layout_settings[margins][top]"]')?.value || '20');
+        const marginRight = parseFloat(document.querySelector('[name="layout_settings[margins][right]"]')?.value || '20');
+        const marginBottom = parseFloat(document.querySelector('[name="layout_settings[margins][bottom]"]')?.value || '20');
+        const marginLeft = parseFloat(document.querySelector('[name="layout_settings[margins][left]"]')?.value || '20');
+        const previewQr = qrEnabled ? renderPreviewQrBlock() : '';
+        const dynamicSamples = {
+            fullName: 'Dr. Sarah Alotaibi',
+            studentName: 'Sarah',
+            middleName: 'Ahmed',
+            lastName: 'Alotaibi',
+            studentEmail: 'sarah.alotaibi@example.com',
+            university: 'King Saud University',
+            purpose: 'Residency Application',
+            trackingId: 'REC-2026-DEMO123',
+            date: 'April 22, 2026',
+            rotationMonth: 'April 2026',
+            trainingPeriod: 'April, 2026',
+            status: 'Approved',
+            phone: '+966500000000',
+            major: 'Medicine',
+            notes: 'Excellent clinical performance',
+            qrCode: previewQr,
+            signature: sigImage ? `<img src="${sigImage}" alt="Signature" style="max-height: 60px; display: block;">` : '',
+            he: 'she',
+            him: 'her',
+            his: 'her',
+            himself: 'herself',
+            He: 'She',
+            Him: 'Her',
+            His: 'Her',
+            title: 'Ms.',
+            gender: 'female',
+        };
+
+        header = sanitize(applyPreviewVariables(header, dynamicSamples));
+        body = sanitize(applyPreviewVariables(body, dynamicSamples));
+        footer = sanitize(applyPreviewVariables(footer, dynamicSamples));
         
         const preview = document.getElementById('previewContent');
         if (!preview) return;
-        
-        preview.innerHTML = `
-            <div style="margin-bottom: 20px;">${header}</div>
-            <div style="min-height: 400px; line-height: 1.6;">${body}</div>
-            <!-- Signature Section - Table Layout -->
-            <div style="margin-top: 40px;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <!-- Left Column: Signature Details & Image -->
-                        <td style="vertical-align: top; width: 65%;">
-                            <p style="margin-bottom: 5px;"><strong>${sigName}</strong></p>
-                            ${sigTitle ? `<p style="margin: 2px 0; color: #333;">${sigTitle}</p>` : ''}
-                            
-                            ${sigDept || sigInst ? `
-                                <div style="margin-top: 5px; color: #4b5563;">
-                                    ${sigDept ? `<div>${sigDept}</div>` : ''}
-                                    ${sigInst ? `<div>${sigInst}</div>` : ''}
-                                </div>
-                            ` : ''}
-                            
-                            <!-- Signature Image BELOW details -->
-                            ${sigImage ? `<div style="margin-top: 15px;"><img src="${sigImage}" style="height: 50px; display: block;"></div>` : ''}
-                        </td>
 
-                        <!-- Right Column: Stamp & QR Code -->
-                        <td style="vertical-align: top; text-align: right; width: 35%;">
-                            <!-- Stamp from saved template (if available) - Editor might not show live stamp preview unless we add logic, but placeholder is good for layout check -->
-                            <!-- QR Code Placeholder -->
-                            ${document.getElementById('qrCodeEnabled')?.checked ? `
-                                <div style="margin-top: 10px;">
-                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=PREVIEW" alt="QR Code" style="width: 70px; height: 70px; opacity: 0.5;">
-                                    <div style="font-size: 8px; color: #999;">(Preview)</div>
-                                </div>
-                            ` : ''}
-                        </td>
-                    </tr>
-                </table>
+        preview.style.padding = `${marginTop}mm ${marginRight}mm ${Math.max(marginBottom * 0.35, 8)}mm ${marginLeft}mm`;
+        preview.style.fontFamily = fontFamily;
+        preview.style.fontSize = `${fontSize}pt`;
+        preview.style.direction = direction;
+        preview.style.lineHeight = direction === 'rtl' ? '1.65' : '1.55';
+        preview.style.position = 'relative';
+
+        preview.innerHTML = `
+            ${watermarkEnabled ? `
+                <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; transform: rotate(-35deg); font-size: 64pt; color: rgba(203, 213, 225, 0.18); font-weight: 700; text-transform: uppercase; pointer-events: none; user-select: none;">
+                    ${escapeHtml(watermarkText || 'OFFICIAL COPY')}
+                </div>
+            ` : ''}
+            <div style="position: relative; z-index: 1;">
+                <div style="margin-bottom: 16px;">${header}</div>
+                <div style="min-height: 150mm;">${body}</div>
+                <div style="margin-top: 28px;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="vertical-align: top; width: 65%;">
+                                ${sigName ? `<div style="font-weight: 700; font-size: ${Math.max(fontSize + 0.3, 11)}pt; margin-bottom: 3px;">${escapeHtml(sigName)}</div>` : ''}
+                                ${sigTitle ? `<div style="margin-bottom: 4px; color: #374151;">${escapeHtml(sigTitle)}</div>` : ''}
+                                ${(sigDept || sigInst) ? `
+                                    <div style="color: #4b5563; font-size: ${Math.max(fontSize - 2, 9)}pt; line-height: 1.4;">
+                                        ${sigDept ? `<div>${escapeHtml(sigDept)}</div>` : ''}
+                                        ${sigInst ? `<div>${escapeHtml(sigInst)}</div>` : ''}
+                                    </div>
+                                ` : ''}
+                                ${(sigEmail || sigPhone) ? `
+                                    <div style="margin-top: 8px; color: #4b5563; font-size: ${Math.max(fontSize - 2, 9)}pt; line-height: 1.4;">
+                                        ${sigEmail ? `<div>Email: ${escapeHtml(sigEmail)}</div>` : ''}
+                                        ${sigPhone ? `<div>Phone: ${escapeHtml(sigPhone)}</div>` : ''}
+                                    </div>
+                                ` : ''}
+                                ${sigImage ? `<div style="margin-top: 14px;"><img src="${sigImage}" alt="Signature" style="max-height: 58px; max-width: 150px;"></div>` : ''}
+                            </td>
+                            <td style="vertical-align: top; text-align: right; width: 35%;">
+                                ${stampImage ? `<div style="margin-bottom: 10px;"><img src="${stampImage}" alt="Stamp" style="max-width: 90px; max-height: 90px;"></div>` : ''}
+                                ${previewQr ? `<div style="margin-top: 8px;">${previewQr}</div>` : ''}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                ${footerStripEnabled ? `
+                    <div style="margin-top: 14px; padding: 8px 12px; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; background: #f8fafc; color: #4b5563; font-size: 7.6pt; line-height: 1.35;">
+                        <div style="font-weight: 700; color: #111827;">Digitally verified document</div>
+                        <div>Reference ID: REC-2026-DEMO123</div>
+                        <div>Verify this document at: https://apps.aamd.sa/RL/verify/demo-token</div>
+                    </div>
+                ` : ''}
+                <div style="margin-top: 14px; padding-top: 8px; border-top: 1px solid #d1d5db; color: #374151; font-size: ${Math.max(fontSize - 3, 7)}pt; line-height: 1.25;">
+                    ${footer}
+                </div>
             </div>
-            <div style="position: absolute; bottom: 20mm; left: 20mm; right: 20mm; text-align: center; font-size: 9pt; color: #666;">${footer}</div>
         `;
         
         // Apply border to paper
@@ -1393,6 +1477,7 @@
         if (el) {
             el.addEventListener('change', function() {
                 markDirty();
+                updatePreview();
             });
         }
     });

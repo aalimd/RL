@@ -1,5 +1,42 @@
+@php
+    $margins = $layout['margins'] ?? [];
+    $marginTop = max(10, min((float) ($margins['top'] ?? 20), 35));
+    $marginSide = max(10, min((((float) ($margins['left'] ?? 20)) + ((float) ($margins['right'] ?? 20))) / 2, 30));
+    $marginBottom = max(10, min((float) ($margins['bottom'] ?? 20), 35));
+    $fontSize = max(10.5, min((float) ($layout['fontSize'] ?? 12), 16));
+    $fontFamily = $layout['fontFamily'] ?? "'Times New Roman', serif";
+    $language = $layout['language'] ?? 'en';
+    $direction = $layout['direction'] ?? ($language === 'ar' ? 'rtl' : 'ltr');
+    $watermarkConfig = $layout['watermark'] ?? [];
+    $watermarkEnabled = (bool) ($watermarkConfig['enabled'] ?? false);
+    $watermarkText = !empty($watermarkConfig['text']) ? $watermarkConfig['text'] : ($request->tracking_id ?? 'OFFICIAL COPY');
+    $showDigitalFooter = (bool) ($layout['footer']['enabled'] ?? true);
+    $verifyUrl = $request->verify_token ? route('public.verify', $request->verify_token) : null;
+    $pageStyle = implode(' ', [
+        '--header-pad-top: ' . max(7, min($marginTop * 0.5, 16)) . 'mm;',
+        '--header-pad-side: ' . $marginSide . 'mm;',
+        '--header-pad-bottom: ' . max(3, min($marginTop * 0.25, 8)) . 'mm;',
+        '--body-pad-side: ' . max(10, min($marginSide + 1.5, 30)) . 'mm;',
+        '--body-font-size: ' . $fontSize . 'pt;',
+        '--body-line-height: ' . ($direction === 'rtl' ? '1.65' : '1.55') . ';',
+        '--paragraph-gap: 8px;',
+        '--closing-pad-top: 10px;',
+        '--closing-pad-side: ' . $marginSide . 'mm;',
+        '--closing-pad-bottom: 4px;',
+        '--signature-name-size: ' . max(10.5, min($fontSize + 0.3, 13)) . 'pt;',
+        '--signature-detail-size: ' . max(8.2, min($fontSize - 2, 10)) . 'pt;',
+        '--signature-image-height: 58px;',
+        '--stamp-size: 90px;',
+        '--footer-pad-top: 3mm;',
+        '--footer-pad-side: ' . $marginSide . 'mm;',
+        '--footer-pad-bottom: ' . max(3, min($marginBottom * 0.28, 8)) . 'mm;',
+        '--footer-font-size: ' . max(6.8, min($fontSize - 3, 8.2)) . 'pt;',
+        '--footer-line-height: 1.2;',
+        '--page-font-family: ' . $fontFamily . ';',
+    ]);
+@endphp
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ $language }}" dir="{{ $direction }}">
 
 <head>
     <meta charset="UTF-8">
@@ -55,6 +92,8 @@
             overflow: hidden;
             display: grid;
             grid-template-rows: auto minmax(0, 1fr) auto auto;
+            font-family: var(--page-font-family), 'Times New Roman', Times, serif;
+            direction: inherit;
         }
 
         /* Header Section */
@@ -252,6 +291,57 @@
             width: 100%;
             table-layout: fixed;
             border-collapse: collapse;
+        }
+
+        .letter-digital-footer {
+            margin: 0 var(--footer-pad-side);
+            padding: 8px 12px;
+            border-top: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f8fafc;
+            color: #4b5563;
+            font-size: 7.6pt;
+            line-height: 1.35;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .letter-digital-footer strong {
+            color: #111827;
+        }
+
+        .letter-digital-footer a {
+            color: #4f46e5;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .letter-watermark {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 72pt;
+            color: rgba(203, 213, 225, 0.18);
+            font-weight: 700;
+            letter-spacing: 3px;
+            transform: rotate(-35deg);
+            pointer-events: none;
+            user-select: none;
+            z-index: 0;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .letter-header,
+        .letter-body,
+        .letter-closing,
+        .letter-digital-footer,
+        .letter-footer {
+            position: relative;
+            z-index: 1;
         }
 
         /* Toolbar */
@@ -476,7 +566,10 @@
             : "";
     @endphp
 
-    <div class="letter-page" style="{{ $borderStyle }}">
+    <div class="letter-page" style="{{ $borderStyle }} {{ $pageStyle }}">
+        @if($watermarkEnabled)
+            <div class="letter-watermark">{{ $watermarkText }}</div>
+        @endif
 
         <!-- Header -->
         <div class="letter-header">
@@ -564,6 +657,16 @@
         </div>
         </div>
 
+        @if($showDigitalFooter && $verifyUrl)
+            <div class="letter-digital-footer">
+                <strong>Digitally verified document</strong>
+                <span>Reference ID: {{ $request->tracking_id }}</span>
+                <span>Verify this document:
+                    <a href="{{ $verifyUrl }}">{{ $verifyUrl }}</a>
+                </span>
+            </div>
+        @endif
+
         <!-- Footer -->
         <div class="letter-footer">
             {!! $footer !!}
@@ -591,35 +694,44 @@
             element.style.setProperty(variableName, `${next}`);
         }
 
+        let letterFitDefaults = null;
+
+        function captureLetterDefaults(page) {
+            const style = getComputedStyle(page);
+            letterFitDefaults = {
+                '--header-pad-top': style.getPropertyValue('--header-pad-top').trim(),
+                '--header-pad-side': style.getPropertyValue('--header-pad-side').trim(),
+                '--header-pad-bottom': style.getPropertyValue('--header-pad-bottom').trim(),
+                '--body-pad-side': style.getPropertyValue('--body-pad-side').trim(),
+                '--body-font-size': style.getPropertyValue('--body-font-size').trim(),
+                '--body-line-height': style.getPropertyValue('--body-line-height').trim(),
+                '--paragraph-gap': style.getPropertyValue('--paragraph-gap').trim(),
+                '--closing-pad-top': style.getPropertyValue('--closing-pad-top').trim(),
+                '--closing-pad-side': style.getPropertyValue('--closing-pad-side').trim(),
+                '--closing-pad-bottom': style.getPropertyValue('--closing-pad-bottom').trim(),
+                '--signature-name-size': style.getPropertyValue('--signature-name-size').trim(),
+                '--signature-detail-size': style.getPropertyValue('--signature-detail-size').trim(),
+                '--signature-image-height': style.getPropertyValue('--signature-image-height').trim(),
+                '--stamp-size': style.getPropertyValue('--stamp-size').trim(),
+                '--footer-pad-top': style.getPropertyValue('--footer-pad-top').trim(),
+                '--footer-pad-side': style.getPropertyValue('--footer-pad-side').trim(),
+                '--footer-pad-bottom': style.getPropertyValue('--footer-pad-bottom').trim(),
+                '--footer-font-size': style.getPropertyValue('--footer-font-size').trim(),
+                '--footer-line-height': style.getPropertyValue('--footer-line-height').trim(),
+            };
+        }
+
         function fitLetterToSinglePage() {
             const page = document.querySelector('.letter-page');
             if (!page) {
                 return;
             }
 
-            const defaults = {
-                '--header-pad-top': '10mm',
-                '--header-pad-side': '12mm',
-                '--header-pad-bottom': '5mm',
-                '--body-pad-side': '14mm',
-                '--body-font-size': '11pt',
-                '--body-line-height': '1.55',
-                '--paragraph-gap': '8px',
-                '--closing-pad-top': '10px',
-                '--closing-pad-side': '14mm',
-                '--closing-pad-bottom': '4px',
-                '--signature-name-size': '11pt',
-                '--signature-detail-size': '8.8pt',
-                '--signature-image-height': '58px',
-                '--stamp-size': '90px',
-                '--footer-pad-top': '3.5mm',
-                '--footer-pad-side': '14mm',
-                '--footer-pad-bottom': '5mm',
-                '--footer-font-size': '7.1pt',
-                '--footer-line-height': '1.2'
-            };
+            if (!letterFitDefaults) {
+                captureLetterDefaults(page);
+            }
 
-            Object.entries(defaults).forEach(([key, value]) => page.style.setProperty(key, value));
+            Object.entries(letterFitDefaults).forEach(([key, value]) => page.style.setProperty(key, value));
 
             let guard = 0;
             while (page.scrollHeight > page.clientHeight + 2 && guard < 18) {
@@ -648,7 +760,14 @@
             requestAnimationFrame(() => window.print());
         }
 
-        window.addEventListener('load', fitLetterToSinglePage);
+        window.addEventListener('load', function() {
+            const page = document.querySelector('.letter-page');
+            if (page) {
+                captureLetterDefaults(page);
+            }
+
+            fitLetterToSinglePage();
+        });
         window.addEventListener('beforeprint', fitLetterToSinglePage);
     </script>
 </body>

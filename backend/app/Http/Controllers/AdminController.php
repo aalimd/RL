@@ -655,8 +655,18 @@ class AdminController extends Controller
     {
         $settings = $this->getSettings();
         $template = Template::findOrFail($id);
+        $draftLoaded = false;
 
-        return view('admin.template-editor', compact('settings', 'template'));
+        if (
+            is_array($template->draft_data)
+            && $template->last_draft_saved_at
+            && (!$template->updated_at || $template->last_draft_saved_at->greaterThan($template->updated_at))
+        ) {
+            $template->forceFill(array_filter($template->draft_data, static fn($value) => !is_null($value)));
+            $draftLoaded = true;
+        }
+
+        return view('admin.template-editor', compact('settings', 'template', 'draftLoaded'));
     }
 
     /**
@@ -712,6 +722,8 @@ class AdminController extends Controller
 
         $validated['is_active'] = $request->has('is_active');
         $validated['content'] = $validated['body_content'];
+        $validated['draft_data'] = null;
+        $validated['last_draft_saved_at'] = null;
         // layout_settings is already an array and will be auto-encoded by the model's cast
 
         $template->update($validated);
@@ -739,9 +751,19 @@ class AdminController extends Controller
 
         // We validate less strictly for drafts, mostly just that data exists
         $data = $request->validate([
+            'name' => 'nullable|string|max:255',
             'header_content' => 'nullable|string',
             'body_content' => 'nullable|string',
             'footer_content' => 'nullable|string',
+            'signature_name' => 'nullable|string|max:255',
+            'signature_title' => 'nullable|string|max:255',
+            'signature_department' => 'nullable|string|max:255',
+            'signature_institution' => 'nullable|string|max:255',
+            'signature_email' => 'nullable|string|max:255',
+            'signature_phone' => 'nullable|string|max:100',
+            'signature_image' => 'nullable|string|max:10000',
+            'stamp_image' => 'nullable|string|max:10000',
+            'language' => 'nullable|in:en,ar',
             'layout_settings' => 'nullable|array',
         ]);
 
@@ -751,17 +773,25 @@ class AdminController extends Controller
         $data['footer_content'] = $this->letterService->sanitizeHtml($data['footer_content'] ?? '');
 
         $draftData = [
+            'name' => trim((string) $request->input('name', $template->name)),
             'header_content' => $data['header_content'],
             'body_content' => $data['body_content'],
             'footer_content' => $data['footer_content'],
-            'layout_settings' => $data['layout_settings'] ?? null,
             'signature_name' => $request->input('signature_name'),
             'signature_title' => $request->input('signature_title'),
-            // ... capture other fields as needed for draft
+            'signature_department' => $request->input('signature_department'),
+            'signature_institution' => $request->input('signature_institution'),
+            'signature_email' => $request->input('signature_email'),
+            'signature_phone' => $request->input('signature_phone'),
+            'signature_image' => $request->input('signature_image'),
+            'stamp_image' => $request->input('stamp_image'),
+            'language' => $request->input('language', $template->language),
+            'is_active' => $request->boolean('is_active'),
+            'layout_settings' => $data['layout_settings'] ?? [],
         ];
 
         $template->update([
-            'draft_data' => json_encode($draftData),
+            'draft_data' => $draftData,
             'last_draft_saved_at' => now(),
         ]);
 

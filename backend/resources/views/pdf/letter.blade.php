@@ -7,14 +7,16 @@
         'left' => max(14, min((int) ($margins['left'] ?? 20), 24)),
     ];
     $fontSize = max(10.5, min((float) ($layout['fontSize'] ?? 12), 12));
+    $fontFamily = $layout['fontFamily'] ?? 'DejaVu Sans, sans-serif';
     $direction = $layout['direction'] ?? 'ltr';
+    $language = $layout['language'] ?? ($direction === 'rtl' ? 'ar' : 'en');
     $watermarkConfig = $layout['watermark'] ?? [];
     $watermarkEnabled = (bool) ($watermarkConfig['enabled'] ?? false);
     $watermarkText = !empty($watermarkConfig['text']) ? $watermarkConfig['text'] : ($request->tracking_id ?? 'OFFICIAL COPY');
     $showDigitalFooter = $layout['footer']['enabled'] ?? true;
 @endphp
 <!DOCTYPE html>
-<html lang="en" dir="{{ $direction }}">
+<html lang="{{ $language }}" dir="{{ $direction }}">
 
 <head>
     <meta charset="UTF-8">
@@ -33,7 +35,7 @@
         }
 
         body {
-            font-family: 'DejaVu Sans', sans-serif;
+            font-family: {{ $fontFamily }};
             font-size: {{ $fontSize }}pt;
             line-height: 1.45;
             color: #000;
@@ -46,7 +48,7 @@
             width: 100%;
             position: static;
             @if(isset($layout['border']['enabled']) && $layout['border']['enabled'])
-                border: {{ max(1, min((int) ($layout['border']['width'] ?? 2), 3)) }}px solid {{ $layout['border']['color'] ?? '#057f3a' }};
+                border: {{ max(1, min((int) ($layout['border']['width'] ?? 2), 3)) }}px {{ $layout['border']['style'] ?? 'solid' }} {{ $layout['border']['color'] ?? '#057f3a' }};
                 padding: 12px;
             @endif
         }

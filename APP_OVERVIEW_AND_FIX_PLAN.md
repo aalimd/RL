@@ -405,14 +405,24 @@ Code fixes completed so far:
 
 - Letter UX:
   The public recommendation-letter preview now keeps a tighter A4 structure with explicit print headroom, a unified closing section, and a clearer one-page presentation.
-  The primary print action now opens the official inline PDF, which is the most reliable final copy for students to save or print.
+  The primary student action now uses the browser's native print/save flow on the current letter page, which matches the cleaner result students were already getting manually.
   The PDF template now has a direct automated one-page regression check so standard letters do not silently return to two-page output.
   Arabic text in the PDF path is now pre-shaped for PDF rendering and the old letter frame has been restored more closely, so bilingual headers and footers stay professional.
+  The public browser print/save letter now respects the active template's layout settings more faithfully, including font family, font size, watermark, QR toggle, and digital footer strip.
+  The student-facing letter page no longer exposes the bad separate-PDF button path, so the default action follows the cleaner native browser print/save flow.
+
+- Template Editor:
+  The admin template editor settings tab no longer contains duplicated broken markup, so border and security controls submit predictably.
+  Autosave now stores the full draft state instead of only partial fields, and reopening a template restores the newer unsaved draft when one exists.
+  Manual template save now clears stale draft data so the saved version becomes the source of truth again.
+  The live preview now reflects current editor values more closely, including signature details, stamp, QR visibility, watermark, digital footer, and core layout styling.
+  Template updates are now covered by regression tests that verify the public recommendation letter actually changes when the template changes.
+  HTML sanitization now normalizes template inline styles before purification, so richer signature/template markup no longer drops into fallback sanitization during saves.
 
 - Verified:
   `composer audit` reports no active advisories.
   The QR generator now boots under PHP 8.4 without deprecation output.
-  `php artisan test` passes with 26 tests / 98 assertions after these changes.
+  `php artisan test` passes with 29 tests / 119 assertions after these changes.
   Live Apache smoke now confirms `/install` is blocked with `403 Forbidden` when the installer lock exists.
   Hostinger compatibility tests now confirm public disk assets can be served through `/media/...` without requiring a storage symlink.
 

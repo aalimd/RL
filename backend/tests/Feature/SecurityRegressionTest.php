@@ -13,6 +13,7 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
@@ -202,6 +203,24 @@ class SecurityRegressionTest extends TestCase
         $this->assertStringNotContainsString('direction: rtl', $prepared);
         $this->assertStringContainsString($arabic->utf8Glyphs('المملكة العربية السعودية'), $prepared);
         $this->assertStringContainsString('text-align: right', $prepared);
+    }
+
+    public function test_html_sanitizer_handles_signature_markup_without_falling_back(): void
+    {
+        Log::spy();
+
+        $service = app(LetterService::class);
+        $html = '<div class="official-signature"><div style="margin-bottom: 5px;"><img src="https://example.test/signature.png" style="max-height: 80px; display: block;" alt="Signature"></div><div style="margin-top: -40px; margin-left: 100px;"><img src="https://example.test/stamp.png" style="max-height: 100px; opacity: 0.8;" alt="Stamp"></div></div>';
+
+        $sanitized = $service->sanitizeHtml($html);
+
+        $this->assertStringContainsString('official-signature', $sanitized);
+        $this->assertStringContainsString('max-height:80px', str_replace(' ', '', $sanitized));
+        $this->assertStringContainsString('margin-left:100px', str_replace(' ', '', $sanitized));
+        $this->assertStringNotContainsString('display: block', $sanitized);
+        $this->assertStringNotContainsString('opacity: 0.8', $sanitized);
+
+        Log::shouldNotHaveReceived('warning');
     }
 
     public function test_api_status_update_generates_verify_token_and_clears_stale_admin_message(): void
@@ -410,6 +429,105 @@ class SecurityRegressionTest extends TestCase
             ->assertOk()
             ->assertSee('/admin/requests/' . $request->id . '/document', false)
             ->assertSee('unexpected-format');
+    }
+
+    public function test_template_update_is_reflected_in_public_letter_output(): void
+    {
+        $admin = $this->createAdminUser();
+        $request = $this->createApprovedRequest();
+        $template = Template::findOrFail($request->template_id);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->put(route('admin.templates.update', $template->id), [
+                'name' => 'Updated Template',
+                'header_content' => '<p>Updated Header {{trackingId}}</p>',
+                'body_content' => '<p>Updated letter for {{fullName}}</p>',
+                'footer_content' => '<p>Updated Footer</p>',
+                'signature_name' => 'Dr. {{lastName}} Reviewer',
+                'signature_title' => 'Training Director',
+                'signature_department' => 'Emergency Department',
+                'signature_institution' => 'King Abdulaziz Medical City',
+                'signature_email' => 'director@example.test',
+                'signature_phone' => '123456789',
+                'language' => 'en',
+                'is_active' => 'on',
+                'layout_settings' => [
+                    'fontFamily' => "'Courier New', monospace",
+                    'fontSize' => 13,
+                    'margins' => [
+                        'top' => 20,
+                        'right' => 20,
+                        'bottom' => 20,
+                        'left' => 20,
+                    ],
+                    'border' => [
+                        'enabled' => 1,
+                        'width' => 2,
+                        'style' => 'solid',
+                        'color' => '#057f3a',
+                    ],
+                    'qrCode' => [
+                        'enabled' => 0,
+                    ],
+                    'footer' => [
+                        'enabled' => 1,
+                    ],
+                ],
+            ])
+            ->assertRedirect(route('admin.templates'));
+
+        $this->withSession([
+            'tracking_verified_request_id' => $request->id,
+            'tracking_verified_tracking_id' => $request->tracking_id,
+            'tracking_verified_until' => now()->addMinutes(30)->timestamp,
+        ])->get(route('public.letter', ['tracking_id' => $request->tracking_id]))
+            ->assertOk()
+            ->assertSee('Updated Header ' . $request->tracking_id, false)
+            ->assertSee('Updated letter for', false)
+            ->assertDontSee('Letter for Letter Student', false)
+            ->assertDontSee('Scan to Verify', false)
+            ->assertSee('Courier New', false);
+    }
+
+    public function test_template_editor_prefers_newer_autosaved_draft_when_reopened(): void
+    {
+        $admin = $this->createAdminUser();
+        $template = Template::create([
+            'name' => 'Saved Template',
+            'header_content' => '<p>Saved Header</p>',
+            'body_content' => '<p>Saved Body</p>',
+            'footer_content' => '<p>Saved Footer</p>',
+            'language' => 'en',
+            'layout_settings' => [],
+            'is_active' => true,
+        ]);
+
+        $template->update([
+            'draft_data' => [
+                'name' => 'Draft Template Name',
+                'header_content' => '<p>Draft Header</p>',
+                'body_content' => '<p>Draft Body</p>',
+                'footer_content' => '<p>Draft Footer</p>',
+                'signature_name' => 'Draft Signer',
+                'language' => 'ar',
+                'layout_settings' => [
+                    'fontSize' => 14,
+                ],
+            ],
+            'last_draft_saved_at' => now()->addMinute(),
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->get(route('admin.templates.edit', $template->id))
+            ->assertOk()
+            ->assertSee('Draft Template Name')
+            ->assertSee('Draft Header', false)
+            ->assertSee('Draft Body', false)
+            ->assertSee('Draft Footer', false)
+            ->assertSee('Draft Signer')
+            ->assertSee('Unsaved draft restored');
     }
 
     private function createAdminUser(array $overrides = []): User
