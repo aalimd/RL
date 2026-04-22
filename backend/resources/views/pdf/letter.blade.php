@@ -41,15 +41,17 @@
             line-height: 1.45;
             color: #111827;
             direction: {{ $direction }};
+            margin: 0;
+            padding: 0;
         }
 
         .page-container {
             width: 100%;
-            min-height: 100%;
-            position: relative;
+            position: static;
+            page-break-after: avoid;
             @if($borderEnabled)
                 border: {{ $borderWidth }}px solid {{ $borderColor }};
-                padding: 12px 14px 10px;
+                padding: 10px 12px 8px;
             @endif
         }
 
@@ -117,8 +119,9 @@
         }
 
         .closing-section {
-            margin-top: 10px;
+            margin-top: 8px;
             page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .signature-table {
@@ -158,7 +161,7 @@
         }
 
         .signature-image {
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         .signature-image img {
@@ -174,7 +177,7 @@
         }
 
         .qr-block {
-            margin-top: 8px;
+            margin-top: 6px;
             text-align: right;
         }
 
@@ -195,10 +198,11 @@
         }
 
         .footer-block {
-            margin-top: 8px;
-            padding-top: 8px;
+            margin-top: 6px;
+            padding-top: 6px;
             border-top: 1px solid #d1d5db;
             page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         .verification-strip {
@@ -222,7 +226,7 @@
         }
 
         .custom-footer {
-            margin-top: 6px;
+            margin-top: 4px;
             font-size: 7.5pt;
             line-height: 1.18;
             color: #374151;

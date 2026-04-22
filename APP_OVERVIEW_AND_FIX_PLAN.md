@@ -383,6 +383,7 @@ Code fixes completed so far:
 - [x] Reworked the public recommendation-letter view into a safer fixed A4 layout so signature, QR, and footer stay on one professional page more reliably
 - [x] Rebuilt the PDF letter template into a compact one-page print layout and changed the public PDF route to open inline for easier official printing
 - [x] Added regression coverage for inline public PDF delivery during verified tracking sessions
+- [x] Fixed the Dompdf blank-second-page regression by removing forced full-page container sizing and added a direct PDF page-count regression test
 
 ### Current Pass Summary
 
@@ -403,11 +404,12 @@ Code fixes completed so far:
 - Letter UX:
   The public recommendation-letter preview now keeps a tighter A4 structure with explicit print headroom, a unified closing section, and a clearer one-page presentation.
   The primary print action now opens the official inline PDF, which is the most reliable final copy for students to save or print.
+  The PDF template now has a direct automated one-page regression check so standard letters do not silently return to two-page output.
 
 - Verified:
   `composer audit` reports no active advisories.
   The QR generator now boots under PHP 8.4 without deprecation output.
-  `php artisan test` passes with 24 tests / 94 assertions after these changes.
+  `php artisan test` passes with 25 tests / 95 assertions after these changes.
   Live Apache smoke now confirms `/install` is blocked with `403 Forbidden` when the installer lock exists.
   Hostinger compatibility tests now confirm public disk assets can be served through `/media/...` without requiring a storage symlink.
 

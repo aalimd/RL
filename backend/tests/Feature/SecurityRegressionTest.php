@@ -7,6 +7,9 @@ use App\Mail\RequestStatusUpdated;
 use App\Models\Request as RequestRecord;
 use App\Models\Template;
 use App\Models\User;
+use App\Services\LetterService;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -106,6 +109,85 @@ class SecurityRegressionTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf')
             ->assertHeader('content-disposition', 'inline; filename="Recommendation_Letter_' . $request->tracking_id . '.pdf"');
+    }
+
+    public function test_pdf_letter_template_renders_single_page_for_standard_letter_content(): void
+    {
+        $request = $this->createApprovedRequest();
+        $template = Template::findOrFail($request->template_id);
+
+        $template->update([
+            'header_content' => '
+                <table style="width:100%; border-collapse:collapse;">
+                    <tr>
+                        <td style="width:40%; font-size:8pt; line-height:1.2;">
+                            <strong>Kingdom of Saudi Arabia</strong><br>
+                            National Guard Health Affairs<br>
+                            King Abdulaziz Medical City - Jeddah<br>
+                            Department of Emergency Medicine
+                        </td>
+                        <td style="width:20%; text-align:center;">
+                            <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="Logo" style="height:56px;">
+                        </td>
+                        <td style="width:40%; font-size:8pt; line-height:1.2; text-align:right;">
+                            المملكة العربية السعودية<br>
+                            الشؤون الصحية بوزارة الحرس الوطني<br>
+                            مدينة الملك عبدالعزيز الطبية - جدة<br>
+                            قسم طب الطوارئ
+                        </td>
+                    </tr>
+                </table>
+                <hr style="margin:8px 0 6px; border:none; border-top:1px solid #94a3b8;">
+            ',
+            'body_content' => '
+                <p style="text-align:center; font-weight:700; font-size:12pt;">Dr. {{studentName}} {{lastName}}</p>
+                <p style="text-align:center; font-weight:700;">To Whom It May Concern,</p>
+                <p>This letter is to certify that Dr. {{studentName}} completed a rotation in the Emergency Department at King Abdulaziz Medical City, Jeddah during {{trainingPeriod}} as part of the medical internship program.</p>
+                <p>Throughout this rotation, Dr. {{studentName}} demonstrated solid clinical knowledge, strong professionalism, and dependable teamwork. The student interacted effectively with patients, residents, consultants, nursing staff, and other healthcare team members.</p>
+                <p>Dr. {{studentName}} showed particular interest in Emergency Medicine, with good situational awareness, appropriate prioritization, and the ability to work efficiently in a fast-paced environment. The student was receptive to feedback and showed continuous improvement during the rotation.</p>
+                <p>Based on this performance, work ethic, and interpersonal skills, I believe Dr. {{studentName}} would be a valuable addition to any training program or institution.</p>
+            ',
+            'footer_content' => '
+                <table style="width:100%; border-collapse:collapse; font-size:7pt; line-height:1.15;">
+                    <tr>
+                        <td style="width:33%;">P.O. Box 9515<br>Jeddah 21423<br>Kingdom of Saudi Arabia</td>
+                        <td style="width:34%; text-align:center;">FAX: 624 7444</td>
+                        <td style="width:33%; text-align:right;">ص.ب 9515<br>جدة 21423<br>المملكة العربية السعودية</td>
+                    </tr>
+                </table>
+            ',
+        ]);
+
+        $request->update([
+            'training_period' => '2026-04',
+        ]);
+
+        $letterService = app(LetterService::class);
+        $content = $letterService->generateLetterContent($request->fresh(), $template->fresh());
+
+        $data = [
+            'request' => $request->fresh(),
+            'layout' => $content['layout'],
+            'header' => $letterService->sanitizeHtml($content['header']),
+            'body' => $letterService->sanitizeHtml($content['body']),
+            'footer' => $letterService->sanitizeHtml($content['footer']),
+            'signature' => $content['signature'],
+            'qrCode' => $content['qrCode'] ?? '',
+        ];
+
+        $html = view('pdf.letter', $data)->render();
+
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', $data['layout']['fontFamily'] ?? 'DejaVu Sans');
+
+        $pdf = new Dompdf($options);
+        $pdf->loadHtml($html, 'UTF-8');
+        $pdf->setPaper('a4', 'portrait');
+        $pdf->render();
+
+        $this->assertSame(1, $pdf->getCanvas()->get_page_count());
     }
 
     public function test_api_status_update_generates_verify_token_and_clears_stale_admin_message(): void
