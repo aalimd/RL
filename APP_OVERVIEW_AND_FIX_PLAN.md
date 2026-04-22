@@ -384,6 +384,8 @@ Code fixes completed so far:
 - [x] Rebuilt the PDF letter template into a compact one-page print layout and changed the public PDF route to open inline for easier official printing
 - [x] Added regression coverage for inline public PDF delivery during verified tracking sessions
 - [x] Fixed the Dompdf blank-second-page regression by removing forced full-page container sizing and added a direct PDF page-count regression test
+- [x] Added `khaled.alshamaa/ar-php` and shaped Arabic text specifically for the PDF output so recommendation letters no longer render broken Arabic glyphs
+- [x] Restored the PDF letter frame closer to the earlier stable layout while keeping the one-page regression checks
 
 ### Current Pass Summary
 
@@ -405,11 +407,12 @@ Code fixes completed so far:
   The public recommendation-letter preview now keeps a tighter A4 structure with explicit print headroom, a unified closing section, and a clearer one-page presentation.
   The primary print action now opens the official inline PDF, which is the most reliable final copy for students to save or print.
   The PDF template now has a direct automated one-page regression check so standard letters do not silently return to two-page output.
+  Arabic text in the PDF path is now pre-shaped for PDF rendering and the old letter frame has been restored more closely, so bilingual headers and footers stay professional.
 
 - Verified:
   `composer audit` reports no active advisories.
   The QR generator now boots under PHP 8.4 without deprecation output.
-  `php artisan test` passes with 25 tests / 95 assertions after these changes.
+  `php artisan test` passes with 26 tests / 98 assertions after these changes.
   Live Apache smoke now confirms `/install` is blocked with `403 Forbidden` when the installer lock exists.
   Hostinger compatibility tests now confirm public disk assets can be served through `/media/...` without requiring a storage symlink.
 

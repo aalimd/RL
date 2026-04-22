@@ -1,16 +1,13 @@
 @php
     $margins = $layout['margins'] ?? [];
     $pageMargins = [
-        'top' => max(14, min((int) ($margins['top'] ?? 18), 22)),
-        'right' => max(14, min((int) ($margins['right'] ?? 18), 22)),
-        'bottom' => max(14, min((int) ($margins['bottom'] ?? 18), 22)),
-        'left' => max(14, min((int) ($margins['left'] ?? 18), 22)),
+        'top' => max(14, min((int) ($margins['top'] ?? 20), 24)),
+        'right' => max(14, min((int) ($margins['right'] ?? 20), 24)),
+        'bottom' => max(14, min((int) ($margins['bottom'] ?? 20), 24)),
+        'left' => max(14, min((int) ($margins['left'] ?? 20), 24)),
     ];
-    $fontSize = max(10.5, min((float) ($layout['fontSize'] ?? 11), 12));
+    $fontSize = max(10.5, min((float) ($layout['fontSize'] ?? 12), 12));
     $direction = $layout['direction'] ?? 'ltr';
-    $borderEnabled = (bool) ($layout['border']['enabled'] ?? false);
-    $borderWidth = max(1, min((int) ($layout['border']['width'] ?? 2), 3));
-    $borderColor = $layout['border']['color'] ?? '#1f2937';
     $watermarkConfig = $layout['watermark'] ?? [];
     $watermarkEnabled = (bool) ($watermarkConfig['enabled'] ?? false);
     $watermarkText = !empty($watermarkConfig['text']) ? $watermarkConfig['text'] : ($request->tracking_id ?? 'OFFICIAL COPY');
@@ -39,7 +36,7 @@
             font-family: 'DejaVu Sans', sans-serif;
             font-size: {{ $fontSize }}pt;
             line-height: 1.45;
-            color: #111827;
+            color: #000;
             direction: {{ $direction }};
             margin: 0;
             padding: 0;
@@ -48,44 +45,36 @@
         .page-container {
             width: 100%;
             position: static;
-            page-break-after: avoid;
-            @if($borderEnabled)
-                border: {{ $borderWidth }}px solid {{ $borderColor }};
-                padding: 10px 12px 8px;
+            @if(isset($layout['border']['enabled']) && $layout['border']['enabled'])
+                border: {{ max(1, min((int) ($layout['border']['width'] ?? 2), 3)) }}px solid {{ $layout['border']['color'] ?? '#057f3a' }};
+                padding: 12px;
             @endif
         }
 
         .header {
-            margin-bottom: 10px;
+            margin-bottom: 14px;
         }
 
         .header img {
-            max-height: 74px;
+            max-height: 80px;
             width: auto;
         }
 
-        .header table {
+        .header table,
+        .body-content table,
+        .signature-table,
+        .footer table {
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
         }
 
-        .header p,
-        .header div,
-        .header span,
-        .header td,
-        .header th {
-            line-height: 1.18;
-        }
-
         .body-content {
-            color: #111827;
-            line-height: 1.45;
+            margin-bottom: 14px;
         }
 
         .body-content p {
-            margin-bottom: 7px;
-            text-align: justify;
+            margin-bottom: 8px;
         }
 
         .body-content h1,
@@ -95,154 +84,119 @@
         .body-content h5,
         .body-content h6 {
             margin-bottom: 8px;
-            line-height: 1.25;
         }
 
-        .body-content div,
-        .body-content li,
-        .body-content td,
-        .body-content th,
-        .body-content span {
-            font-size: inherit;
-            line-height: inherit;
-        }
-
-        .body-content table {
-            width: 100%;
-            table-layout: fixed;
-            border-collapse: collapse;
-        }
-
-        .body-content img {
+        .body-content img,
+        .signature-image img,
+        .stamp-image img {
             max-width: 100%;
             height: auto;
         }
 
-        .closing-section {
-            margin-top: 8px;
+        .signature-section {
+            margin-top: 14px;
             page-break-inside: avoid;
             break-inside: avoid;
         }
 
-        .signature-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-        }
-
         .signature-left {
-            width: 65%;
+            width: 68%;
             vertical-align: top;
         }
 
         .signature-right {
-            width: 35%;
+            width: 32%;
             vertical-align: top;
             text-align: right;
         }
 
         .signature-name {
-            font-weight: 700;
+            font-weight: bold;
             font-size: 11pt;
             margin-bottom: 2px;
         }
 
         .signature-title {
-            font-size: 9.2pt;
-            color: #1f2937;
-            margin-bottom: 4px;
+            font-size: 10pt;
+            color: #333;
         }
 
         .signature-details {
-            font-size: 8.2pt;
-            color: #374151;
-            line-height: 1.32;
-            margin-top: 4px;
+            font-size: 9pt;
+            color: #555;
+            margin-top: 5px;
+            line-height: 1.3;
         }
 
         .signature-image {
-            margin-top: 8px;
+            margin-top: 10px;
         }
 
         .signature-image img {
-            max-width: 140px;
-            max-height: 58px;
-            height: auto;
+            max-width: 150px;
+            max-height: 70px;
         }
 
         .stamp-image img {
-            max-width: 86px;
-            max-height: 86px;
-            height: auto;
+            max-width: 96px;
+            max-height: 96px;
         }
 
         .qr-block {
-            margin-top: 6px;
+            margin-top: 8px;
             text-align: right;
         }
 
         .qr-block svg,
         .qr-block img {
-            width: 70px !important;
-            height: 70px !important;
-            max-width: 70px !important;
-            max-height: 70px !important;
+            width: 72px !important;
+            height: 72px !important;
+            max-width: 72px !important;
+            max-height: 72px !important;
         }
 
         .qr-block p,
         .qr-block span,
         .qr-block div {
-            margin-top: 1px !important;
             font-size: 6.8pt !important;
             line-height: 1.1 !important;
+            margin-top: 1px !important;
         }
 
-        .footer-block {
-            margin-top: 6px;
-            padding-top: 6px;
-            border-top: 1px solid #d1d5db;
+        .digital-footer {
+            margin-top: 10px;
+            border-top: 1px solid #e5e7eb;
+            padding: 8px;
+            font-size: 7.1pt;
+            color: #666;
+            text-align: center;
+            background-color: #f9fafb;
+            border-radius: 4px;
+            line-height: 1.2;
             page-break-inside: avoid;
             break-inside: avoid;
         }
 
-        .verification-strip {
-            padding: 6px 8px;
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 4px;
-            font-size: 7.4pt;
-            line-height: 1.2;
-            color: #374151;
-            text-align: center;
-        }
-
-        .verification-strip strong {
-            color: #111827;
-        }
-
-        .verification-strip a {
-            color: #374151;
+        .digital-footer a {
+            color: #666;
             text-decoration: none;
         }
 
-        .custom-footer {
-            margin-top: 4px;
-            font-size: 7.5pt;
-            line-height: 1.18;
-            color: #374151;
+        .footer {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #ddd;
+            font-size: 8pt;
+            line-height: 1.15;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
-        .custom-footer * {
+        .footer * {
             font-size: inherit !important;
             line-height: inherit !important;
             margin-top: 0 !important;
             margin-bottom: 0 !important;
-        }
-
-        .custom-footer table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
         }
 
         .watermark {
@@ -251,17 +205,21 @@
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
             font-size: 72pt;
-            color: rgba(148, 163, 184, 0.14);
-            font-weight: 700;
+            color: rgba(200, 200, 200, 0.12);
+            font-weight: bold;
             z-index: -1;
             white-space: nowrap;
+            pointer-events: none;
+            user-select: none;
         }
     </style>
 </head>
 
 <body>
     @if($watermarkEnabled)
-        <div class="watermark">{{ $watermarkText }}</div>
+        <div class="watermark">
+            {{ $watermarkText }}
+        </div>
     @endif
 
     <div class="page-container">
@@ -276,7 +234,7 @@
         </div>
 
         @if(($signature['name'] ?? null) || ($signature['image'] ?? null) || !empty($qrCode))
-            <div class="closing-section">
+            <div class="signature-section">
                 <table class="signature-table">
                     <tr>
                         <td class="signature-left">
@@ -288,13 +246,13 @@
                                 <div class="signature-title">{{ $signature['title'] }}</div>
                             @endif
 
-                            @if((!empty($signature['department'])) || (!empty($signature['institution'])))
+                            @if((!empty($signature['institution'])) || (!empty($signature['department'])))
                                 <div class="signature-details">
                                     @if(!empty($signature['department']))
-                                        <div>{{ $signature['department'] }}</div>
+                                        {{ $signature['department'] }}<br>
                                     @endif
                                     @if(!empty($signature['institution']))
-                                        <div>{{ $signature['institution'] }}</div>
+                                        {{ $signature['institution'] }}
                                     @endif
                                 </div>
                             @endif
@@ -302,10 +260,10 @@
                             @if((!empty($signature['email'])) || (!empty($signature['phone'])))
                                 <div class="signature-details">
                                     @if(!empty($signature['email']))
-                                        <div>Email: {{ $signature['email'] }}</div>
+                                        Email: {{ $signature['email'] }}<br>
                                     @endif
                                     @if(!empty($signature['phone']))
-                                        <div>Phone: {{ $signature['phone'] }}</div>
+                                        Phone: {{ $signature['phone'] }}
                                     @endif
                                 </div>
                             @endif
@@ -334,22 +292,18 @@
             </div>
         @endif
 
-        @if($showDigitalFooter || $footer)
-            <div class="footer-block">
-                @if($showDigitalFooter)
-                    <div class="verification-strip">
-                        <strong>Digitally verified document</strong>
-                        | Reference ID: {{ $request->tracking_id }}
-                        | Verify: <a
-                            href="{{ route('public.verify', $request->verify_token) }}">{{ route('public.verify', $request->verify_token) }}</a>
-                    </div>
-                @endif
+        @if($showDigitalFooter)
+            <div class="digital-footer">
+                <strong>DIGITALLY VERIFIED DOCUMENT</strong><br>
+                Reference ID: {{ $request->tracking_id }}<br>
+                Verify this document at:
+                <a href="{{ route('public.verify', $request->verify_token) }}">{{ route('public.verify', $request->verify_token) }}</a>
+            </div>
+        @endif
 
-                @if($footer)
-                    <div class="custom-footer">
-                        {!! $footer !!}
-                    </div>
-                @endif
+        @if($footer)
+            <div class="footer">
+                {!! $footer !!}
             </div>
         @endif
     </div>

@@ -8,6 +8,7 @@ use App\Models\Request as RequestRecord;
 use App\Models\Template;
 use App\Models\User;
 use App\Services\LetterService;
+use ArPHP\I18N\Arabic as ArabicText;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -188,6 +189,19 @@ class SecurityRegressionTest extends TestCase
         $pdf->render();
 
         $this->assertSame(1, $pdf->getCanvas()->get_page_count());
+    }
+
+    public function test_pdf_html_preparation_shapes_arabic_and_removes_rtl_direction_for_visual_glyphs(): void
+    {
+        $service = app(LetterService::class);
+        $arabic = new ArabicText();
+
+        $html = '<td style="text-align: right; direction: rtl; font-family: \'DejaVu Sans\', sans-serif;">المملكة العربية السعودية</td>';
+        $prepared = $service->prepareHtmlForPdf($html);
+
+        $this->assertStringNotContainsString('direction: rtl', $prepared);
+        $this->assertStringContainsString($arabic->utf8Glyphs('المملكة العربية السعودية'), $prepared);
+        $this->assertStringContainsString('text-align: right', $prepared);
     }
 
     public function test_api_status_update_generates_verify_token_and_clears_stale_admin_message(): void

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Request;
 use App\Models\Template;
+use ArPHP\I18N\Arabic as ArabicText;
 use Carbon\Carbon;
 use HTMLPurifier;
 use HTMLPurifier_Config;
@@ -13,6 +14,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class LetterService
 {
     private ?HTMLPurifier $purifier = null;
+    private ?ArabicText $arabicText = null;
 
     /**
      * Sanitize HTML content
@@ -171,6 +173,123 @@ class LetterService
             'layout' => $layoutSettings,
             'qrCode' => $this->generateQrCodeHtml($request),
         ];
+    }
+
+    public function prepareHtmlForPdf(?string $html): ?string
+    {
+        if (!$html || !preg_match('/\p{Arabic}/u', $html)) {
+            return $html;
+        }
+
+        $internalErrors = libxml_use_internal_errors(true);
+
+        try {
+            $dom = new \DOMDocument('1.0', 'UTF-8');
+            $wrapperId = 'pdf-arabic-root';
+            $fragment = '<?xml encoding="utf-8" ?><div id="' . $wrapperId . '">' . $html . '</div>';
+            $dom->loadHTML($fragment, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+            $xpath = new \DOMXPath($dom);
+            $root = $xpath->query('//*[@id="' . $wrapperId . '"]')->item(0);
+
+            if (!$root instanceof \DOMElement) {
+                return $html;
+            }
+
+            foreach ($xpath->query('.//text()[normalize-space(.) != ""]', $root) as $textNode) {
+                if (!$textNode instanceof \DOMText) {
+                    continue;
+                }
+
+                if (preg_match('/\p{Arabic}/u', $textNode->nodeValue ?? '')) {
+                    $textNode->nodeValue = $this->shapeArabicStringForPdf($textNode->nodeValue);
+                }
+            }
+
+            foreach ($xpath->query('.//*[@style or @dir]', $root) as $element) {
+                if (!$element instanceof \DOMElement) {
+                    continue;
+                }
+
+                $style = (string) $element->getAttribute('style');
+                $dir = strtolower(trim((string) $element->getAttribute('dir')));
+                $textContent = (string) $element->textContent;
+                $hasArabic = preg_match('/\p{Arabic}/u', $textContent) === 1;
+                $hadRtlDirection = $dir === 'rtl' || preg_match('/direction\s*:\s*rtl/i', $style);
+
+                if (!$hasArabic && !$hadRtlDirection) {
+                    continue;
+                }
+
+                if ($dir === 'rtl') {
+                    $element->setAttribute('dir', 'ltr');
+                }
+
+                $style = preg_replace('/direction\s*:\s*rtl\s*;?/i', 'direction: ltr;', $style) ?? $style;
+                $style = preg_replace('/unicode-bidi\s*:\s*[^;]+;?/i', '', $style) ?? $style;
+
+                if ($hasArabic && !preg_match('/font-family\s*:/i', $style)) {
+                    $style = rtrim($style, '; ') . '; font-family: DejaVu Sans, sans-serif;';
+                }
+
+                if ($hadRtlDirection && !preg_match('/text-align\s*:/i', $style)) {
+                    $style = rtrim($style, '; ') . '; text-align: right;';
+                }
+
+                if ($hasArabic && !preg_match('/direction\s*:/i', $style)) {
+                    $style = rtrim($style, '; ') . '; direction: ltr;';
+                }
+
+                $element->setAttribute('style', trim($style, " \t\n\r\0\x0B;") . ';');
+            }
+
+            $result = '';
+            foreach ($root->childNodes as $child) {
+                $result .= $dom->saveHTML($child);
+            }
+
+            return $result;
+        } catch (\Throwable $e) {
+            Log::warning('Arabic PDF HTML shaping failed, using original HTML: ' . $e->getMessage());
+            return $html;
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($internalErrors);
+        }
+    }
+
+    public function prepareSignatureForPdf(array $signature): array
+    {
+        foreach (['name', 'title', 'institution', 'department', 'email', 'phone'] as $field) {
+            if (!isset($signature[$field]) || !is_string($signature[$field])) {
+                continue;
+            }
+
+            $signature[$field] = $this->shapeArabicStringForPdf($signature[$field]);
+        }
+
+        return $signature;
+    }
+
+    private function shapeArabicStringForPdf(?string $text): string
+    {
+        $text = (string) $text;
+
+        if ($text === '' || !preg_match('/\p{Arabic}/u', $text)) {
+            return $text;
+        }
+
+        try {
+            return $this->arabicText()->utf8Glyphs($text);
+        } catch (\Throwable $e) {
+            Log::warning('Arabic glyph shaping failed, using original text: ' . $e->getMessage());
+            return $text;
+        }
+    }
+
+    private function arabicText(): ArabicText
+    {
+        return $this->arabicText ??= new ArabicText();
     }
 
     /**

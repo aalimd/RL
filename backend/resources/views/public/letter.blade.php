@@ -445,10 +445,6 @@
 
 <body>
 
-    @php
-        $officialPdfUrl = route('public.letter.pdf', ['tracking_id' => $request->tracking_id]);
-    @endphp
-
     <div class="toolbar no-print">
         <div class="toolbar-actions">
             <a href="{{ url('/track/' . $request->tracking_id) }}" class="btn btn-secondary">
@@ -458,15 +454,6 @@
                 </svg>
                 Back
             </a>
-            <a href="{{ $officialPdfUrl }}" target="_blank" rel="noopener" class="btn btn-secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" x2="12" y1="15" y2="3" />
-                </svg>
-                Open PDF
-            </a>
             <button onclick="printOfficialLetter()" class="btn btn-primary" type="button">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -474,12 +461,12 @@
                     <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                     <rect x="6" y="14" width="12" height="8" />
                 </svg>
-                Print Official PDF
+                Print / Save
             </button>
         </div>
         <div class="toolbar-note">
-            <strong>Best one-page result:</strong> use the official PDF for printing or saving. The page preview is kept
-            compact, but the PDF is the most reliable final copy.
+            <strong>Best result:</strong> use <em>Print / Save</em> to open your browser's print dialog, then choose
+            your printer or <em>Save as PDF</em>.
         </div>
     </div>
 
@@ -656,11 +643,9 @@
             }
         }
 
-        const officialPdfUrl = @json($officialPdfUrl);
-
         function printOfficialLetter() {
             fitLetterToSinglePage();
-            window.open(officialPdfUrl, '_blank', 'noopener');
+            requestAnimationFrame(() => window.print());
         }
 
         window.addEventListener('load', fitLetterToSinglePage);

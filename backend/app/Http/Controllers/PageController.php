@@ -913,10 +913,10 @@ class PageController extends Controller
         $data = [
             'request' => $request,
             'layout' => $content['layout'],
-            'header' => $this->letterService->sanitizeHtml($content['header']),
-            'body' => $this->letterService->sanitizeHtml($content['body']),
-            'footer' => $this->letterService->sanitizeHtml($content['footer']),
-            'signature' => $content['signature'],
+            'header' => $this->letterService->prepareHtmlForPdf($this->letterService->sanitizeHtml($content['header'])),
+            'body' => $this->letterService->prepareHtmlForPdf($this->letterService->sanitizeHtml($content['body'])),
+            'footer' => $this->letterService->prepareHtmlForPdf($this->letterService->sanitizeHtml($content['footer'])),
+            'signature' => $this->letterService->prepareSignatureForPdf($content['signature']),
             'qrCode' => $content['qrCode'] ?? '',
         ];
 
