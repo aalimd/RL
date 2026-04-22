@@ -877,10 +877,16 @@
                             </div>
                         </div>
 
-                        @if($request->admin_message)
+                        @php
+                            $studentStatusMessage = $request->status === 'Rejected'
+                                ? ($request->rejection_reason ?? $request->admin_message)
+                                : ($request->admin_message ?? $request->rejection_reason);
+                        @endphp
+
+                        @if($studentStatusMessage)
                             <div class="admin-message">
                                 <div class="admin-message-title">Message from Admin</div>
-                                <p class="admin-message-text">{{ $request->admin_message }}</p>
+                                <p class="admin-message-text">{{ $studentStatusMessage }}</p>
                             </div>
                         @endif
 
@@ -943,7 +949,7 @@
                         @endif
 
                         @if($request->status === 'Approved')
-                            <a href="{{ route('public.letter', ['tracking_id' => $request->tracking_id, 'token' => $request->verification_token]) }}"
+                            <a href="{{ route('public.letter', ['tracking_id' => $request->tracking_id]) }}"
                                 class="view-letter-btn" target="_blank">
                                 <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
                                 View Recommendation Letter

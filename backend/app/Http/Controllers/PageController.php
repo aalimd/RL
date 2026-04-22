@@ -4,15 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Settings;
 use App\Models\User;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Response;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use App\Mail\RequestSubmittedToStudent;
 use App\Mail\RequestSubmittedToAdmin;
 
 
 use App\Services\LetterService;
+use App\Services\PublicAssetUrlService;
 use App\Services\WizardService;
 
 class PageController extends Controller
@@ -20,12 +22,14 @@ class PageController extends Controller
     protected $letterService;
     protected $wizardService;
     protected $telegramService;
+    protected $publicAssetUrlService;
 
-    public function __construct(LetterService $letterService, WizardService $wizardService, \App\Services\TelegramService $telegramService)
+    public function __construct(LetterService $letterService, WizardService $wizardService, \App\Services\TelegramService $telegramService, PublicAssetUrlService $publicAssetUrlService)
     {
         $this->letterService = $letterService;
         $this->wizardService = $wizardService;
         $this->telegramService = $telegramService;
+        $this->publicAssetUrlService = $publicAssetUrlService;
     }
     /**
      * Get public settings for views
@@ -82,9 +86,48 @@ class PageController extends Controller
             'requestSubmitBtn',
         ];
 
-        return Settings::whereIn('key', $publicKeys)
-            ->pluck('value', 'key')
-            ->toArray();
+        try {
+            $settings = Settings::whereIn('key', $publicKeys)
+                ->pluck('value', 'key')
+                ->toArray();
+
+            return $this->publicAssetUrlService->normalizeSettings($settings);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Public settings lookup failed. Using empty defaults.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * Serve files stored on the public disk when a storage symlink is unavailable.
+     */
+    public function publicMedia(string $path)
+    {
+        $path = ltrim($path, '/');
+
+        if ($path === '' || str_contains($path, '..')) {
+            abort(404);
+        }
+
+        $disk = Storage::disk('public');
+
+        if (!$disk->exists($path)) {
+            abort(404);
+        }
+
+        $filePath = $disk->path($path);
+
+        if (!is_file($filePath)) {
+            abort(404);
+        }
+
+        return response()->file($filePath, [
+            'Cache-Control' => 'public, max-age=86400',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     /**
@@ -121,6 +164,20 @@ class PageController extends Controller
 
         return (int) $verifiedRequestId === (int) $requestModel->id
             && (string) $verifiedTrackingId === (string) $requestModel->tracking_id;
+    }
+
+    /**
+     * Require a valid verified tracking session before exposing approved letters.
+     */
+    private function ensureApprovedLetterAccess(\App\Models\Request $requestModel): void
+    {
+        if (!$this->hasValidTrackingVerification($requestModel)) {
+            abort(403, 'Please verify your request with OTP before viewing the letter.');
+        }
+
+        if ($requestModel->status !== 'Approved') {
+            abort(403, 'This request has not been approved yet.');
+        }
     }
 
     /**
@@ -522,10 +579,13 @@ class PageController extends Controller
                 return back()->with('error', 'Failed to submit request. Please try again or contact support.');
             }
 
+            $studentEmailSent = false;
+
             // Send email notifications
             try {
                 // Send confirmation to student
                 Mail::to($newRequest->student_email)->send(new RequestSubmittedToStudent($newRequest));
+                $studentEmailSent = true;
 
                 // Send notification to admin(s) only
                 $admins = User::where('role', 'admin')->get();
@@ -550,7 +610,9 @@ class PageController extends Controller
             return redirect()->route('public.request')->with([
                 'success' => true,
                 'tracking_id' => $trackingId,
-                'telegram_bot_username' => $this->telegramService->getBotUsername()
+                'telegram_bot_username' => $this->telegramService->getBotUsername(),
+                'confirmation_email_hint' => $this->maskEmail((string) $newRequest->student_email),
+                'confirmation_email_sent' => $studentEmailSent,
             ]);
         }
 
@@ -778,21 +840,8 @@ class PageController extends Controller
      */
     public function viewLetter($tracking_id, Request $httpRequest)
     {
-        // Fix 7: IDOR Protection
-        // Search by tracking_id (Random String) instead of Auto-Increment ID
         $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
-
-        // Secondary Check: Verify Token (Student ID) matches
-        $token = $httpRequest->query('token');
-
-        // Strict Comparison
-        if (!$token || $token !== $request->verification_token) {
-            abort(403, 'Invalid access token. Please ensure you are using the correct link.');
-        }
-
-        if ($request->status !== 'Approved') {
-            abort(403, 'This request has not been approved yet.');
-        }
+        $this->ensureApprovedLetterAccess($request);
 
         // Get Template - with try/catch for encrypted form_data
         $templateId = null;
@@ -838,19 +887,8 @@ class PageController extends Controller
      */
     public function downloadPdf($tracking_id, Request $httpRequest)
     {
-        // Fix 7: Search by tracking_id
         $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
-
-        // Secondary Check: Verify Token
-        $token = $httpRequest->query('token');
-
-        if (!$token || $token !== $request->verification_token) {
-            abort(403, 'Invalid access token.');
-        }
-
-        if ($request->status !== 'Approved') {
-            abort(403, 'This request has not been approved yet.');
-        }
+        $this->ensureApprovedLetterAccess($request);
 
         // Get Template
         $templateId = null;
@@ -890,12 +928,23 @@ class PageController extends Controller
             $data['layout']['direction'] = 'ltr';
 
         try {
-            $pdf = Pdf::setOptions(['isHtml5ParserEnabled' => true, 'isRemoteEnabled' => true])->loadView('pdf.letter', $data);
+            $html = view('pdf.letter', $data)->render();
+            $options = new Options();
+            $options->set('isHtml5ParserEnabled', true);
+            $options->set('isRemoteEnabled', true);
+            $options->set('defaultFont', $data['layout']['fontFamily'] ?? 'DejaVu Sans');
+
+            $pdf = new Dompdf($options);
+            $pdf->loadHtml($html, 'UTF-8');
             $pdf->setPaper('a4', 'portrait');
+            $pdf->render();
 
             $filename = 'Recommendation_Letter_' . $request->tracking_id . '.pdf';
 
-            return $pdf->download($filename);
+            return response($pdf->output(), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('PDF Generation Failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to generate PDF. Please try again later.');

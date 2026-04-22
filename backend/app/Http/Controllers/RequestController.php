@@ -11,15 +11,17 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use App\Mail\RequestSubmittedToStudent;
 use App\Mail\RequestSubmittedToAdmin;
-use App\Mail\RequestStatusUpdated;
+use App\Services\RequestStatusService;
 
 class RequestController extends Controller
 {
     protected $telegramService;
+    protected $requestStatusService;
 
-    public function __construct(\App\Services\TelegramService $telegramService)
+    public function __construct(\App\Services\TelegramService $telegramService, RequestStatusService $requestStatusService)
     {
         $this->telegramService = $telegramService;
+        $this->requestStatusService = $requestStatusService;
     }
 
     // GET /api/requests
@@ -77,7 +79,7 @@ class RequestController extends Controller
                 'purpose' => 'required|string|max:100',
                 'gpa' => 'nullable|numeric|min:0|max:4',
                 'deadline' => 'nullable|date',
-                'trainingPeriod' => 'nullable|string|max:100',
+                'trainingPeriod' => 'nullable|date_format:Y-m',
                 'templateId' => 'nullable|integer|exists:templates,id',
                 'customContent' => 'nullable|string',
                 'contentOption' => 'nullable|in:template,custom',
@@ -238,18 +240,12 @@ class RequestController extends Controller
             'purpose' => 'sometimes|string|max:100',
             'gpa' => 'sometimes|nullable|numeric|min:0|max:4',
             'deadline' => 'sometimes|nullable|date',
-            'trainingPeriod' => 'sometimes|nullable|string|max:100',
+            'trainingPeriod' => 'sometimes|nullable|date_format:Y-m',
             'templateId' => 'sometimes|nullable|integer|exists:templates,id',
             'customContent' => 'sometimes|nullable|string',
             'contentOption' => 'sometimes|nullable|in:template,custom',
-            'verificationToken' => 'sometimes|nullable|string|max:100',
-            'verifyToken' => 'sometimes|nullable|string|max:64',
             'formData' => 'sometimes|nullable|array',
         ]);
-
-        if (($user->role ?? null) !== 'admin') {
-            unset($validated['verificationToken'], $validated['verifyToken']);
-        }
 
         $data = [];
         if (array_key_exists('studentName', $validated))
@@ -278,10 +274,6 @@ class RequestController extends Controller
             $data['custom_content'] = $validated['customContent'];
         if (array_key_exists('contentOption', $validated))
             $data['content_option'] = $validated['contentOption'];
-        if (array_key_exists('verificationToken', $validated))
-            $data['verification_token'] = $validated['verificationToken'];
-        if (array_key_exists('verifyToken', $validated))
-            $data['verify_token'] = $validated['verifyToken'];
 
         $syncFormData = array_key_exists('formData', $validated)
             || array_key_exists('middleName', $validated)
@@ -297,6 +289,8 @@ class RequestController extends Controller
             if (!is_array($formData)) {
                 $formData = [];
             }
+
+            unset($formData['verification_token'], $formData['verify_token']);
 
             if (array_key_exists('middleName', $validated)) {
                 $formData['middle_name'] = $validated['middleName'];
@@ -343,44 +337,11 @@ class RequestController extends Controller
         ]);
 
         $req = RequestModel::findOrFail($id);
-        $req->status = $validated['status'];
-        if ($validated['status'] === 'Rejected') {
-            $req->rejection_reason = $validated['rejectionReason'] ?? null;
-        } else {
-            $req->rejection_reason = null;
-        }
-        if (array_key_exists('adminMessage', $validated)) {
-            $req->admin_message = $validated['adminMessage'];
-        }
-        $req->save();
-
-        // Send email notification to student about status update
-        try {
-            Mail::to($req->student_email)->send(new RequestStatusUpdated($req));
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('API status update email failed: ' . $e->getMessage());
-        }
-
-        // Send Telegram Notification to Student (if subscribed)
-        if ($req->telegram_chat_id) {
-            $statusStr = $validated['status'];
-            $studentMsg = "🔔 <b>Update on your Request</b>\n\n";
-            $studentMsg .= "Your request status has been updated to: <b>$statusStr</b>\n";
-
-            if ($statusStr === 'Approved') {
-                $studentMsg .= "✅ Congratulations! Check your email for the recommendation letter.";
-            } elseif ($statusStr === 'Rejected') {
-                $studentMsg .= "❌ We are sorry, but your request has been declined. Check your email for details.";
-            } elseif ($statusStr === 'Needs Revision') {
-                $studentMsg .= "📝 Additional information is needed. Please check your email.";
-            }
-
-            try {
-                $this->telegramService->sendMessageToChat($req->telegram_chat_id, $studentMsg);
-            } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Failed to send Telegram update to student from API: " . $e->getMessage());
-            }
-        }
+        $req = $this->requestStatusService->transition($req, $validated['status'], [
+            'admin_message' => $validated['adminMessage'] ?? null,
+            'rejection_reason' => $validated['rejectionReason'] ?? null,
+        ]);
+        $this->requestStatusService->notifyStudent($req);
 
         AuditLog::create([
             'action' => 'UPDATE_STATUS',

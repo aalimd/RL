@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use App\Models\Settings;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 class CheckMaintenance
 {
@@ -26,9 +28,17 @@ class CheckMaintenance
         // We use cache to avoid hitting DB on every single request if possible, 
         // but for simplicity & reliability in this setup, direct DB query is fine for now 
         // or we trust the Settings model might cache internally if optimized later.
-        $maintenanceMode = cache()->remember('maintenance_mode', 60, function () {
-            return Settings::where('key', 'maintenanceMode')->value('value');
-        });
+        try {
+            $maintenanceMode = Cache::remember('maintenance_mode', 60, function () {
+                return Settings::where('key', 'maintenanceMode')->value('value');
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Maintenance mode check skipped because settings lookup failed.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return $next($request);
+        }
 
         if ($maintenanceMode === 'true') {
             // 3. Allow Authenticated Admins/Editors to bypass
@@ -38,7 +48,15 @@ class CheckMaintenance
             }
 
             // 4. Fetch Custom Message
-            $message = Settings::where('key', 'maintenanceMessage')->value('value');
+            try {
+                $message = Settings::where('key', 'maintenanceMessage')->value('value');
+            } catch (\Throwable $e) {
+                Log::warning('Maintenance message lookup failed. Falling back to default copy.', [
+                    'error' => $e->getMessage(),
+                ]);
+                $message = null;
+            }
+
             if (empty($message)) {
                 $message = 'We are currently performing scheduled maintenance. Please check back soon.';
             }

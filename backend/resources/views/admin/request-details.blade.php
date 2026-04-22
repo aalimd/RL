@@ -6,7 +6,10 @@
     @php
         $canManageRequests = auth()->check() && in_array(auth()->user()->role, ['admin', 'editor'], true);
         $statusValue = old('status', $request->status);
-        $adminMessageValue = old('admin_message', $request->admin_message ?? '');
+        $adminMessageValue = old(
+            'admin_message',
+            $statusValue === 'Rejected' ? ($request->rejection_reason ?? '') : ($request->admin_message ?? '')
+        );
     @endphp
     <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
         <a href="{{ route('admin.requests') }}" class="btn btn-ghost">
@@ -155,8 +158,18 @@
 
                     <div style="margin-bottom: 1rem;">
                         <label style="font-size: 0.75rem; color: var(--text-muted);">Training Period</label>
+                        @php
+                            $trainingPeriodLabel = 'N/A';
+                            if ($request->training_period) {
+                                try {
+                                    $trainingPeriodLabel = \Carbon\Carbon::createFromFormat('Y-m', $request->training_period)->format('F, Y');
+                                } catch (\Throwable $e) {
+                                    $trainingPeriodLabel = $request->training_period;
+                                }
+                            }
+                        @endphp
                         <p style="font-weight: 500; color: var(--text-main);">
-                            {{ $request->training_period ? \Carbon\Carbon::parse($request->training_period . '-01')->format('F, Y') : 'N/A' }}
+                            {{ $trainingPeriodLabel }}
                         </p>
                     </div>
 
@@ -171,7 +184,7 @@
                         <div style="margin-bottom: 1rem;">
                             <label style="font-size: 0.75rem; color: var(--text-muted);">Attachment</label>
                             <div>
-                                <a href="{{ route('requests.document', $request->id) }}" target="_blank"
+                                <a href="{{ route('admin.requests.document', $request->id) }}" target="_blank"
                                     class="btn btn-sm btn-white"
                                     style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
                                     <i data-feather="paperclip" style="width: 14px; height: 14px;"></i>
@@ -230,13 +243,21 @@
 
                         <div style="flex: 1; min-width: 250px;">
                             <label id="adminMessageLabel"
-                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 500;">Admin
-                                Message <span
-                                    id="adminMessageHint">{{ $statusValue === 'Needs Revision' ? '(Required for Needs Revision)' : '(Optional)' }}</span></label>
+                                style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; color: var(--text-main); font-weight: 500;"><span id="adminMessageLabelText">Admin
+                                Message</span> <span
+                                    id="adminMessageHint">
+                                    @if($statusValue === 'Needs Revision')
+                                        (Required for Needs Revision)
+                                    @elseif($statusValue === 'Rejected')
+                                        (Required for Rejected)
+                                    @else
+                                        (Optional)
+                                    @endif
+                                </span></label>
                             <textarea id="adminMessageField" name="admin_message" rows="1" class="form-textarea"
                                 style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem; min-height: 42px; height: 42px; line-height: 1.5;"
-                                placeholder="Message to student..." onfocus="this.rows=3; this.style.height='auto'"
-                                onblur="if(this.value==''){this.rows=1; this.style.height='42px'}" {{ $statusValue === 'Needs Revision' ? 'required' : '' }}>{{ $adminMessageValue }}</textarea>
+                                placeholder="{{ $statusValue === 'Rejected' ? 'Reason for rejection...' : 'Message to student...' }}" onfocus="this.rows=3; this.style.height='auto'"
+                                onblur="if(this.value==''){this.rows=1; this.style.height='42px'}" {{ in_array($statusValue, ['Needs Revision', 'Rejected'], true) ? 'required' : '' }}>{{ $adminMessageValue }}</textarea>
                         </div>
 
                         <button type="submit" class="btn btn-primary">Update Status</button>
@@ -584,12 +605,20 @@
             const statusSelect = document.getElementById('statusSelect');
             const adminMessageField = document.getElementById('adminMessageField');
             const adminMessageHint = document.getElementById('adminMessageHint');
+            const adminMessageLabelText = document.getElementById('adminMessageLabelText');
 
-            if (!statusSelect || !adminMessageField || !adminMessageHint) return;
+            if (!statusSelect || !adminMessageField || !adminMessageHint || !adminMessageLabelText) return;
 
             const needsRevision = statusSelect.value === 'Needs Revision';
-            adminMessageField.required = needsRevision;
-            adminMessageHint.textContent = needsRevision ? '(Required for Needs Revision)' : '(Optional)';
+            const rejected = statusSelect.value === 'Rejected';
+            adminMessageField.required = needsRevision || rejected;
+            adminMessageHint.textContent = needsRevision
+                ? '(Required for Needs Revision)'
+                : rejected
+                    ? '(Required for Rejected)'
+                    : '(Optional)';
+            adminMessageLabelText.textContent = rejected ? 'Rejection Reason' : 'Admin Message';
+            adminMessageField.placeholder = rejected ? 'Reason for rejection...' : 'Message to student...';
         }
 
         document.addEventListener('DOMContentLoaded', function () {

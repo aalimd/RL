@@ -179,6 +179,45 @@
             line-height: 1.6;
         }
 
+        .delivery-tip {
+            margin: -1.2rem 0 1.75rem;
+            padding: 0.95rem 1rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(59, 130, 246, 0.18);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(99, 102, 241, 0.05));
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            text-align: left;
+        }
+
+        .delivery-tip-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 0.9rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 12px 24px -16px rgba(99, 102, 241, 0.55);
+        }
+
+        .delivery-tip-title {
+            margin: 0 0 0.2rem 0;
+            color: var(--text-primary);
+            font-weight: 700;
+            font-size: 0.94rem;
+        }
+
+        .delivery-tip-text {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            line-height: 1.65;
+        }
+
         .otp-input {
             width: 100%;
             padding: 1.125rem;
@@ -292,6 +331,19 @@
                     We've sent a 6-digit verification code to your email address. Please enter it below.
                 @endif
             </p>
+
+            <div class="delivery-tip">
+                <div class="delivery-tip-icon">
+                    <i data-lucide="inbox" style="width: 18px; height: 18px;"></i>
+                </div>
+                <div>
+                    <p class="delivery-tip-title">If the email is not in your inbox</p>
+                    <p class="delivery-tip-text">
+                        Please check your spam or junk folder. If you find the message there, mark it as safe so future
+                        updates from {{ $settings['siteName'] ?? 'this portal' }} arrive correctly.
+                    </p>
+                </div>
+            </div>
 
             @if(session('error'))
                 <div class="error-box">

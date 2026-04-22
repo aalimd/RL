@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\TestEmailMail;
 use App\Models\Settings;
 use App\Models\Request as RequestModel;
 use App\Models\User;
@@ -11,9 +12,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use App\Mail\RequestStatusUpdated;
 use App\Services\LetterService;
 use App\Services\AiService;
+use App\Services\PublicAssetUrlService;
+use App\Services\RequestStatusService;
 use App\Services\TelegramService;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Artisan;
@@ -26,12 +28,16 @@ class AdminController extends Controller
     protected $letterService;
     protected $aiService;
     protected $telegramService;
+    protected $requestStatusService;
+    protected $publicAssetUrlService;
 
-    public function __construct(LetterService $letterService, AiService $aiService, TelegramService $telegramService)
+    public function __construct(LetterService $letterService, AiService $aiService, TelegramService $telegramService, RequestStatusService $requestStatusService, PublicAssetUrlService $publicAssetUrlService)
     {
         $this->letterService = $letterService;
         $this->aiService = $aiService;
         $this->telegramService = $telegramService;
+        $this->requestStatusService = $requestStatusService;
+        $this->publicAssetUrlService = $publicAssetUrlService;
     }
 
     // ... existing ...
@@ -57,7 +63,9 @@ class AdminController extends Controller
      */
     private function getSettings(): array
     {
-        return Settings::all()->pluck('value', 'key')->toArray();
+        $settings = Settings::all()->pluck('value', 'key')->toArray();
+
+        return $this->publicAssetUrlService->normalizeSettings($settings);
     }
 
     /**
@@ -170,61 +178,37 @@ class AdminController extends Controller
 
         $validated = $request->validate([
             'status' => 'required|in:Submitted,Under Review,Approved,Rejected,Archived,Needs Revision',
-            'admin_message' => 'required_if:status,Needs Revision|nullable|string|max:2000',
+            'admin_message' => 'nullable|string|max:2000',
         ], [
             'admin_message.required_if' => 'Admin message is required when status is Needs Revision.',
         ]);
 
+        $status = $validated['status'];
+        $studentMessage = trim((string) ($validated['admin_message'] ?? ''));
+
         if (
-            $validated['status'] === 'Needs Revision' &&
-            trim((string) ($validated['admin_message'] ?? '')) === ''
+            in_array($status, ['Needs Revision', 'Rejected'], true) &&
+            $studentMessage === ''
         ) {
             return back()
-                ->withErrors(['admin_message' => 'Admin message is required when status is Needs Revision.'])
+                ->withErrors([
+                    'admin_message' => $status === 'Rejected'
+                        ? 'Rejection reason is required when status is Rejected.'
+                        : 'Admin message is required when status is Needs Revision.',
+                ])
                 ->withInput();
         }
 
-        $updateData = [
-            'status' => $validated['status'],
-            'admin_message' => $validated['status'] === 'Needs Revision'
-                ? trim((string) ($validated['admin_message'] ?? ''))
-                : null,
+        $transitionContext = [
+            'admin_message' => $validated['admin_message'] ?? null,
         ];
 
-        // Generate verification token if approved and not exists
-        if ($validated['status'] === 'Approved' && !$requestModel->verify_token) {
-            $updateData['verify_token'] = Str::random(32);
+        if ($status === 'Rejected') {
+            $transitionContext['rejection_reason'] = $validated['admin_message'] ?? null;
         }
 
-        $requestModel->update($updateData);
-
-        // Send email notification to student about status update
-        try {
-            Mail::to($requestModel->student_email)->send(new RequestStatusUpdated($requestModel));
-        } catch (\Exception $e) {
-            Log::error('Status update email failed: ' . $e->getMessage());
-        }
-
-        // Send Telegram Notification to Student (if subscribed)
-        if ($requestModel->telegram_chat_id) {
-            $status = $validated['status'];
-            $studentMsg = "🔔 <b>Update on your Request</b>\n\n";
-            $studentMsg .= "Your request status has been updated to: <b>$status</b>\n";
-
-            if ($status === 'Approved') {
-                $studentMsg .= "✅ Congratulations! Check your email for the recommendation letter.";
-            } elseif ($status === 'Rejected') {
-                $studentMsg .= "❌ We are sorry, but your request has been declined. Check your email for details.";
-            } elseif ($status === 'Needs Revision') {
-                $studentMsg .= "📝 Additional information is needed. Please check your email.";
-            }
-
-            try {
-                $this->telegramService->sendMessageToChat($requestModel->telegram_chat_id, $studentMsg);
-            } catch (\Exception $e) {
-                Log::error("Failed to send Telegram update to student from Admin: " . $e->getMessage());
-            }
-        }
+        $requestModel = $this->requestStatusService->transition($requestModel, $status, $transitionContext);
+        $this->requestStatusService->notifyStudent($requestModel);
 
         // Audit Log
         AuditLog::create([
@@ -252,7 +236,7 @@ class AdminController extends Controller
             'verification_token' => 'nullable|string|max:100',
             'purpose' => 'nullable|string|max:100',
             'deadline' => 'nullable|date',
-            'training_period' => 'nullable|string',
+            'training_period' => 'nullable|date_format:Y-m',
             'custom_content' => 'nullable|string',
             'gender' => 'required|in:male,female',
             'phone' => 'nullable|string|max:20',
@@ -833,21 +817,16 @@ class AdminController extends Controller
             $logAction = "Bulk deleted $count requests";
         } else {
             $status = $validated['action'] === 'approve' ? 'Approved' : 'Rejected';
+            $requests = RequestModel::whereIn('id', $ids)->get();
 
-            // For approval, we need to generate tokens, so we loop
-            if ($status === 'Approved') {
-                $requests = RequestModel::whereIn('id', $ids)->get();
-                foreach ($requests as $r) {
-                    /** @var RequestModel $r */
-                    $r->status = 'Approved';
-                    if (!$r->verify_token) {
-                        $r->verify_token = Str::random(32);
-                    }
-                    $r->save();
+            foreach ($requests as $requestModel) {
+                $transitionContext = [];
+                if ($status === 'Rejected') {
+                    $transitionContext['rejection_reason'] = 'Your request has been declined. Please contact support if you need more details.';
                 }
-            } else {
-                // For rejection, bulk update is fine
-                RequestModel::whereIn('id', $ids)->update(['status' => $status]);
+
+                $requestModel = $this->requestStatusService->transition($requestModel, $status, $transitionContext);
+                $this->requestStatusService->notifyStudent($requestModel);
             }
 
             $logAction = "Bulk updated $count requests to $status";
@@ -1094,10 +1073,7 @@ class AdminController extends Controller
         }
 
         try {
-            Mail::raw('This is a test email from your Academic Recommendation System.', function ($message) use ($email) {
-                $message->to($email)
-                    ->subject('Test Email - Connection Successful');
-            });
+            Mail::to($email)->send(new TestEmailMail());
 
             return response()->json(['success' => true, 'message' => 'Test email sent successfully!']);
         } catch (\Exception $e) {

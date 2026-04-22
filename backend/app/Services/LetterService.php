@@ -4,36 +4,63 @@ namespace App\Services;
 
 use App\Models\Request;
 use App\Models\Template;
-use Illuminate\Support\Facades\Log;
-use Mews\Purifier\Facades\Purifier;
-use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Carbon\Carbon;
+use HTMLPurifier;
+use HTMLPurifier_Config;
+use Illuminate\Support\Facades\Log;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class LetterService
 {
+    private ?HTMLPurifier $purifier = null;
+
     /**
      * Sanitize HTML content
      * Only admins can edit templates, but we still sanitize to prevent stored XSS
      */
     public function sanitizeHtml($html)
     {
-        if (!$html)
+        if (!$html) {
             return null;
+        }
 
-        // Use Purifier if available, with custom config to allow common styling
         try {
-            return Purifier::clean($html, [
-                // Allow classes and IDs for layout
-                'HTML.Allowed' => 'p[style|class|id],br,strong,b,em,i,u,ul,ol,li,a[href|target],span[style|class|id],div[style|class|id],h1[style|class|id],h2[style|class|id],h3[style|class|id],h4[style|class|id],h5[style|class|id],h6[style|class|id],img[src|alt|style|width|height|class],table[style|class|border|width|cellpadding|cellspacing],tr[style|class],td[style|class|colspan|rowspan|width|height|align|valign],th[style|class|colspan|rowspan|width|height|align|valign],thead,tbody,tfoot,hr[style|class],font[color|size|face],center,blockquote',
-                // Allow more CSS for positioning and layout
-                'CSS.AllowedProperties' => 'font-size,font-family,font-weight,font-style,text-align,text-decoration,line-height,color,background-color,background,border,border-radius,border-collapse,border-spacing,width,height,min-width,max-width,min-height,max-height,display,padding,margin,float,clear,overflow,position,top,bottom,left,right,z-index,vertical-align,white-space,list-style-type',
-                'AutoFormat.RemoveEmpty' => false, // Don't remove empty spacing divs/spans
-            ]);
-        } catch (\Exception $e) {
+            return $this->purifier()->purify((string) $html);
+        } catch (\Throwable $e) {
             // Fallback: strip dangerous tags but keep basic HTML
-            Log::warning('Purifier failed, using basic sanitization: ' . $e->getMessage());
+            Log::warning('HTMLPurifier failed, using basic sanitization: ' . $e->getMessage());
             return strip_tags($html, '<p><br><strong><b><em><i><u><ul><ol><li><span><div><h1><h2><h3><h4><h5><h6><table><tr><td><th><img>');
         }
+    }
+
+    private function purifier(): HTMLPurifier
+    {
+        if ($this->purifier instanceof HTMLPurifier) {
+            return $this->purifier;
+        }
+
+        $cachePath = (string) config('purifier.cachePath', storage_path('app/purifier'));
+        $cacheMode = (int) config('purifier.cacheFileMode', 0755);
+
+        if (!is_dir($cachePath)) {
+            @mkdir($cachePath, $cacheMode, true);
+        }
+
+        $config = HTMLPurifier_Config::createDefault();
+        $config->loadArray((array) config('purifier.settings.default', []));
+        $config->set('Core.Encoding', config('purifier.encoding', 'UTF-8'));
+        $config->set('Cache.SerializerPath', $cachePath);
+        $config->set('Cache.SerializerPermissions', $cacheMode);
+
+        if (!config('purifier.finalize', true)) {
+            $config->autoFinalize = false;
+        }
+
+        $config->set('HTML.Allowed', 'p[style|class|id],br,strong,b,em,i,u,ul,ol,li,a[href|target],span[style|class|id],div[style|class|id],h1[style|class|id],h2[style|class|id],h3[style|class|id],h4[style|class|id],h5[style|class|id],h6[style|class|id],img[src|alt|style|width|height|class],table[style|class|border|width|cellpadding|cellspacing],tr[style|class],td[style|class|colspan|rowspan|width|height|align|valign],th[style|class|colspan|rowspan|width|height|align|valign],thead,tbody,tfoot,hr[style|class],font[color|size|face],center,blockquote');
+        $config->set('CSS.AllowedProperties', 'font-size,font-family,font-weight,font-style,text-align,text-decoration,line-height,color,background-color,background,border,border-radius,border-collapse,border-spacing,width,height,min-width,max-width,min-height,max-height,display,padding,margin,float,clear,overflow,position,top,bottom,left,right,z-index,vertical-align,white-space,list-style-type');
+        $config->set('AutoFormat.RemoveEmpty', false);
+
+        return $this->purifier = new HTMLPurifier($config);
     }
 
     /**

@@ -3,12 +3,14 @@ DEPLOYMENT GUIDE FOR HOSTINGER (v4 - Automation Ready)
 Updated: Jan 29, 2026
 
 1. PREPARATION
-   - Ensure your hosting runs PHP 8.2 or higher.
+   - Ensure the website itself runs PHP 8.3 or higher in hPanel.
+   - Do not rely only on `php -v` over SSH; Hostinger can apply a different PHP version per website/folder.
    - Database: MySQL or MariaDB.
 
 2. UPLOAD
    - Zip the entire project folder (exclude node_modules, tests, .git).
    - Upload to your `public_html` (or subfolder).
+   - Keep the project structure intact. The root `index.php` is already prepared to forward requests into `backend/public`.
    - Extract the files.
 
 3. AUTOMATED DEPLOYMENT (GitHub Actions) - **RECOMMENDED**
@@ -31,6 +33,7 @@ Updated: Jan 29, 2026
      SESSION_DRIVER=file
      CACHE_STORE=file
      QUEUE_CONNECTION=sync
+     LOG_CHANNEL=single
      MAIL_FAILOVER_MAILERS=zeptomail,smtp
    - Run `php artisan key:generate` (via SSH) or manually set APP_KEY if you can't access SSH.
 
@@ -40,20 +43,21 @@ Updated: Jan 29, 2026
    - Set to **775** (or 777 not recommended but works if 775 fails).
    - Ensure `backend/bootstrap/cache` is also **775**.
 
-6. SYMLINK (For Images)
-   - If you have SSH access: `cd backend && php artisan storage:link`
-   - If no SSH, you can try creating a PHP file named `link.php` in `public` folder with:
-     <?php symlink(__DIR__.'/../backend/storage/app/public', __DIR__.'/storage'); echo 'Done'; ?>
-     Then visit `your-domain.com/link.php` once.
+6. PUBLIC ASSETS (Images / Logos)
+   - The app now has a built-in `/media/...` fallback for files stored on Laravel's public disk.
+   - That means logos and appearance uploads can still load even if `storage:link` is unavailable on shared hosting.
+   - If you do have SSH and want the standard Laravel symlink anyway: `cd backend && php artisan storage:link`
 
 7. AUTOMATION & QUEUES
-   - The system is designed to work without complex queue workers for basic emails.
+   - The system is designed to work without queue workers. Keep `QUEUE_CONNECTION=sync` on shared hosting unless you intentionally change the architecture.
    - If emails are slow, configure a Cron Job for `php artisan schedule:run`.
    - After each deploy, run `php artisan optimize:clear`.
 
 TROUBLESHOOTING
 - "500 Internal Server Error": Almost always folder permissions (Step 5).
+- "500 Internal Server Error" right after deploy: also verify the WEBSITE PHP version in hPanel is 8.3+.
 - "Class not found": Run `composer install --optimize-autoloader --no-dev` if you have SSH.
 - "Cache table error" (e.g. SQL on `cache` table): set `CACHE_STORE=file` in `backend/.env`.
 - "Emails appear successful but are not delivered": make sure `MAIL_FAILOVER_MAILERS` does not end with `log` in production.
 - "No laravel.log file": if `LOG_CHANNEL=errorlog`, check hosting PHP/Apache error logs.
+- "Uploaded logo/background not visible": confirm the file exists in `backend/storage/app/public`; if `storage:link` is unavailable, the app will serve it through `/media/...`.

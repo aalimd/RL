@@ -17,6 +17,7 @@ if (config('app.env') === 'production') {
 
 // Public Pages
 Route::get('/', [PageController::class, 'landing'])->name('home');
+Route::get('/media/{path}', [PageController::class, 'publicMedia'])->where('path', '.*')->name('public.media');
 Route::get('/login', [PageController::class, 'showLogin'])->name('login');
 Route::post('/login', [PageController::class, 'login'])->middleware('throttle:6,1');
 Route::post('/logout', [PageController::class, 'logout'])->name('logout');
@@ -25,7 +26,7 @@ Route::post('/request', [PageController::class, 'handleWizard'])->middleware('th
 Route::post('/request/edit', [PageController::class, 'initializeEdit'])->middleware('throttle:10,1')->name('public.request.edit');
 Route::get('/track/{id?}', [PageController::class, 'tracking'])->name('public.tracking');
 Route::post('/track', [PageController::class, 'doTracking'])->middleware('throttle:10,1')->name('public.tracking.post');
-Route::get('/letter/{tracking_id}', [PageController::class, 'viewLetter'])->name('public.letter');
+Route::get('/letter/{tracking_id}', [PageController::class, 'viewLetter'])->middleware('throttle:10,1')->name('public.letter');
 Route::get('/letter/{tracking_id}/pdf', [PageController::class, 'downloadPdf'])->middleware('throttle:10,1')->name('public.letter.pdf');
 Route::get('/verify/{token}', [App\Http\Controllers\VerificationController::class, 'verify'])->name('public.verify');
 Route::get('/tracking/verify', [PageController::class, 'show2FAVerify'])->name('public.tracking.verify');

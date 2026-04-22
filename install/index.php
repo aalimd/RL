@@ -4,15 +4,17 @@
  * Academic Recommendation System
  */
 
+require_once __DIR__ . '/helpers.php';
+
 session_start();
 
+$envPath = installer_env_path(__DIR__);
+$lockPath = installer_lock_path(__DIR__);
+
 // Check if already installed
-if (file_exists(__DIR__ . '/../backend/.env')) {
-    $envContent = file_get_contents(__DIR__ . '/../backend/.env');
-    if (strpos($envContent, 'INSTALLED=true') !== false) {
-        header('Location: ../');
-        exit;
-    }
+if (installer_is_complete($envPath, $lockPath)) {
+    header('Location: ../');
+    exit;
 }
 
 $step = $_GET['step'] ?? 1;
@@ -111,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $result = performInstallation($_SESSION['install']);
                 if ($result === true) {
                     session_destroy();
-                    header('Location: ?step=7');
-                    exit;
+                    $step = 7;
+                    $success = 'Installation completed successfully.';
                 } else {
                     $error = $result;
                 }
@@ -129,9 +131,12 @@ function performInstallation($data)
     $admin = $data['admin'];
     $email = $data['email'] ?? null;
     $site = $data['site'];
+    $envPath = installer_env_path(__DIR__);
+    $lockPath = installer_lock_path(__DIR__);
 
     // Ensure storage directories exist with correct permissions
     $directories = [
+        __DIR__ . '/../backend/storage/app',
         __DIR__ . '/../backend/storage/app/public',
         __DIR__ . '/../backend/storage/framework/cache/data',
         __DIR__ . '/../backend/storage/framework/sessions',
@@ -191,8 +196,7 @@ function performInstallation($data)
     }
 
     // Create .env file
-    $envContent = generateEnvFile($db, $site, $email);
-    $envPath = __DIR__ . '/../backend/.env';
+    $envContent = generateEnvFile($db, $site, $email, false);
     if (file_put_contents($envPath, $envContent) === false) {
         return "Failed to create backend/.env file. Please check write permissions.";
     }
@@ -202,6 +206,10 @@ function performInstallation($data)
     $schemaSyncResult = runPostInstallMigrations($pdo);
     if ($schemaSyncResult !== true) {
         return $schemaSyncResult;
+    }
+
+    if (!installer_mark_complete($envPath, $lockPath)) {
+        return 'Installation finished but failed to mark the app as installed. Please check backend/.env and backend/storage/app permissions.';
     }
 
     return true;
@@ -254,7 +262,7 @@ function runPostInstallMigrations(PDO $pdo)
     return true;
 }
 
-function generateEnvFile($db, $site, $email = null)
+function generateEnvFile($db, $site, $email = null, $installed = false)
 {
     $appKey = 'base64:' . base64_encode(random_bytes(32));
     $appUrl = rtrim($site['url'], '/') ?: 'http://localhost';
@@ -270,6 +278,7 @@ function generateEnvFile($db, $site, $email = null)
     };
     $mailFromAddress = $email['mail_from'] ?? '';
     $mailFromName = $email['mail_name'] ?? '';
+    $installedFlag = $installed ? 'true' : 'false';
 
     return <<<ENV
 APP_NAME="{$site['name']}"
@@ -278,7 +287,7 @@ APP_KEY={$appKey}
 APP_DEBUG=false
 APP_URL={$appUrl}
 
-INSTALLED=true
+INSTALLED={$installedFlag}
 
 DB_CONNECTION=mysql
 DB_HOST={$db['host']}
@@ -291,6 +300,7 @@ SESSION_DRIVER=file
 CACHE_STORE=file
 CACHE_DRIVER=file
 QUEUE_CONNECTION=sync
+LOG_CHANNEL=single
 
 MAIL_MAILER={$mailMailer}
 MAIL_HOST={$mailHost}
@@ -308,7 +318,7 @@ function checkRequirements()
 {
     $requirements = [];
 
-    $requirements['PHP >= 8.2'] = version_compare(PHP_VERSION, '8.2.0', '>=');
+    $requirements['PHP >= 8.3'] = version_compare(PHP_VERSION, '8.3.0', '>=');
     $requirements['PDO Extension'] = extension_loaded('pdo');
     $requirements['PDO MySQL'] = extension_loaded('pdo_mysql');
     $requirements['OpenSSL'] = extension_loaded('openssl');
@@ -748,7 +758,8 @@ $allRequirementsMet = !in_array(false, $requirements, true);
 
                     <div
                         style="background: #fef3c7; color: #92400e; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left;">
-                        <strong>⚠️ Important:</strong> Delete or rename the <code>/install</code> folder for security.
+                        <strong>Security Note:</strong> The installer is now locked automatically.
+                        You may still remove the <code>/install</code> folder if you do not need it anymore.
                     </div>
 
                     <a href="../" class="btn btn-primary" style="text-decoration: none;">Go to Website →</a>

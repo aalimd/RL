@@ -2,13 +2,13 @@
 
 namespace App\Mail;
 
+use App\Models\Request;
+use App\Services\EmailTemplateRenderer;
 use Illuminate\Bus\Queueable;
-
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Request;
 
 class TrackingVerificationCode extends Mailable
 {
@@ -16,8 +16,10 @@ class TrackingVerificationCode extends Mailable
 
     public $requestModel;
     public $otp;
-    public $renderedBody;
-    protected $template;
+    public array $branding;
+    public string $subjectLine;
+    public ?string $renderedBody;
+    public ?string $renderedText;
 
     /**
      * Create a new message instance.
@@ -26,8 +28,16 @@ class TrackingVerificationCode extends Mailable
     {
         $this->requestModel = $requestModel;
         $this->otp = $otp;
-        $this->template = \App\Models\EmailTemplate::where('name', 'tracking_verification')->first();
-        $this->renderedBody = $this->template ? $this->replaceVariables($this->template->body) : null;
+        $template = app(EmailTemplateRenderer::class)->render(
+            'tracking_verification',
+            $this->templateVariables(),
+            'Your access code for request {tracking_id}'
+        );
+
+        $this->branding = $template['branding'];
+        $this->subjectLine = $template['subject'];
+        $this->renderedBody = $template['body_html'];
+        $this->renderedText = $template['body_text'];
     }
 
     /**
@@ -35,13 +45,8 @@ class TrackingVerificationCode extends Mailable
      */
     public function envelope(): Envelope
     {
-        $subject = 'Verification Code - ' . $this->requestModel->tracking_id;
-        if ($this->template) {
-            $subject = $this->replaceVariables($this->template->subject);
-        }
-
         return new Envelope(
-            subject: $subject,
+            subject: $this->subjectLine,
         );
     }
 
@@ -52,20 +57,26 @@ class TrackingVerificationCode extends Mailable
     {
         return new Content(
             view: 'emails.tracking_verification',
+            text: 'emails.text.tracking_verification',
             with: [
                 'body' => $this->renderedBody,
+                'textBody' => $this->renderedText,
+                'branding' => $this->branding,
+                'requestModel' => $this->requestModel,
+                'otp' => $this->otp,
             ],
         );
     }
 
-    protected function replaceVariables($content)
+    protected function templateVariables(): array
     {
-        $vars = [
-            '{student_name}' => $this->requestModel->student_name,
-            '{tracking_id}' => $this->requestModel->tracking_id,
-            '{otp}' => $this->otp,
+        return [
+            'student_name' => $this->requestModel->student_name,
+            'tracking_id' => $this->requestModel->tracking_id,
+            'otp' => $this->otp,
+            'request_id' => (string) $this->requestModel->id,
+            'expires_in_minutes' => '5',
         ];
-        return str_replace(array_keys($vars), array_values($vars), $content);
     }
 
     /**

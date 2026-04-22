@@ -118,34 +118,35 @@
         img {
             max-width: 100%;
             height: auto;
+        }
 
-            /* Watermark Styles */
-            .watermark {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%) rotate(-45deg);
-                font-size: 80pt;
-                color: rgba(200, 200, 200, 0.15);
-                font-weight: bold;
-                z-index: -1;
-                white-space: nowrap;
-                pointer-events: none;
-                user-select: none;
-            }
+        /* Watermark Styles */
+        .watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 80pt;
+            color: rgba(200, 200, 200, 0.15);
+            font-weight: bold;
+            z-index: -1;
+            white-space: nowrap;
+            pointer-events: none;
+            user-select: none;
+        }
 
-            /* Digital Footer Styles */
-            .digital-footer {
-                margin-top: 30px;
-                border-top: 2px solid #eee;
-                padding-top: 10px;
-                font-size: 8pt;
-                color: #666;
-                text-align: center;
-                background-color: #f9f9f9;
-                padding: 10px;
-                border-radius: 4px;
-            }
+        /* Digital Footer Styles */
+        .digital-footer {
+            margin-top: 30px;
+            border-top: 2px solid #eee;
+            padding-top: 10px;
+            font-size: 8pt;
+            color: #666;
+            text-align: center;
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 

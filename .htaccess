@@ -1,8 +1,9 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Block installer after setup (when backend/.env exists), backend source tree, and hidden files
-    RewriteCond backend/.env -f
+    # Block installer after setup only when the installation lock exists.
+    RewriteCond %{REQUEST_FILENAME} ^(.+?)/install(?:/.*)?$
+    RewriteCond %1/backend/storage/app/install.lock -f
     RewriteRule ^install(?:/|$) - [F,L,NC]
     RewriteRule ^backend/ - [F,L,NC]
     RewriteRule (^|/)\. - [F,L]

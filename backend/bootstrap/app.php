@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\CheckRole::class,
             'twofactor' => \App\Http\Middleware\TwoFactorMiddleware::class,
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
+            'api.twofactor' => \App\Http\Middleware\EnsureApiTwoFactorVerified::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

@@ -586,6 +586,47 @@
             border: 1px solid var(--border-color);
         }
 
+        .email-guidance-card {
+            margin: 1.25rem auto 1.75rem;
+            max-width: 560px;
+            padding: 1rem 1.1rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(var(--primary-rgb), 0.18);
+            background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--primary-rgb), 0.04));
+            text-align: left;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            box-shadow: 0 16px 30px -22px rgba(var(--primary-rgb), 0.45);
+        }
+
+        .email-guidance-icon {
+            flex-shrink: 0;
+            width: 42px;
+            height: 42px;
+            border-radius: 0.9rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 12px 24px -16px rgba(var(--primary-rgb), 0.5);
+        }
+
+        .email-guidance-title {
+            margin: 0 0 0.3rem 0;
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .email-guidance-text {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.65;
+            font-size: 0.93rem;
+        }
+
         .tracking-label {
             font-size: 0.875rem;
             color: var(--text-muted);
@@ -827,6 +868,29 @@
                         <h2 class="success-title">{{ session('success_title', 'Request Submitted Successfully!') }}</h2>
                         <p class="success-subtitle">
                             {{ session('success_subtitle', 'Your recommendation request has been received.') }}</p>
+
+                        <div class="email-guidance-card">
+                            <div class="email-guidance-icon">
+                                <i data-lucide="mail-search" style="width: 20px; height: 20px;"></i>
+                            </div>
+                            <div>
+                                <p class="email-guidance-title">Confirmation email reminder</p>
+                                @if(session('confirmation_email_sent'))
+                                    <p class="email-guidance-text">
+                                        A confirmation email was sent to
+                                        <strong>{{ session('confirmation_email_hint', 'your registered email address') }}</strong>.
+                                        If it does not appear within a few minutes, please check your spam or junk folder
+                                        and mark the message as safe.
+                                    </p>
+                                @else
+                                    <p class="email-guidance-text">
+                                        Please watch your inbox for a confirmation email. If it is not visible within a few
+                                        minutes, check your spam or junk folder first. You can still use your tracking ID
+                                        below to follow your request.
+                                    </p>
+                                @endif
+                            </div>
+                        </div>
 
                         <div class="tracking-box"
                             style="display: flex; align-items: center; justify-content: center; gap: 1rem;">

@@ -16,7 +16,7 @@ return [
     */
 
     // Backward compatible with older installs that still set CACHE_DRIVER.
-    'default' => env('CACHE_STORE', env('CACHE_DRIVER', 'database')),
+    'default' => env('CACHE_STORE', env('CACHE_DRIVER', 'file')),
 
     /*
     |--------------------------------------------------------------------------
@@ -103,6 +103,9 @@ return [
     | that reason, you may prefix every cache key to avoid collisions.
     |
     */
+
+    // Laravel 13 hardens cache unserialization. We only cache scalars/arrays.
+    'serializable_classes' => false,
 
     'prefix' => env('CACHE_PREFIX', Str::slug(env('APP_NAME', 'laravel'), '_').'_cache_'),
 

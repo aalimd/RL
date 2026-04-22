@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\TwoFactorCodeMail;
 use App\Models\Settings;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use PragmaRX\Google2FA\Google2FA;
 
 class TwoFactorController extends Controller
 {
@@ -39,7 +41,7 @@ class TwoFactorController extends Controller
         $method = $request->input('method', 'app'); // 'app' or 'email'
 
         if ($method === 'app') {
-            $google2fa = app('pragmarx.google2fa');
+            $google2fa = $this->google2fa();
             $secret = $google2fa->generateSecretKey();
 
             $request->session()->put('2fa_setup_secret', $secret);
@@ -63,10 +65,11 @@ class TwoFactorController extends Controller
             $request->session()->put('2fa_setup_method', 'email');
 
             try {
-                Mail::raw("Your 2FA Code is: $code", function ($message) use ($user) {
-                    $message->to($user->email)
-                        ->subject('2FA Verification Code');
-                });
+                Mail::to($user->email)->send(new TwoFactorCodeMail(
+                    $code,
+                    $user->name,
+                    'finish two-factor setup'
+                ));
             } catch (\Exception $e) {
                 return response()->json(['message' => 'Failed to send email. Check SMTP settings.'], 500);
             }
@@ -94,7 +97,7 @@ class TwoFactorController extends Controller
 
         if ($method === 'app') {
             $secret = session('2fa_setup_secret');
-            $google2fa = app('pragmarx.google2fa');
+            $google2fa = $this->google2fa();
 
             $valid = $google2fa->verifyKey($secret, $code);
 
@@ -203,7 +206,7 @@ class TwoFactorController extends Controller
         $code = $request->input('code');
 
         if ($user->two_factor_method === 'app') {
-            $google2fa = app('pragmarx.google2fa');
+            $google2fa = $this->google2fa();
             // The model cast already decrypts this value for us.
             $secret = $user->two_factor_secret;
             if (!$secret) {
@@ -266,9 +269,11 @@ class TwoFactorController extends Controller
         ])->save();
 
         try {
-            Mail::raw("Your Login Code: $code", function ($message) use ($user) {
-                $message->to($user->email)->subject('Login Verification Code');
-            });
+            Mail::to($user->email)->send(new TwoFactorCodeMail(
+                $code,
+                $user->name,
+                'complete sign-in'
+            ));
 
             return true;
         } catch (\Exception $e) {
@@ -284,5 +289,10 @@ class TwoFactorController extends Controller
     private function getLayoutSettings(): array
     {
         return Settings::all()->pluck('value', 'key')->toArray();
+    }
+
+    private function google2fa(): Google2FA
+    {
+        return new Google2FA();
     }
 }

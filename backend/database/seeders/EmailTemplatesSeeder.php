@@ -15,27 +15,39 @@ class EmailTemplatesSeeder extends Seeder
         $templates = [
             [
                 'name' => 'request_submitted_student',
-                'subject' => 'We received your recommendation request',
-                'body' => '<p>Dear {student_name},</p><p>We have received your request for a recommendation letter.</p><p>Tracking ID: <strong>{tracking_id}</strong></p><p>We will review it and notify you shortly.</p><p>Regards,<br>{university}</p>',
-                'variables' => ['student_name', 'tracking_id', 'university']
+                'subject' => 'Request received - {tracking_id}',
+                'body' => '<p>Hello {student_name},</p><p>We received your recommendation request and added it to the review queue.</p><p><strong>Tracking ID:</strong> {tracking_id}<br><strong>Request ID:</strong> #{request_id}<br><strong>Submitted:</strong> {submitted_at}</p><p>You can check the latest status at any time from your tracking page: <a href="{tracking_link}">{tracking_link}</a></p>',
+                'variables' => ['student_name', 'tracking_id', 'request_id', 'submitted_at', 'tracking_link', 'purpose', 'university', 'site_name', 'support_email']
             ],
             [
                 'name' => 'request_submitted_admin',
-                'subject' => 'New Recommendation Request: {student_name}',
-                'body' => '<p>New request received from <strong>{student_name}</strong>.</p><p>Purpose: {purpose}</p><p><a href="{admin_link}">View Request</a></p>',
-                'variables' => ['student_name', 'purpose', 'admin_link']
+                'subject' => 'New request received - {student_name} ({tracking_id})',
+                'body' => '<p>A new recommendation request has been submitted and is ready for review.</p><p><strong>Student:</strong> {student_full_name}<br><strong>Email:</strong> {student_email}<br><strong>Tracking ID:</strong> {tracking_id}<br><strong>Request ID:</strong> #{request_id}<br><strong>Submitted:</strong> {submitted_at}</p><p><a href="{admin_link}">Open the request in the admin panel</a></p>',
+                'variables' => ['student_name', 'student_full_name', 'student_email', 'tracking_id', 'request_id', 'submitted_at', 'purpose', 'university', 'admin_link', 'site_name']
             ],
             [
                 'name' => 'request_status_updated',
-                'subject' => 'Update on your request: {status}',
-                'body' => '<p>Dear {student_name},</p><p>Your request status has been updated to: <strong>{status}</strong>.</p><div style="background:#f3f4f6;padding:10px;margin:10px 0;">{admin_message}</div><p>You can track progress here: <a href="{tracking_link}">{tracking_link}</a></p>',
-                'variables' => ['student_name', 'status', 'admin_message', 'tracking_link']
+                'subject' => 'Request status updated: {status} - {tracking_id}',
+                'body' => '<p>Hello {student_name},</p><p>Your recommendation request now has the following status: <strong>{status}</strong>.</p><p><strong>Tracking ID:</strong> {tracking_id}<br><strong>Request ID:</strong> #{request_id}</p><p>{student_message}</p><p>Review the latest details here: <a href="{tracking_link}">{tracking_link}</a></p>',
+                'variables' => ['student_name', 'status', 'student_message', 'rejection_reason', 'tracking_id', 'request_id', 'tracking_link', 'site_name', 'support_email']
+            ],
+            [
+                'name' => 'request_status_update',
+                'subject' => 'Request status updated: {status} - {tracking_id}',
+                'body' => '<p>Hello {student_name},</p><p>Your recommendation request now has the following status: <strong>{status}</strong>.</p><p><strong>Tracking ID:</strong> {tracking_id}<br><strong>Request ID:</strong> #{request_id}</p><p>{student_message}</p><p>Review the latest details here: <a href="{tracking_link}">{tracking_link}</a></p>',
+                'variables' => ['student_name', 'status', 'student_message', 'rejection_reason', 'tracking_id', 'request_id', 'tracking_link', 'site_name', 'support_email']
             ],
             [
                 'name' => 'tracking_verification',
-                'subject' => 'Verification Code - {tracking_id}',
-                'body' => '<p>Hello <strong>{student_name}</strong>,</p><p>To access the details of your request <strong>#{tracking_id}</strong>, please use the verification code below:</p><div style="background: #ffffff; border: 2px dashed #007bff; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #007bff; margin: 20px 0; border-radius: 5px;">{otp}</div><p>This code will expire in 5 minutes. If you did not request this code, please ignore this email.</p>',
-                'variables' => ['student_name', 'tracking_id', 'otp']
+                'subject' => 'Your access code for request {tracking_id}',
+                'body' => '<p>Hello {student_name},</p><p>Use the code below to securely access request <strong>{tracking_id}</strong>.</p><p><strong>Code:</strong> {otp}</p><p>This code expires in {expires_in_minutes} minutes. If you did not request it, you can ignore this email.</p>',
+                'variables' => ['student_name', 'tracking_id', 'otp', 'expires_in_minutes', 'site_name', 'support_email']
+            ],
+            [
+                'name' => 'two_factor_code',
+                'subject' => 'Your verification code for {site_name}',
+                'body' => '<p>Hello {user_name},</p><p>Use the verification code below to {action_label}.</p><p><strong>Code:</strong> {code}</p><p>This code expires in {expires_in_minutes} minutes. If you did not request it, you can ignore this email.</p>',
+                'variables' => ['user_name', 'action_label', 'code', 'expires_in_minutes', 'site_name', 'support_email']
             ]
         ];
 

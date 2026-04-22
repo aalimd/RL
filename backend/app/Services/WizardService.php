@@ -13,9 +13,16 @@ class WizardService
      */
     public function getFormConfig(): array
     {
-        $allSettings = Settings::whereIn('key', ['templateSelectionMode', 'defaultTemplateId', 'allowCustomContent', 'formFieldConfig'])
-            ->pluck('value', 'key')
-            ->toArray();
+        try {
+            $allSettings = Settings::whereIn('key', ['templateSelectionMode', 'defaultTemplateId', 'allowCustomContent', 'formFieldConfig'])
+                ->pluck('value', 'key')
+                ->toArray();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Wizard settings lookup failed. Using fallback defaults.', [
+                'error' => $e->getMessage(),
+            ]);
+            $allSettings = [];
+        }
 
         $templateMode = $allSettings['templateSelectionMode'] ?? 'student_choice';
         if (!in_array($templateMode, ['student_choice', 'admin_fixed', 'custom_only'], true)) {
@@ -52,17 +59,25 @@ class WizardService
      */
     public function getTemplates(array $formConfig)
     {
-        if (($formConfig['templateMode'] ?? 'student_choice') === 'admin_fixed') {
-            if (empty($formConfig['defaultTemplateId'])) {
-                return Template::whereRaw('1 = 0')->get();
+        try {
+            if (($formConfig['templateMode'] ?? 'student_choice') === 'admin_fixed') {
+                if (empty($formConfig['defaultTemplateId'])) {
+                    return Template::whereRaw('1 = 0')->get();
+                }
+
+                return Template::where('id', $formConfig['defaultTemplateId'])
+                    ->where('is_active', true)
+                    ->get();
             }
 
-            return Template::where('id', $formConfig['defaultTemplateId'])
-                ->where('is_active', true)
-                ->get();
-        }
+            return Template::where('is_active', true)->orderBy('name')->get();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Template lookup failed for wizard. Returning no templates.', [
+                'error' => $e->getMessage(),
+            ]);
 
-        return Template::where('is_active', true)->orderBy('name')->get();
+            return collect();
+        }
     }
 
     /**
@@ -119,7 +134,7 @@ class WizardService
             'student_email' => ['display' => 'Email', 'rule' => 'email|max:255'],
             'university' => ['display' => 'University', 'rule' => 'string|max:255'],
             'verification_token' => ['display' => 'ID number', 'rule' => 'string|max:100'],
-            'training_period' => ['display' => 'Training period', 'rule' => 'string'],
+            'training_period' => ['display' => 'Training period', 'rule' => 'date_format:Y-m'],
             'phone' => ['display' => 'Phone number', 'rule' => 'regex:/^([0-9\s\-\+\(\)]*)$/|min:10|max:20'],
             'major' => ['display' => 'Major', 'rule' => 'string|max:255'],
         ];

@@ -2,13 +2,13 @@
 
 namespace App\Mail;
 
+use App\Models\Request as RequestModel;
+use App\Services\EmailTemplateRenderer;
 use Illuminate\Bus\Queueable;
-
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use App\Models\Request as RequestModel;
 
 class RequestSubmittedToStudent extends Mailable
 {
@@ -16,21 +16,31 @@ class RequestSubmittedToStudent extends Mailable
 
     public RequestModel $request;
     public string $trackingUrl;
+    public array $branding;
+    public string $subjectLine;
     public ?string $renderedBody;
-    protected $template;
+    public ?string $renderedText;
 
     public function __construct(RequestModel $request)
     {
         $this->request = $request;
         $this->trackingUrl = url('/track/' . $request->tracking_id);
-        $this->template = \App\Models\EmailTemplate::where('name', 'request_submitted_student')->first();
-        $this->renderedBody = $this->template ? $this->replaceVariables($this->template->body) : null;
+        $template = app(EmailTemplateRenderer::class)->render(
+            'request_submitted_student',
+            $this->templateVariables(),
+            'Request received - Tracking ID {tracking_id}'
+        );
+
+        $this->branding = $template['branding'];
+        $this->subjectLine = $template['subject'];
+        $this->renderedBody = $template['body_html'];
+        $this->renderedText = $template['body_text'];
     }
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: $this->template ? $this->replaceVariables($this->template->subject) : 'Your Recommendation Request Has Been Received',
+            subject: $this->subjectLine,
         );
     }
 
@@ -38,23 +48,28 @@ class RequestSubmittedToStudent extends Mailable
     {
         return new Content(
             view: 'emails.request-submitted-student',
+            text: 'emails.text.request-submitted-student',
             with: [
                 'request' => $this->request,
                 'trackingUrl' => $this->trackingUrl,
                 'body' => $this->renderedBody,
+                'textBody' => $this->renderedText,
+                'branding' => $this->branding,
             ],
         );
     }
 
-    protected function replaceVariables($content)
+    protected function templateVariables(): array
     {
-        $vars = [
-            '{student_name}' => $this->request->student_name,
-            '{tracking_id}' => $this->request->tracking_id,
-            '{request_id}' => (string) $this->request->id,
-            '{tracking_link}' => $this->trackingUrl,
-            '{university}' => $this->request->university ?? 'Our University',
+        return [
+            'student_name' => $this->request->student_name,
+            'tracking_id' => $this->request->tracking_id,
+            'request_id' => (string) $this->request->id,
+            'tracking_link' => $this->trackingUrl,
+            'university' => $this->request->university ?? '',
+            'purpose' => $this->request->purpose ?? '',
+            'student_email' => $this->request->student_email,
+            'submitted_at' => optional($this->request->created_at)->format('M d, Y h:i A') ?? '',
         ];
-        return str_replace(array_keys($vars), array_values($vars), $content);
     }
 }

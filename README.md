@@ -3,7 +3,7 @@
 ## Installation Guide
 
 ### Requirements
-- PHP 8.1 or higher
+- PHP 8.3 or higher
 - MySQL 5.7+ or MariaDB 10.3+
 - Apache with mod_rewrite enabled
 - Required PHP Extensions: PDO, PDO_MySQL, OpenSSL, Mbstring, Tokenizer, JSON, cURL
@@ -14,8 +14,9 @@
 
 ### 1. Upload Files
 Upload all files to your hosting:
-- Upload the entire folder contents to your web root or a subdirectory
-- Ensure `backend/storage` folder has write permissions (755 or 775)
+- Upload the entire project to your web root, such as `public_html`
+- This app is designed so the root `index.php` forwards requests into `backend/public`
+- Ensure `backend/storage` and `backend/bootstrap/cache` have write permissions (775 recommended)
 
 ### 2. Run Installation Wizard
 Navigate to: `https://yourdomain.com/install/`
@@ -29,7 +30,7 @@ The wizard will guide you through:
 6. **Installation** - Complete the setup
 
 ### 3. Post-Installation Security
-⚠️ **Important**: After successful installation, delete or rename the `/install` folder for security.
+⚠️ **Important**: After successful installation, the installer is auto-locked. Deleting or renaming `/install` is optional extra hardening, not a required recovery step.
 
 ---
 
@@ -53,6 +54,10 @@ DB_HOST=localhost
 DB_DATABASE=recommendation_db
 DB_USERNAME=your_username
 DB_PASSWORD=your_password
+SESSION_DRIVER=file
+CACHE_STORE=file
+QUEUE_CONNECTION=sync
+LOG_CHANNEL=single
 ```
 
 ### 4. Create Admin User
@@ -113,7 +118,9 @@ Configure email in: Admin Panel → Settings → Email Settings
 - Check `backend/storage/logs/laravel.log` for errors
 - If `LOG_CHANNEL=errorlog`, check your server PHP/Apache error log instead.
 - Ensure storage folder is writable: `chmod -R 775 backend/storage`
+- Ensure `backend/bootstrap/cache` is writable too
 - Ensure cache store is file-based on shared hosting: `CACHE_STORE=file`
+- Ensure the website itself is using PHP 8.3 or higher, not just the SSH CLI version
 
 ### Email Not Sending
 - Verify SMTP settings in Admin → Settings
@@ -124,6 +131,10 @@ Configure email in: Admin Panel → Settings → Email Settings
 ### Page Not Found
 - Ensure mod_rewrite is enabled
 - Check .htaccess files are properly uploaded
+
+### Uploaded Images Not Showing
+- The app can serve uploaded public assets through `/media/...` even if `storage:link` is unavailable
+- If you do have SSH and prefer direct `/storage/...` URLs, run `php artisan storage:link`
 
 ---
 

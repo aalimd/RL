@@ -2,15 +2,16 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     public function up(): void
     {
-        Schema::table('templates', function (Blueprint $table) {
-            // Check for existing indexes to avoid duplicates
-            $indexes = collect(\Illuminate\Support\Facades\DB::select("SHOW INDEX FROM templates"))->pluck('Key_name')->all();
+        $driver = Schema::getConnection()->getDriverName();
+        $indexes = $this->getIndexNames('templates', $driver);
 
+        Schema::table('templates', function (Blueprint $table) use ($indexes) {
             if (!in_array('templates_is_active_index', $indexes)) {
                 $table->index('is_active');
             }
@@ -24,6 +25,15 @@ return new class extends Migration {
                 $table->index('created_at');
             }
         });
+    }
+
+    private function getIndexNames(string $table, string $driver): array
+    {
+        if ($driver === 'sqlite') {
+            return collect(DB::select("PRAGMA index_list('$table')"))->pluck('name')->all();
+        }
+
+        return collect(DB::select("SHOW INDEX FROM $table"))->pluck('Key_name')->all();
     }
 
     public function down(): void

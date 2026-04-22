@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Mail\Transports\ZeptoMailTransport;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
 use App\Models\Settings;
@@ -23,6 +25,15 @@ class MailConfigServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Mail::extend('zeptomail', function (array $config = []) {
+            $config = array_merge(config('zeptomail', []), $config);
+
+            return new ZeptoMailTransport(
+                (string) ($config['token'] ?? ''),
+                (string) ($config['host'] ?? 'zoho.com')
+            );
+        });
+
         // Check if application is installed before attempting DB connection
         if (config('app.installed') !== true && config('app.installed') !== 'true') {
             return;

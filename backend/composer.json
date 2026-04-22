@@ -8,24 +8,42 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
-        "barryvdh/laravel-dompdf": "^3.1",
-        "laravel/framework": "^11.0",
+        "php": "^8.3",
+        "dompdf/dompdf": "^3.1",
+        "ezyang/htmlpurifier": "^4.19",
+        "laravel/framework": "^13.0",
         "laravel/sanctum": "^4.0",
-        "laravel/tinker": "^2.9",
-        "mews/purifier": "^3.4",
-        "simplesoftwareio/simple-qrcode": "^4.2",
-        "pragmarx/google2fa-laravel": "^2.0",
-        "zohomail/laravel-zeptomail": "dev-main"
+        "laravel/tinker": "^3.0",
+        "pragmarx/google2fa": "^8.0",
+        "simplesoftwareio/simple-qrcode": "^4.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
-        "laravel/pint": "^1.13",
+        "laravel/pint": "^1.27",
         "laravel/sail": "^1.26",
         "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.0",
-        "phpunit/phpunit": "^11.0.1",
+        "nunomaduro/collision": "^8.6",
+        "phpunit/phpunit": "^12.5.12",
         "spatie/laravel-ignition": "^2.4"
+    },
+    "conflict": {
+        "symfony/clock": ">=8.0",
+        "symfony/console": ">=8.0",
+        "symfony/css-selector": ">=8.0",
+        "symfony/error-handler": ">=8.0",
+        "symfony/event-dispatcher": ">=8.0",
+        "symfony/finder": ">=8.0",
+        "symfony/http-foundation": ">=8.0",
+        "symfony/http-kernel": ">=8.0",
+        "symfony/mailer": ">=8.0",
+        "symfony/mime": ">=8.0",
+        "symfony/process": ">=8.0",
+        "symfony/routing": ">=8.0",
+        "symfony/string": ">=8.0",
+        "symfony/translation": ">=8.0",
+        "symfony/uid": ">=8.0",
+        "symfony/var-dumper": ">=8.0",
+        "symfony/yaml": ">=8.0"
     },
     "autoload": {
         "psr-4": {
@@ -41,6 +59,7 @@
     },
     "scripts": {
         "post-autoload-dump": [
+            "@php scripts/patch-qr-php84-deprecations.php",
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
         ],

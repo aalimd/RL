@@ -259,7 +259,8 @@
                             <div class="form-group">
                                 <label class="form-label">From Name</label>
                                 <input type="text" name="mailFromName" class="form-input"
-                                    value="{{ $settings['mailFromName'] ?? '' }}" placeholder="System Name">
+                                    value="{{ $settings['mailFromName'] ?? '' }}"
+                                    placeholder="{{ $settings['siteName'] ?? config('app.name') }}">
                             </div>
                         </div>
 

@@ -6,19 +6,21 @@ use App\Models\Request as RequestModel;
 use App\Models\Settings;
 use App\Services\TelegramService;
 use App\Services\LetterService;
+use App\Services\RequestStatusService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class TelegramController extends Controller
 {
     protected $telegram;
     protected $letterService;
+    protected $requestStatusService;
 
-    public function __construct(TelegramService $telegram, LetterService $letterService)
+    public function __construct(TelegramService $telegram, LetterService $letterService, RequestStatusService $requestStatusService)
     {
         $this->telegram = $telegram;
         $this->letterService = $letterService;
+        $this->requestStatusService = $requestStatusService;
     }
 
     /**
@@ -99,22 +101,15 @@ class TelegramController extends Controller
         if (!$req)
             return;
 
-        $req->status = $status;
-
-        // Generate verify_token if missing (for Approved requests mostly, but good integration)
-        if ($status === 'Approved' && !$req->verify_token) {
-            $req->verify_token = \Str::random(32);
+        $transitionContext = [];
+        if ($status === 'Needs Revision') {
+            $transitionContext['admin_message'] = 'Please review your request details and submit the requested revisions.';
+        } elseif ($status === 'Rejected') {
+            $transitionContext['rejection_reason'] = 'Your request has been declined. Please contact support if you need more details.';
         }
 
-        $req->save();
-
-        // Send email to student
-        try {
-            Mail::to($req->student_email)
-                ->send(new \App\Mail\RequestStatusUpdated($req));
-        } catch (\Exception $e) {
-            Log::error("Telegram $status email failed: " . $e->getMessage());
-        }
+        $req = $this->requestStatusService->transition($req, $status, $transitionContext);
+        $this->requestStatusService->notifyStudent($req);
 
         // Audit Log
         \App\Models\AuditLog::create([
@@ -125,29 +120,6 @@ class TelegramController extends Controller
 
         // Send feedback to Admin via Telegram
         $this->telegram->sendMessage("$feedbackMessage\n👤 Student: {$req->student_name}\n📧 Email notification sent.");
-
-        // Send Notification to Student (if subscribed)
-        if ($req->telegram_chat_id) {
-            $studentMsg = "🔔 <b>Update on your Request</b>\n\n";
-            $studentMsg .= "Your request status has been updated to: <b>$status</b>\n";
-            if ($status === 'Approved') {
-                $studentMsg .= "✅ Congratulations! Check your email for the recommendation letter.";
-            } elseif ($status === 'Rejected') {
-                $studentMsg .= "❌ We are sorry, but your request has been declined. Check your email for details.";
-            } elseif ($status === 'Needs Revision') {
-                $studentMsg .= "📝 Additional information is needed. Please check your email.";
-            }
-
-            // Send to student
-            try {
-                // Determine student bot token/chat ID? 
-                // Wait, we use the SAME bot. So we just send to $req->telegram_chat_id
-                // We need to use a clean sendMessage method that accepts chatId
-                $this->telegram->sendMessageToChat($req->telegram_chat_id, $studentMsg);
-            } catch (\Exception $e) {
-                Log::error("Failed to send Telegram update to student: " . $e->getMessage());
-            }
-        }
     }
 
     /**

@@ -3,10 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Settings;
+use App\Services\PublicAssetUrlService;
 use Illuminate\Http\Request;
 
 class SettingsController extends Controller
 {
+    public function __construct(private PublicAssetUrlService $publicAssetUrlService)
+    {
+    }
+
     // GET /api/settings
     public function index()
     {
@@ -14,7 +19,9 @@ class SettingsController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $settings = Settings::all()->pluck('value', 'key');
+        $settings = Settings::all()->pluck('value', 'key')->toArray();
+        $settings = $this->publicAssetUrlService->normalizeSettings($settings);
+
         return response()->json($settings);
     }
 
@@ -108,7 +115,9 @@ class SettingsController extends Controller
             'showBranding' // Added logic keys
         ];
 
-        $settings = Settings::whereIn('key', $publicKeys)->pluck('value', 'key');
+        $settings = Settings::whereIn('key', $publicKeys)->pluck('value', 'key')->toArray();
+        $settings = $this->publicAssetUrlService->normalizeSettings($settings);
+
         return response()->json($settings);
     }
 }

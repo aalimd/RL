@@ -14,9 +14,18 @@ class TelegramService
 
     public function __construct()
     {
-        // Load settings from database
-        $this->botToken = Settings::getValue('telegram_bot_token');
-        $this->chatId = Settings::getValue('telegram_chat_id');
+        try {
+            // Load settings from database
+            $this->botToken = Settings::getValue('telegram_bot_token');
+            $this->chatId = Settings::getValue('telegram_chat_id');
+        } catch (\Throwable $e) {
+            $this->botToken = null;
+            $this->chatId = null;
+
+            Log::warning('Telegram settings lookup failed. Telegram features are temporarily disabled.', [
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -160,14 +169,19 @@ class TelegramService
      */
     public function getBotUsername()
     {
-        // Check DB first
-        $username = Settings::getValue('telegram_bot_username');
-        if ($username) {
-            return $username;
-        }
-
         if (!$this->botToken) {
             return null;
+        }
+
+        try {
+            $username = Settings::getValue('telegram_bot_username');
+            if ($username) {
+                return $username;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Telegram bot username lookup failed. Falling back to API lookup.', [
+                'error' => $e->getMessage(),
+            ]);
         }
 
         // Fetch from API
@@ -178,10 +192,17 @@ class TelegramService
                 $username = $data['result']['username'] ?? null;
 
                 if ($username) {
-                    Settings::updateOrCreate(
-                        ['key' => 'telegram_bot_username'],
-                        ['value' => $username]
-                    );
+                    try {
+                        Settings::updateOrCreate(
+                            ['key' => 'telegram_bot_username'],
+                            ['value' => $username]
+                        );
+                    } catch (\Throwable $e) {
+                        Log::warning('Telegram bot username could not be cached in settings.', [
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+
                     return $username;
                 }
             }

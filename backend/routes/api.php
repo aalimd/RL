@@ -32,26 +32,29 @@ Route::any('/telegram/webhook', [App\Http\Controllers\TelegramController::class,
 
 // Protected Routes
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
-    Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-    // Requests
-    Route::get('/requests', [RequestController::class, 'index']);
-    Route::get('/requests/{id}', [RequestController::class, 'show']);
-    Route::put('/requests/{id}', [RequestController::class, 'update']);
-    Route::put('/requests/{id}/status', [RequestController::class, 'updateStatus']);
-    Route::put('/requests/{id}/archive', [RequestController::class, 'archive']);
+    Route::middleware('api.twofactor')->group(function () {
+        Route::get('/auth/me', [AuthController::class, 'me']);
 
-    // Templates
-    Route::apiResource('templates', TemplateController::class);
+        // Requests
+        Route::get('/requests', [RequestController::class, 'index']);
+        Route::get('/requests/{id}', [RequestController::class, 'show']);
+        Route::put('/requests/{id}', [RequestController::class, 'update']);
+        Route::put('/requests/{id}/status', [RequestController::class, 'updateStatus']);
+        Route::put('/requests/{id}/archive', [RequestController::class, 'archive']);
 
-    // Settings
-    Route::get('/settings', [SettingsController::class, 'index']);
-    Route::put('/settings', [SettingsController::class, 'update']);
+        // Templates
+        Route::apiResource('templates', TemplateController::class);
 
-    // Analytics
-    Route::get('/analytics', [AnalyticsController::class, 'index']);
+        // Settings
+        Route::get('/settings', [SettingsController::class, 'index']);
+        Route::put('/settings', [SettingsController::class, 'update']);
 
-    // Audit Logs
-    Route::get('/audit-logs', [AuditLogController::class, 'index']);
+        // Analytics
+        Route::get('/analytics', [AnalyticsController::class, 'index']);
+
+        // Audit Logs
+        Route::get('/audit-logs', [AuditLogController::class, 'index']);
+    });
 });

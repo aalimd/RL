@@ -12,9 +12,15 @@ class TemplateService
      */
     public function getActiveTemplate(): ?Template
     {
-        return Cache::remember('active_template', 3600, function () {
-            return Template::where('is_active', true)->first();
+        $attributes = Cache::remember('active_template_v2', 3600, function () {
+            return Template::where('is_active', true)->first()?->getAttributes();
         });
+
+        if (!is_array($attributes)) {
+            return null;
+        }
+
+        return Template::newFromBuilder($attributes);
     }
 
     /**
@@ -22,9 +28,14 @@ class TemplateService
      */
     public function getAllTemplates()
     {
-        return Cache::remember('all_templates', 1800, function () {
-            return Template::orderBy('name')->get();
+        $templates = Cache::remember('all_templates_v2', 1800, function () {
+            return Template::orderBy('name')
+                ->get()
+                ->map(static fn (Template $template) => $template->getAttributes())
+                ->all();
         });
+
+        return Template::hydrate(is_array($templates) ? $templates : []);
     }
 
     /**
@@ -32,7 +43,7 @@ class TemplateService
      */
     public function clearCache(): void
     {
-        Cache::forget('active_template');
-        Cache::forget('all_templates');
+        Cache::forget('active_template_v2');
+        Cache::forget('all_templates_v2');
     }
 }

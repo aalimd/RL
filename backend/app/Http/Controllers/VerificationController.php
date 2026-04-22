@@ -4,10 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Request as RequestModel;
 use App\Models\Settings;
+use App\Services\PublicAssetUrlService;
 use Illuminate\Http\Request;
 
 class VerificationController extends Controller
 {
+    public function __construct(private PublicAssetUrlService $publicAssetUrlService)
+    {
+    }
+
     /**
      * Get public settings for views (Helper)
      */
@@ -48,9 +53,19 @@ class VerificationController extends Controller
             'trackingRevisionMessage'
         ];
 
-        return Settings::whereIn('key', $publicKeys)
-            ->pluck('value', 'key')
-            ->toArray();
+        try {
+            $settings = Settings::whereIn('key', $publicKeys)
+                ->pluck('value', 'key')
+                ->toArray();
+
+            return $this->publicAssetUrlService->normalizeSettings($settings);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Verification page settings lookup failed. Using empty defaults.', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
     }
 
     /**
