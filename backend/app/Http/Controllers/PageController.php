@@ -940,10 +940,11 @@ class PageController extends Controller
             $pdf->render();
 
             $filename = 'Recommendation_Letter_' . $request->tracking_id . '.pdf';
+            $disposition = $httpRequest->boolean('download') ? 'attachment' : 'inline';
 
             return response($pdf->output(), 200, [
                 'Content-Type' => 'application/pdf',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Content-Disposition' => $disposition . '; filename="' . $filename . '"',
             ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('PDF Generation Failed: ' . $e->getMessage());

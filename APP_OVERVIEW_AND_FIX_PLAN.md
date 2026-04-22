@@ -380,6 +380,9 @@ Code fixes completed so far:
 - [x] Upgraded the admin email template preview to render the full final email shell so every template has consistent visual UX during editing
 - [x] Applied the refreshed transactional email templates to the local app database through a new migration
 - [x] Added email rendering regression tests for branding, security-code mails, and admin test-email delivery
+- [x] Reworked the public recommendation-letter view into a safer fixed A4 layout so signature, QR, and footer stay on one professional page more reliably
+- [x] Rebuilt the PDF letter template into a compact one-page print layout and changed the public PDF route to open inline for easier official printing
+- [x] Added regression coverage for inline public PDF delivery during verified tracking sessions
 
 ### Current Pass Summary
 
@@ -397,10 +400,14 @@ Code fixes completed so far:
   Student, admin, tracking verification, status update, backup, login code, and SMTP test emails now use modern professional templates with clear copy and visible actions.
   The email template editor now includes a live preview, sample data rendering, and subject-line guidance so future edits stay aligned.
 
+- Letter UX:
+  The public recommendation-letter preview now keeps a tighter A4 structure with explicit print headroom, a unified closing section, and a clearer one-page presentation.
+  The primary print action now opens the official inline PDF, which is the most reliable final copy for students to save or print.
+
 - Verified:
   `composer audit` reports no active advisories.
   The QR generator now boots under PHP 8.4 without deprecation output.
-  `php artisan test` passes with 23 tests / 89 assertions after these changes.
+  `php artisan test` passes with 24 tests / 94 assertions after these changes.
   Live Apache smoke now confirms `/install` is blocked with `403 Forbidden` when the installer lock exists.
   Hostinger compatibility tests now confirm public disk assets can be served through `/media/...` without requiring a storage symlink.
 

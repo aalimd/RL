@@ -94,6 +94,20 @@ class SecurityRegressionTest extends TestCase
             ->assertSee($request->student_name);
     }
 
+    public function test_public_letter_pdf_is_served_inline_for_verified_tracking_session(): void
+    {
+        $request = $this->createApprovedRequest();
+
+        $this->withSession([
+            'tracking_verified_request_id' => $request->id,
+            'tracking_verified_tracking_id' => $request->tracking_id,
+            'tracking_verified_until' => now()->addMinutes(30)->timestamp,
+        ])->get(route('public.letter.pdf', ['tracking_id' => $request->tracking_id]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertHeader('content-disposition', 'inline; filename="Recommendation_Letter_' . $request->tracking_id . '.pdf"');
+    }
+
     public function test_api_status_update_generates_verify_token_and_clears_stale_admin_message(): void
     {
         Mail::fake();

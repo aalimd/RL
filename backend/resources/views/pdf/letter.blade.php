@@ -1,5 +1,23 @@
+@php
+    $margins = $layout['margins'] ?? [];
+    $pageMargins = [
+        'top' => max(14, min((int) ($margins['top'] ?? 18), 22)),
+        'right' => max(14, min((int) ($margins['right'] ?? 18), 22)),
+        'bottom' => max(14, min((int) ($margins['bottom'] ?? 18), 22)),
+        'left' => max(14, min((int) ($margins['left'] ?? 18), 22)),
+    ];
+    $fontSize = max(10.5, min((float) ($layout['fontSize'] ?? 11), 12));
+    $direction = $layout['direction'] ?? 'ltr';
+    $borderEnabled = (bool) ($layout['border']['enabled'] ?? false);
+    $borderWidth = max(1, min((int) ($layout['border']['width'] ?? 2), 3));
+    $borderColor = $layout['border']['color'] ?? '#1f2937';
+    $watermarkConfig = $layout['watermark'] ?? [];
+    $watermarkEnabled = (bool) ($watermarkConfig['enabled'] ?? false);
+    $watermarkText = !empty($watermarkConfig['text']) ? $watermarkConfig['text'] : ($request->tracking_id ?? 'OFFICIAL COPY');
+    $showDigitalFooter = $layout['footer']['enabled'] ?? true;
+@endphp
 <!DOCTYPE html>
-<html lang="en" dir="{{ $layout['direction'] ?? 'ltr' }}">
+<html lang="en" dir="{{ $direction }}">
 
 <head>
     <meta charset="UTF-8">
@@ -7,15 +25,8 @@
     <title>Recommendation Letter - {{ $request->tracking_id }}</title>
     <style>
         @page {
-            margin:
-                {{ ($layout['margins']['top'] ?? 25) }}
-                px
-                {{ ($layout['margins']['right'] ?? 25) }}
-                px
-                {{ ($layout['margins']['bottom'] ?? 25) }}
-                px
-                {{ ($layout['margins']['left'] ?? 25) }}
-                px;
+            size: A4;
+            margin: {{ $pageMargins['top'] }}px {{ $pageMargins['right'] }}px {{ $pageMargins['bottom'] }}px {{ $pageMargins['left'] }}px;
         }
 
         * {
@@ -26,157 +37,245 @@
 
         body {
             font-family: 'DejaVu Sans', sans-serif;
-            font-size:
-                {{ ($layout['fontSize'] ?? 12) }}
-                pt;
-            line-height: 1.5;
-            color: #000;
-            direction:
-                {{ $layout['direction'] ?? 'ltr' }}
-            ;
+            font-size: {{ $fontSize }}pt;
+            line-height: 1.45;
+            color: #111827;
+            direction: {{ $direction }};
         }
 
         .page-container {
             width: 100%;
             min-height: 100%;
             position: relative;
-            @if(isset($layout['border']['enabled']) && $layout['border']['enabled'])
-                border:
-                    {{ $layout['border']['width'] ?? 2 }}
-                    px solid
-                    {{ $layout['border']['color'] ?? '#000' }}
-                ;
-                padding: 15px;
+            @if($borderEnabled)
+                border: {{ $borderWidth }}px solid {{ $borderColor }};
+                padding: 12px 14px 10px;
             @endif
         }
 
         .header {
-            margin-bottom: 15px;
-        }
-
-        .body-content {
-            margin-bottom: 20px;
-        }
-
-        .signature-section {
-            margin-top: 30px;
-        }
-
-        .signature-image {
-            max-width: 150px;
-            max-height: 80px;
             margin-bottom: 10px;
         }
 
-        .stamp-image {
-            max-width: 100px;
-            max-height: 100px;
+        .header img {
+            max-height: 74px;
+            width: auto;
+        }
+
+        .header table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .header p,
+        .header div,
+        .header span,
+        .header td,
+        .header th {
+            line-height: 1.18;
+        }
+
+        .body-content {
+            color: #111827;
+            line-height: 1.45;
+        }
+
+        .body-content p {
+            margin-bottom: 7px;
+            text-align: justify;
+        }
+
+        .body-content h1,
+        .body-content h2,
+        .body-content h3,
+        .body-content h4,
+        .body-content h5,
+        .body-content h6 {
+            margin-bottom: 8px;
+            line-height: 1.25;
+        }
+
+        .body-content div,
+        .body-content li,
+        .body-content td,
+        .body-content th,
+        .body-content span {
+            font-size: inherit;
+            line-height: inherit;
+        }
+
+        .body-content table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+
+        .body-content img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .closing-section {
+            margin-top: 10px;
+            page-break-inside: avoid;
+        }
+
+        .signature-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .signature-left {
+            width: 65%;
+            vertical-align: top;
+        }
+
+        .signature-right {
+            width: 35%;
+            vertical-align: top;
+            text-align: right;
         }
 
         .signature-name {
-            font-weight: bold;
+            font-weight: 700;
             font-size: 11pt;
             margin-bottom: 2px;
         }
 
         .signature-title {
-            font-size: 10pt;
-            color: #333;
+            font-size: 9.2pt;
+            color: #1f2937;
+            margin-bottom: 4px;
         }
 
         .signature-details {
-            font-size: 9pt;
-            color: #555;
-            margin-top: 5px;
+            font-size: 8.2pt;
+            color: #374151;
+            line-height: 1.32;
+            margin-top: 4px;
         }
 
-        .footer {
-            margin-top: 20px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
-            font-size: 9pt;
+        .signature-image {
+            margin-top: 10px;
         }
 
-        p {
-            margin-bottom: 8px;
-        }
-
-        h1,
-        h2,
-        h3,
-        h4,
-        h5,
-        h6 {
-            margin-bottom: 8px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        img {
-            max-width: 100%;
+        .signature-image img {
+            max-width: 140px;
+            max-height: 58px;
             height: auto;
         }
 
-        /* Watermark Styles */
+        .stamp-image img {
+            max-width: 86px;
+            max-height: 86px;
+            height: auto;
+        }
+
+        .qr-block {
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .qr-block svg,
+        .qr-block img {
+            width: 70px !important;
+            height: 70px !important;
+            max-width: 70px !important;
+            max-height: 70px !important;
+        }
+
+        .qr-block p,
+        .qr-block span,
+        .qr-block div {
+            margin-top: 1px !important;
+            font-size: 6.8pt !important;
+            line-height: 1.1 !important;
+        }
+
+        .footer-block {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #d1d5db;
+            page-break-inside: avoid;
+        }
+
+        .verification-strip {
+            padding: 6px 8px;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            font-size: 7.4pt;
+            line-height: 1.2;
+            color: #374151;
+            text-align: center;
+        }
+
+        .verification-strip strong {
+            color: #111827;
+        }
+
+        .verification-strip a {
+            color: #374151;
+            text-decoration: none;
+        }
+
+        .custom-footer {
+            margin-top: 6px;
+            font-size: 7.5pt;
+            line-height: 1.18;
+            color: #374151;
+        }
+
+        .custom-footer * {
+            font-size: inherit !important;
+            line-height: inherit !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        .custom-footer table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
         .watermark {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
-            font-size: 80pt;
-            color: rgba(200, 200, 200, 0.15);
-            font-weight: bold;
+            font-size: 72pt;
+            color: rgba(148, 163, 184, 0.14);
+            font-weight: 700;
             z-index: -1;
             white-space: nowrap;
-            pointer-events: none;
-            user-select: none;
-        }
-
-        /* Digital Footer Styles */
-        .digital-footer {
-            margin-top: 30px;
-            border-top: 2px solid #eee;
-            padding-top: 10px;
-            font-size: 8pt;
-            color: #666;
-            text-align: center;
-            background-color: #f9f9f9;
-            padding: 10px;
-            border-radius: 4px;
         }
     </style>
 </head>
 
 <body>
-    {{-- Watermark --}}
-    @if($layout['watermark']['enabled'] ?? false)
-        <div class="watermark">
-            {{ $layout['watermark']['text'] ?: ($request->tracking_id ?? 'OFFICIAL COPY') }}
-        </div>
+    @if($watermarkEnabled)
+        <div class="watermark">{{ $watermarkText }}</div>
     @endif
 
     <div class="page-container">
-        {{-- Header Section --}}
         @if($header)
             <div class="header">
                 {!! $header !!}
             </div>
         @endif
 
-        {{-- Body Content --}}
         <div class="body-content">
             {!! $body !!}
         </div>
 
-        {{-- Signature Section --}}
-        @if(($signature['name'] ?? null) || ($signature['image'] ?? null))
-            <div class="signature-section">
-                <table style="width: 100%;">
+        @if(($signature['name'] ?? null) || ($signature['image'] ?? null) || !empty($qrCode))
+            <div class="closing-section">
+                <table class="signature-table">
                     <tr>
-                        <td style="vertical-align: top; width: 65%;">
+                        <td class="signature-left">
                             @if(!empty($signature['name']))
                                 <div class="signature-name">{{ $signature['name'] }}</div>
                             @endif
@@ -185,37 +284,45 @@
                                 <div class="signature-title">{{ $signature['title'] }}</div>
                             @endif
 
-                            @if((!empty($signature['institution'])) || (!empty($signature['department'])))
+                            @if((!empty($signature['department'])) || (!empty($signature['institution'])))
                                 <div class="signature-details">
                                     @if(!empty($signature['department']))
-                                        {{ $signature['department'] }}<br>
+                                        <div>{{ $signature['department'] }}</div>
                                     @endif
                                     @if(!empty($signature['institution']))
-                                        {{ $signature['institution'] }}
+                                        <div>{{ $signature['institution'] }}</div>
                                     @endif
                                 </div>
                             @endif
 
                             @if((!empty($signature['email'])) || (!empty($signature['phone'])))
-                                <div class="signature-details" style="margin-top: 5px;">
+                                <div class="signature-details">
                                     @if(!empty($signature['email']))
-                                        Email: {{ $signature['email'] }}<br>
+                                        <div>Email: {{ $signature['email'] }}</div>
                                     @endif
                                     @if(!empty($signature['phone']))
-                                        Phone: {{ $signature['phone'] }}
+                                        <div>Phone: {{ $signature['phone'] }}</div>
                                     @endif
                                 </div>
                             @endif
 
                             @if(!empty($signature['image']))
-                                <div style="margin-top: 15px;">
-                                    <img src="{{ $signature['image'] }}" alt="Signature" class="signature-image">
+                                <div class="signature-image">
+                                    <img src="{{ $signature['image'] }}" alt="Signature">
                                 </div>
                             @endif
                         </td>
-                        <td style="vertical-align: top; text-align: right; width: 35%;">
+                        <td class="signature-right">
                             @if(!empty($signature['stamp']))
-                                <img src="{{ $signature['stamp'] }}" alt="Official Stamp" class="stamp-image">
+                                <div class="stamp-image">
+                                    <img src="{{ $signature['stamp'] }}" alt="Official Stamp">
+                                </div>
+                            @endif
+
+                            @if(!empty($qrCode))
+                                <div class="qr-block">
+                                    {!! $qrCode !!}
+                                </div>
                             @endif
                         </td>
                     </tr>
@@ -223,27 +330,22 @@
             </div>
         @endif
 
-        {{-- QR Code - Always displayed independently of signature --}}
-        @if(!empty($qrCode))
-            <div style="text-align: right; margin-top: 10px;">
-                {!! $qrCode !!}
-            </div>
-        @endif
+        @if($showDigitalFooter || $footer)
+            <div class="footer-block">
+                @if($showDigitalFooter)
+                    <div class="verification-strip">
+                        <strong>Digitally verified document</strong>
+                        | Reference ID: {{ $request->tracking_id }}
+                        | Verify: <a
+                            href="{{ route('public.verify', $request->verify_token) }}">{{ route('public.verify', $request->verify_token) }}</a>
+                    </div>
+                @endif
 
-        {{-- Digital Footer Verification Strip --}}
-        @if($layout['footer']['enabled'] ?? true)
-            <div class="digital-footer">
-                <strong>DIGITALLY VERIFIED DOCUMENT</strong><br>
-                Reference ID: {{ $request->tracking_id }} | Issued: {{ now()->format('Y-m-d H:i') }}<br>
-                Verify this document at: <a href="{{ route('public.verify', $request->verify_token) }}"
-                    style="color: #666;">{{ route('public.verify', $request->verify_token) }}</a>
-            </div>
-        @endif
-
-        {{-- Original Footer (Custom Content) --}}
-        @if($footer)
-            <div class="footer">
-                {!! $footer !!}
+                @if($footer)
+                    <div class="custom-footer">
+                        {!! $footer !!}
+                    </div>
+                @endif
             </div>
         @endif
     </div>
