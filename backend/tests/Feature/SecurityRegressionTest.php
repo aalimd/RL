@@ -6,12 +6,14 @@ use App\Mail\TwoFactorCodeMail;
 use App\Mail\RequestStatusUpdated;
 use App\Mail\TrackingVerificationCode;
 use App\Models\Request as RequestRecord;
+use App\Models\Settings;
 use App\Models\Template;
 use App\Models\User;
+use App\Services\BrowserLetterPdfService;
+use App\Services\GoogleDriveLetterBackupService;
+use App\Services\LetterPdfService;
 use App\Services\LetterService;
 use ArPHP\I18N\Arabic as ArabicText;
-use Dompdf\Dompdf;
-use Dompdf\Options;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -97,7 +99,8 @@ class SecurityRegressionTest extends TestCase
             'tracking_verified_until' => now()->addMinutes(30)->timestamp,
         ])->get(route('public.letter', ['tracking_id' => $request->tracking_id]))
             ->assertOk()
-            ->assertSee($request->student_name);
+            ->assertSee($request->student_name)
+            ->assertSee('Print / Save');
     }
 
     public function test_public_letter_pdf_is_served_inline_for_verified_tracking_session(): void
@@ -423,7 +426,7 @@ class SecurityRegressionTest extends TestCase
                 'rejection_reason' => $case['rejection_reason'] ?? null,
             ]);
 
-            $this->withSession([
+            $response = $this->withSession([
                 '2fa_otp' => '123456',
                 '2fa_expires' => now()->addMinutes(5)->toDateTimeString(),
                 '2fa_request_id' => $request->id,
@@ -432,10 +435,16 @@ class SecurityRegressionTest extends TestCase
                 '2fa_delivery_hint' => 'tr***@ex***.test',
             ])->post(route('public.tracking.verify.post'), [
                 'otp' => '123456',
-            ])
+            ]);
+
+            $response
                 ->assertOk()
                 ->assertSee('What happens next')
                 ->assertSee($case['expected']);
+
+            if ($case['status'] === 'Approved') {
+                $response->assertSee(route('public.letter', ['tracking_id' => $request->tracking_id]), false);
+            }
         }
     }
 
@@ -664,32 +673,108 @@ class SecurityRegressionTest extends TestCase
             'training_period' => '2026-04',
         ]);
 
-        $letterService = app(LetterService::class);
-        $content = $letterService->generateLetterContent($request->fresh(), $template->fresh());
+        $compiled = app(LetterPdfService::class)->compile($request->fresh(), $template->fresh());
 
-        $data = [
-            'request' => $request->fresh(),
-            'layout' => $content['layout'],
-            'header' => $letterService->sanitizeHtml($content['header']),
-            'body' => $letterService->sanitizeHtml($content['body']),
-            'footer' => $letterService->sanitizeHtml($content['footer']),
-            'signature' => $content['signature'],
-            'qrCode' => $content['qrCode'] ?? '',
-        ];
+        $this->assertSame(1, $compiled['pdf_page_count']);
+        $this->assertContains($compiled['fit']['status'], ['fits', 'auto_fitted']);
+    }
 
-        $html = view('pdf.letter', $data)->render();
+    public function test_letter_pdf_service_auto_fits_long_content_to_one_a4_page(): void
+    {
+        $request = $this->createApprovedRequest();
+        $template = Template::findOrFail($request->template_id);
 
-        $options = new Options();
-        $options->set('isHtml5ParserEnabled', true);
-        $options->set('isRemoteEnabled', true);
-        $options->set('defaultFont', $data['layout']['fontFamily'] ?? 'DejaVu Sans');
+        $template->update([
+            'body_content' => str_repeat(
+                '<p>Dr. {{studentName}} consistently demonstrated clinical maturity, strong communication, dependable teamwork, and thoughtful follow-through across the emergency medicine rotation.</p>',
+                24
+            ),
+            'footer_content' => '<p style="font-size:7pt;">King Abdulaziz Medical City, Jeddah</p>',
+        ]);
 
-        $pdf = new Dompdf($options);
-        $pdf->loadHtml($html, 'UTF-8');
-        $pdf->setPaper('a4', 'portrait');
-        $pdf->render();
+        $compiled = app(LetterPdfService::class)->compile($request->fresh(), $template->fresh());
 
-        $this->assertSame(1, $pdf->getCanvas()->get_page_count());
+        $this->assertSame(1, $compiled['pdf_page_count']);
+        $this->assertSame('auto_fitted', $compiled['fit']['status']);
+        $this->assertTrue($compiled['fit']['can_export']);
+    }
+
+    public function test_letter_pdf_service_reports_when_content_still_exceeds_one_a4_page(): void
+    {
+        $request = $this->createApprovedRequest();
+        $template = Template::findOrFail($request->template_id);
+
+        $template->update([
+            'body_content' => str_repeat(
+                '<p>Dr. {{studentName}} delivered sustained excellent performance across the rotation, including extensive clinical reflections, structured feedback summaries, and detailed competency descriptions for each week of training.</p>',
+                55
+            ),
+            'footer_content' => str_repeat('<p style="font-size:7pt;">Emergency Medicine Department, King Abdulaziz Medical City, Jeddah</p>', 6),
+        ]);
+
+        $compiled = app(LetterPdfService::class)->compile($request->fresh(), $template->fresh());
+
+        $this->assertGreaterThan(1, $compiled['pdf_page_count']);
+        $this->assertSame('too_long', $compiled['fit']['status']);
+        $this->assertFalse($compiled['fit']['can_export']);
+        $this->assertNotEmpty($compiled['fit']['overflow_reason']);
+    }
+
+    public function test_letter_pdf_service_keeps_arabic_output_to_one_a4_page(): void
+    {
+        $request = $this->createApprovedRequest();
+        $template = Template::findOrFail($request->template_id);
+
+        $template->update([
+            'language' => 'ar',
+            'body_content' => '
+                <p style="text-align:right;">إلى من يهمه الأمر</p>
+                <p style="text-align:right;">نفيدكم بأن الدكتور {{studentName}} {{lastName}} أكمل فترة تدريب سريري في قسم طب الطوارئ خلال {{trainingPeriod}}، وأظهر مستوى مهنياً متميزاً والتزاماً واضحاً بالتعلم والعمل الجماعي.</p>
+                <p style="text-align:right;">كان تعامله مع المرضى والزملاء والاستشاريين احترافياً، وأثبت قدرة جيدة على تحمل المسؤولية والاستفادة من التغذية الراجعة بشكل مستمر.</p>
+            ',
+            'layout_settings' => [
+                'language' => 'ar',
+                'direction' => 'rtl',
+                'fontFamily' => 'DejaVu Sans, sans-serif',
+                'fontSize' => 12,
+                'margins' => [
+                    'top' => 20,
+                    'right' => 20,
+                    'bottom' => 20,
+                    'left' => 20,
+                ],
+                'footer' => [
+                    'enabled' => true,
+                ],
+            ],
+        ]);
+
+        $compiled = app(LetterPdfService::class)->compile($request->fresh(), $template->fresh());
+
+        $this->assertSame(1, $compiled['pdf_page_count']);
+        $this->assertContains($compiled['fit']['status'], ['fits', 'auto_fitted']);
+        $this->assertStringContainsString('DejaVu Sans', $compiled['pdf_html']);
+    }
+
+    public function test_public_letter_pdf_refuses_to_serve_multi_page_official_output(): void
+    {
+        $request = $this->createApprovedRequest();
+        $template = Template::findOrFail($request->template_id);
+
+        $template->update([
+            'body_content' => str_repeat(
+                '<p>Dr. {{studentName}} completed extensive documented duties, reflective summaries, case logs, competency narratives, multidisciplinary evaluations, and longitudinal commentary across the full emergency medicine rotation.</p>',
+                60
+            ),
+            'footer_content' => str_repeat('<p style="font-size:7pt;">Emergency Medicine Department, King Abdulaziz Medical City, Jeddah</p>', 8),
+        ]);
+
+        $this->withSession([
+            'tracking_verified_request_id' => $request->id,
+            'tracking_verified_tracking_id' => $request->tracking_id,
+            'tracking_verified_until' => now()->addMinutes(30)->timestamp,
+        ])->get(route('public.letter.pdf', ['tracking_id' => $request->tracking_id]))
+            ->assertStatus(409);
     }
 
     public function test_letter_service_keeps_only_one_inline_signature_and_qr_placeholder_across_template_sections(): void
@@ -748,6 +833,14 @@ class SecurityRegressionTest extends TestCase
         Mail::fake();
 
         $user = $this->createAdminUser();
+        $template = Template::create([
+            'name' => 'Approval Template',
+            'header_content' => '<p>Header</p>',
+            'body_content' => '<p>Letter for {{studentName}} {{lastName}}</p>',
+            'footer_content' => '<p>Footer</p>',
+            'layout_settings' => [],
+            'is_active' => true,
+        ]);
         $request = RequestRecord::create([
             'tracking_id' => 'REC-2026-STATUS01',
             'student_name' => 'Student',
@@ -759,6 +852,11 @@ class SecurityRegressionTest extends TestCase
             'training_period' => '2026-04',
             'status' => 'Needs Revision',
             'admin_message' => 'Old revision note',
+            'template_id' => $template->id,
+            'form_data' => [
+                'template_id' => $template->id,
+                'gender' => 'male',
+            ],
         ]);
 
         $loginResponse = $this->postJson('/api/auth/login', [
@@ -879,6 +977,503 @@ class SecurityRegressionTest extends TestCase
         }
 
         Mail::assertSent(RequestStatusUpdated::class, 2);
+    }
+
+    public function test_bulk_status_update_can_target_all_filtered_requests(): void
+    {
+        Mail::fake();
+
+        $user = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+
+        $matchingRequests = collect([
+            RequestRecord::create([
+                'tracking_id' => 'REC-2026-FILTER01',
+                'student_name' => 'Filter',
+                'last_name' => 'One',
+                'student_email' => 'filter-one@example.test',
+                'verification_token' => 'ID-FILTER-1',
+                'university' => 'Shared University',
+                'purpose' => 'Residency',
+                'training_period' => '2026-04',
+                'status' => 'Submitted',
+            ]),
+            RequestRecord::create([
+                'tracking_id' => 'REC-2026-FILTER02',
+                'student_name' => 'Filter',
+                'last_name' => 'Two',
+                'student_email' => 'filter-two@example.test',
+                'verification_token' => 'ID-FILTER-2',
+                'university' => 'Shared University',
+                'purpose' => 'Residency',
+                'training_period' => '2026-05',
+                'status' => 'Submitted',
+            ]),
+        ]);
+
+        $unmatchedRequest = RequestRecord::create([
+            'tracking_id' => 'REC-2026-FILTER03',
+            'student_name' => 'Other',
+            'last_name' => 'Student',
+            'student_email' => 'filter-three@example.test',
+            'verification_token' => 'ID-FILTER-3',
+            'university' => 'Different University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-06',
+            'status' => 'Submitted',
+        ]);
+
+        $sharedMessage = 'We have started reviewing your request and will contact you if anything else is needed.';
+
+        $this->actingAs($user)
+            ->withSession(['2fa_verified' => true])
+            ->post('/admin/requests/bulk', [
+                'operation' => 'status',
+                'selection_scope' => 'filtered',
+                'filters' => json_encode([
+                    'status' => 'Submitted',
+                    'university' => 'Shared University',
+                ], JSON_THROW_ON_ERROR),
+                'status' => 'Under Review',
+                'admin_message' => $sharedMessage,
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Updated 2 request(s) to Under Review.');
+
+        foreach ($matchingRequests as $request) {
+            $request->refresh();
+            $this->assertSame('Under Review', $request->status);
+            $this->assertSame($sharedMessage, $request->admin_message);
+        }
+
+        $unmatchedRequest->refresh();
+        $this->assertSame('Submitted', $unmatchedRequest->status);
+        $this->assertNull($unmatchedRequest->admin_message);
+
+        Mail::assertSent(RequestStatusUpdated::class, 2);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'bulk_request_status_update',
+        ]);
+    }
+
+    public function test_admin_requests_page_renders_bulk_status_controls(): void
+    {
+        $user = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+
+        RequestRecord::create([
+            'tracking_id' => 'REC-2026-BULKUI01',
+            'student_name' => 'Bulk',
+            'last_name' => 'Ui',
+            'student_email' => 'bulk-ui@example.test',
+            'verification_token' => 'ID-BULK-UI',
+            'university' => 'Test University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-04',
+            'status' => 'Submitted',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['2fa_verified' => true])
+            ->get('/admin/requests')
+            ->assertOk()
+            ->assertSee('Change Status')
+            ->assertSee('Bulk status update')
+            ->assertSee('All requests currently in the list')
+            ->assertSee('Export to Google Drive')
+            ->assertSee('Back up approved letters to Google Drive')
+            ->assertSee('Export Letters PDF')
+            ->assertSee('Export approved letters as PDF');
+    }
+
+    public function test_admin_can_save_google_drive_settings_and_encrypt_service_account_json(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+
+        $serviceAccountJson = json_encode([
+            'client_email' => 'drive-bot@example.test',
+            'private_key' => "-----BEGIN PRIVATE KEY-----\nFAKE\n-----END PRIVATE KEY-----\n",
+        ], JSON_THROW_ON_ERROR);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->from(route('admin.settings'))
+            ->put(route('admin.settings.update'), [
+                'settingsGroup' => 'google_drive',
+                'googleDriveEnabled' => 'on',
+                'googleDriveServiceAccountJson' => $serviceAccountJson,
+                'googleDriveFolderId' => 'https://drive.google.com/drive/folders/folder-123456',
+            ])
+            ->assertRedirect(route('admin.settings'))
+            ->assertSessionHas('success', 'Settings updated successfully!');
+
+        $this->assertSame('true', Settings::getValue('googleDriveEnabled'));
+        $this->assertSame('folder-123456', Settings::getValue('googleDriveFolderId'));
+        $this->assertSame($serviceAccountJson, Settings::getValue('googleDriveServiceAccountJson'));
+        $this->assertNotSame($serviceAccountJson, Settings::where('key', 'googleDriveServiceAccountJson')->value('value'));
+    }
+
+    public function test_bulk_rejected_status_requires_shared_message(): void
+    {
+        Mail::fake();
+
+        $user = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+
+        $request = RequestRecord::create([
+            'tracking_id' => 'REC-2026-BULKREJECT',
+            'student_name' => 'Bulk',
+            'last_name' => 'Reject',
+            'student_email' => 'bulk-reject@example.test',
+            'verification_token' => 'ID-BULK-REJECT',
+            'university' => 'Test University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-04',
+            'status' => 'Submitted',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['2fa_verified' => true])
+            ->from('/admin/requests')
+            ->post('/admin/requests/bulk', [
+                'operation' => 'status',
+                'selection_scope' => 'selected',
+                'ids' => json_encode([$request->id], JSON_THROW_ON_ERROR),
+                'status' => 'Rejected',
+                'admin_message' => '',
+            ])
+            ->assertRedirect('/admin/requests')
+            ->assertSessionHasErrors([
+                'admin_message' => 'A shared rejection reason is required for bulk rejection.',
+            ]);
+
+        $request->refresh();
+        $this->assertSame('Submitted', $request->status);
+        $this->assertNull($request->rejection_reason);
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_admin_can_download_single_approved_letter_pdf(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $request = $this->createApprovedRequest();
+        $fakePdfService = $this->bindFakeBrowserLetterPdfService();
+
+        $response = $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->get(route('admin.requests.letter-pdf', $request->id));
+
+        $response->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertHeader('content-disposition', 'attachment; filename="Recommendation_Letter_' . $request->tracking_id . '.pdf"');
+
+        $this->assertSame([$request->id], $fakePdfService->renderedRequestIds);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'admin_download_letter_pdf',
+            'target_id' => $request->id,
+        ]);
+    }
+
+    public function test_admin_can_export_selected_approved_letters_as_zip(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $approved = $this->createApprovedRequest();
+        $submitted = RequestRecord::create([
+            'tracking_id' => 'REC-2026-NOTAPPROVED1',
+            'student_name' => 'Pending',
+            'last_name' => 'Student',
+            'student_email' => 'pending@example.test',
+            'verification_token' => 'ID-PENDING',
+            'university' => 'Test University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-05',
+            'status' => 'Submitted',
+        ]);
+
+        $fakePdfService = $this->bindFakeBrowserLetterPdfService();
+
+        $response = $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->post(route('admin.requests.letters.export-pdf'), [
+                'selection_scope' => 'selected',
+                'ids' => json_encode([$approved->id, $submitted->id], JSON_THROW_ON_ERROR),
+            ]);
+
+        $response->assertOk()
+            ->assertHeader('content-type', 'application/zip');
+
+        $this->assertStringContainsString('.zip', (string) $response->headers->get('content-disposition'));
+        $this->assertSame([$approved->id], $fakePdfService->zipRequestIds);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'admin_export_letters_pdf_zip',
+        ]);
+    }
+
+    public function test_admin_can_export_filtered_approved_letters_as_zip(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+
+        $template = Template::create([
+            'name' => 'Filter Template',
+            'header_content' => '<p>Header</p>',
+            'body_content' => '<p>Body</p>',
+            'footer_content' => '<p>Footer</p>',
+            'layout_settings' => [],
+            'is_active' => true,
+        ]);
+
+        $approvedA = RequestRecord::create([
+            'tracking_id' => 'REC-2026-EXPORTA1',
+            'student_name' => 'Export',
+            'last_name' => 'Alpha',
+            'student_email' => 'export-alpha@example.test',
+            'verification_token' => 'ID-EXPORT-A',
+            'verify_token' => 'verify-export-a',
+            'university' => 'Drive University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-04',
+            'status' => 'Approved',
+            'template_id' => $template->id,
+            'form_data' => ['template_id' => $template->id, 'gender' => 'male'],
+        ]);
+
+        $approvedB = RequestRecord::create([
+            'tracking_id' => 'REC-2026-EXPORTB1',
+            'student_name' => 'Export',
+            'last_name' => 'Beta',
+            'student_email' => 'export-beta@example.test',
+            'verification_token' => 'ID-EXPORT-B',
+            'verify_token' => 'verify-export-b',
+            'university' => 'Drive University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-05',
+            'status' => 'Approved',
+            'template_id' => $template->id,
+            'form_data' => ['template_id' => $template->id, 'gender' => 'male'],
+        ]);
+
+        RequestRecord::create([
+            'tracking_id' => 'REC-2026-EXPORTC1',
+            'student_name' => 'Export',
+            'last_name' => 'Gamma',
+            'student_email' => 'export-gamma@example.test',
+            'verification_token' => 'ID-EXPORT-C',
+            'university' => 'Other University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-06',
+            'status' => 'Approved',
+        ]);
+
+        $fakePdfService = $this->bindFakeBrowserLetterPdfService();
+
+        $response = $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->post(route('admin.requests.letters.export-pdf'), [
+                'selection_scope' => 'filtered',
+                'filters' => json_encode([
+                    'status' => 'All',
+                    'university' => 'Drive University',
+                ], JSON_THROW_ON_ERROR),
+            ]);
+
+        $response->assertOk()
+            ->assertHeader('content-type', 'application/zip');
+
+        $this->assertEqualsCanonicalizing([$approvedA->id, $approvedB->id], $fakePdfService->zipRequestIds);
+    }
+
+    public function test_admin_can_sync_single_approved_letter_to_google_drive(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $request = $this->createApprovedRequest();
+        $fakeDriveService = $this->bindFakeGoogleDriveLetterBackupService();
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->from(route('admin.requests.show', $request->id))
+            ->post(route('admin.requests.letter-drive', $request->id))
+            ->assertRedirect(route('admin.requests.show', $request->id))
+            ->assertSessionHas('success', 'Letter backed up to Google Drive successfully.');
+
+        $request->refresh();
+
+        $this->assertSame([$request->id], $fakeDriveService->syncedRequestIds);
+        $this->assertSame('synced', $request->drive_backup_status);
+        $this->assertSame('drive-file-' . $request->id, $request->drive_backup_file_id);
+        $this->assertSame('https://drive.google.com/file/d/drive-file-' . $request->id . '/view', $request->drive_backup_url);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'admin_sync_letter_google_drive',
+            'target_id' => $request->id,
+        ]);
+    }
+
+    public function test_admin_can_export_selected_approved_letters_to_google_drive(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $approved = $this->createApprovedRequest();
+        $submitted = RequestRecord::create([
+            'tracking_id' => 'REC-2026-NOTDRIVE01',
+            'student_name' => 'Pending',
+            'last_name' => 'Student',
+            'student_email' => 'pending-drive@example.test',
+            'verification_token' => 'ID-PENDING-DRIVE',
+            'university' => 'Test University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-05',
+            'status' => 'Submitted',
+        ]);
+
+        $fakeDriveService = $this->bindFakeGoogleDriveLetterBackupService();
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->from('/admin/requests')
+            ->post(route('admin.requests.letters.export-drive'), [
+                'selection_scope' => 'selected',
+                'ids' => json_encode([$approved->id, $submitted->id], JSON_THROW_ON_ERROR),
+            ])
+            ->assertRedirect('/admin/requests')
+            ->assertSessionHas('success', function ($message) {
+                return is_string($message)
+                    && str_contains($message, 'Backed up 1 approved letter(s) to Google Drive.')
+                    && str_contains($message, 'skipped because they are not approved');
+            });
+
+        $this->assertSame([$approved->id], $fakeDriveService->syncedRequestIds);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'admin_export_letters_google_drive',
+        ]);
+    }
+
+    public function test_admin_can_export_filtered_approved_letters_to_google_drive(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+
+        $template = Template::create([
+            'name' => 'Drive Template',
+            'header_content' => '<p>Header</p>',
+            'body_content' => '<p>Body</p>',
+            'footer_content' => '<p>Footer</p>',
+            'layout_settings' => [],
+            'is_active' => true,
+        ]);
+
+        $approvedA = RequestRecord::create([
+            'tracking_id' => 'REC-2026-DRIVEA1',
+            'student_name' => 'Drive',
+            'last_name' => 'Alpha',
+            'student_email' => 'drive-alpha@example.test',
+            'verification_token' => 'ID-DRIVE-A',
+            'verify_token' => 'verify-drive-a',
+            'university' => 'Drive University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-04',
+            'status' => 'Approved',
+            'template_id' => $template->id,
+            'form_data' => ['template_id' => $template->id, 'gender' => 'male'],
+        ]);
+
+        $approvedB = RequestRecord::create([
+            'tracking_id' => 'REC-2026-DRIVEB1',
+            'student_name' => 'Drive',
+            'last_name' => 'Beta',
+            'student_email' => 'drive-beta@example.test',
+            'verification_token' => 'ID-DRIVE-B',
+            'verify_token' => 'verify-drive-b',
+            'university' => 'Drive University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-05',
+            'status' => 'Approved',
+            'template_id' => $template->id,
+            'form_data' => ['template_id' => $template->id, 'gender' => 'male'],
+        ]);
+
+        RequestRecord::create([
+            'tracking_id' => 'REC-2026-DRIVEC1',
+            'student_name' => 'Drive',
+            'last_name' => 'Gamma',
+            'student_email' => 'drive-gamma@example.test',
+            'verification_token' => 'ID-DRIVE-C',
+            'university' => 'Other University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-06',
+            'status' => 'Approved',
+        ]);
+
+        $fakeDriveService = $this->bindFakeGoogleDriveLetterBackupService();
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->from('/admin/requests')
+            ->post(route('admin.requests.letters.export-drive'), [
+                'selection_scope' => 'filtered',
+                'filters' => json_encode([
+                    'status' => 'All',
+                    'university' => 'Drive University',
+                ], JSON_THROW_ON_ERROR),
+            ])
+            ->assertRedirect('/admin/requests')
+            ->assertSessionHas('success', function ($message) {
+                return is_string($message)
+                    && str_contains($message, 'Backed up 2 approved letter(s) to Google Drive.');
+            });
+
+        $this->assertEqualsCanonicalizing([$approvedA->id, $approvedB->id], $fakeDriveService->syncedRequestIds);
+    }
+
+    public function test_admin_request_details_page_shows_download_pdf_button_for_approved_request(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $request = $this->createApprovedRequest();
+        $request->forceFill([
+            'drive_backup_status' => 'synced',
+            'drive_backup_file_name' => 'Recommendation_Letter_' . $request->tracking_id . '.pdf',
+            'drive_backup_file_id' => 'drive-file-' . $request->id,
+            'drive_backup_url' => 'https://drive.google.com/file/d/drive-file-' . $request->id . '/view',
+            'drive_backup_synced_at' => now(),
+        ])->save();
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->get(route('admin.requests.show', $request->id))
+            ->assertOk()
+            ->assertSee(route('admin.requests.letter-pdf', $request->id), false)
+            ->assertSee(route('admin.requests.letter-drive', $request->id), false)
+            ->assertSee('Download PDF')
+            ->assertSee('Google Drive Backup')
+            ->assertSee('Open Drive File')
+            ->assertSee('Copy Link');
     }
 
     public function test_admin_rejected_status_message_survives_to_student_tracking_view(): void
@@ -1053,6 +1648,72 @@ class SecurityRegressionTest extends TestCase
             ->assertSee('Courier New', false);
     }
 
+    public function test_admin_preview_returns_browser_letter_content(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $request = $this->createApprovedRequest();
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->get(route('admin.requests.preview', $request->id))
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonMissingPath('fit')
+            ->assertJsonFragment([
+                'body' => '<p>Letter for Letter Student</p>',
+            ]);
+    }
+
+    public function test_admin_can_approve_request_even_if_optional_pdf_route_is_too_long(): void
+    {
+        Mail::fake();
+
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $template = Template::create([
+            'name' => 'Too Long Template',
+            'header_content' => '<p>Header</p>',
+            'body_content' => str_repeat(
+                '<p>Dr. {{studentName}} completed extensive documented duties, reflective summaries, case logs, competency narratives, multidisciplinary evaluations, and longitudinal commentary across the full emergency medicine rotation.</p>',
+                60
+            ),
+            'footer_content' => str_repeat('<p style="font-size:7pt;">Emergency Medicine Department, King Abdulaziz Medical City, Jeddah</p>', 8),
+            'layout_settings' => [],
+            'is_active' => true,
+        ]);
+        $request = RequestRecord::create([
+            'tracking_id' => 'REC-2026-OVERFLOW1',
+            'student_name' => 'Overflow',
+            'last_name' => 'Student',
+            'student_email' => 'overflow@example.test',
+            'verification_token' => 'ID-OVERFLOW',
+            'university' => 'Test University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-04',
+            'status' => 'Submitted',
+            'template_id' => $template->id,
+            'form_data' => [
+                'template_id' => $template->id,
+                'gender' => 'male',
+            ],
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->patch(route('admin.requests.update-status', $request->id), [
+                'status' => 'Approved',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Status updated successfully!');
+
+        $this->assertSame('Approved', $request->fresh()->status);
+    }
+
     public function test_template_editor_prefers_newer_autosaved_draft_when_reopened(): void
     {
         $admin = $this->createAdminUser();
@@ -1152,6 +1813,164 @@ class SecurityRegressionTest extends TestCase
                 'gender' => 'male',
             ],
         ]);
+    }
+
+    private function bindFakeBrowserLetterPdfService(): object
+    {
+        $fake = new class(app(LetterService::class)) extends BrowserLetterPdfService {
+            public array $renderedRequestIds = [];
+            public array $zipRequestIds = [];
+
+            public function renderRequestPdf(RequestRecord $request): array
+            {
+                $this->renderedRequestIds[] = $request->id;
+
+                return [
+                    'binary' => '%PDF-FAKE-' . $request->tracking_id,
+                    'filename' => $this->pdfFilename($request),
+                    'tracking_id' => $request->tracking_id,
+                ];
+            }
+
+            public function buildZipArchive(iterable $requests): array
+            {
+                $collected = [];
+                foreach ($requests as $request) {
+                    $collected[] = $request;
+                    $this->zipRequestIds[] = $request->id;
+                }
+
+                $zipPath = tempnam(sys_get_temp_dir(), 'fake-letter-zip-');
+                if ($zipPath === false) {
+                    throw new \RuntimeException('Could not create fake ZIP path.');
+                }
+
+                @unlink($zipPath);
+                $zipPath .= '.zip';
+
+                $zip = new \ZipArchive();
+                $zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+                foreach ($collected as $request) {
+                    $zip->addFromString($this->pdfFilename($request), 'FAKE PDF CONTENT');
+                }
+                $zip->close();
+
+                return [
+                    'path' => $zipPath,
+                    'filename' => 'Recommendation_Letters_Test.zip',
+                    'exported_count' => count($collected),
+                    'failed' => [],
+                ];
+            }
+        };
+
+        $this->app->instance(BrowserLetterPdfService::class, $fake);
+
+        return $fake;
+    }
+
+    private function bindFakeGoogleDriveLetterBackupService(): object
+    {
+        $fake = new class extends GoogleDriveLetterBackupService {
+            public array $syncedRequestIds = [];
+
+            public function __construct()
+            {
+            }
+
+            public function configurationSummary(): array
+            {
+                return [
+                    'enabled' => true,
+                    'configured' => true,
+                    'service_account_email' => 'drive-bot@example.test',
+                    'folder_id' => 'folder-123456',
+                    'folder_url' => 'https://drive.google.com/drive/folders/folder-123456',
+                ];
+            }
+
+            public function parseServiceAccountJsonString(string $rawJson): array
+            {
+                $decoded = json_decode($rawJson, true);
+                if (!is_array($decoded) || empty($decoded['client_email']) || empty($decoded['private_key'])) {
+                    throw new \RuntimeException('Google Drive service account JSON must include client_email and private_key.');
+                }
+
+                return [
+                    'client_email' => $decoded['client_email'],
+                    'private_key' => $decoded['private_key'],
+                    'token_uri' => 'https://oauth2.googleapis.com/token',
+                ];
+            }
+
+            public function normalizeFolderReference(null|string $value): ?string
+            {
+                $value = trim((string) $value);
+                if ($value === '') {
+                    return null;
+                }
+
+                if (preg_match('~/folders/([a-zA-Z0-9_-]+)~', $value, $matches) === 1) {
+                    return $matches[1];
+                }
+
+                return $value;
+            }
+
+            public function testConnection(): array
+            {
+                return [
+                    'service_account_email' => 'drive-bot@example.test',
+                    'folder_id' => 'folder-123456',
+                    'folder_name' => 'Recommendation Letters',
+                    'folder_url' => 'https://drive.google.com/drive/folders/folder-123456',
+                ];
+            }
+
+            public function syncRequest(RequestRecord $request): array
+            {
+                $this->syncedRequestIds[] = $request->id;
+
+                $request->forceFill([
+                    'drive_backup_status' => 'synced',
+                    'drive_backup_file_id' => 'drive-file-' . $request->id,
+                    'drive_backup_file_name' => 'Recommendation_Letter_' . $request->tracking_id . '.pdf',
+                    'drive_backup_url' => 'https://drive.google.com/file/d/drive-file-' . $request->id . '/view',
+                    'drive_backup_error' => null,
+                    'drive_backup_synced_at' => now(),
+                ])->save();
+
+                return [
+                    'request_id' => $request->id,
+                    'tracking_id' => $request->tracking_id,
+                    'file_id' => 'drive-file-' . $request->id,
+                    'file_name' => 'Recommendation_Letter_' . $request->tracking_id . '.pdf',
+                    'file_url' => 'https://drive.google.com/file/d/drive-file-' . $request->id . '/view',
+                    'folder_url' => 'https://drive.google.com/drive/folders/folder-123456',
+                ];
+            }
+
+            public function syncMany(iterable $requests): array
+            {
+                $synced = [];
+
+                foreach ($requests as $request) {
+                    $synced[] = $this->syncRequest($request);
+                }
+
+                return [
+                    'synced_count' => count($synced),
+                    'failed' => [],
+                    'synced' => $synced,
+                    'folder_url' => 'https://drive.google.com/drive/folders/folder-123456',
+                    'folder_id' => 'folder-123456',
+                ];
+            }
+        };
+
+        $this->app->instance(GoogleDriveLetterBackupService::class, $fake);
+
+        return $fake;
     }
 
     private function trackingTrustedBrowserProof(RequestRecord $request, int $rememberUntil): string

@@ -23,14 +23,20 @@
                     Edit Request
                 </button>
             @endif
-            @if($request->status === 'Approved')
-                {{--
-                <a href="{{ route('public.letter.pdf', $request->id) }}" class="btn btn-secondary"
+            @if($canManageRequests && $request->status === 'Approved')
+                <a href="{{ route('admin.requests.letter-pdf', $request->id) }}" class="btn btn-secondary"
                     style="background: #059669; color: white; border-color: #059669;">
                     <i data-feather="download" style="width: 16px; height: 16px;"></i>
                     Download PDF
                 </a>
-                --}}
+                <form method="POST" action="{{ route('admin.requests.letter-drive', $request->id) }}" style="display: inline;">
+                    @csrf
+                    <button type="submit" class="btn btn-secondary"
+                        style="background: #166534; color: white; border-color: #166534;">
+                        <i data-feather="hard-drive" style="width: 16px; height: 16px;"></i>
+                        Sync to Drive
+                    </button>
+                </form>
             @endif
             <button type="button" class="btn btn-primary" onclick="openPreviewModal()">
                 <i data-feather="file-text" style="width: 16px; height: 16px;"></i>
@@ -199,6 +205,103 @@
                         <p style="font-weight: 500; color: var(--text-main);">
                             {{ $request->content_option ?? 'Auto-Generate' }}</p>
                     </div>
+                </div>
+            </div>
+
+            <div
+                style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                <div
+                    style="display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; flex-wrap: wrap; margin-bottom: 1rem;">
+                    <div>
+                        <h4 style="font-size: 0.875rem; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.35rem;">
+                            Google Drive Backup</h4>
+                        <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">
+                            Keep an off-app copy of the official letter for recovery and manual sharing.
+                        </p>
+                    </div>
+                    @if($request->status === 'Approved' && $canManageRequests)
+                        <form method="POST" action="{{ route('admin.requests.letter-drive', $request->id) }}">
+                            @csrf
+                            <button type="submit" class="btn btn-secondary">
+                                <i data-feather="refresh-cw" style="width: 16px; height: 16px;"></i>
+                                {{ $request->drive_backup_status === 'synced' ? 'Sync Again' : 'Sync Now' }}
+                            </button>
+                        </form>
+                    @endif
+                </div>
+
+                @php
+                    $driveStatus = $request->drive_backup_status ?? 'not_synced';
+                    $driveLabel = match ($driveStatus) {
+                        'synced' => 'Synced',
+                        'failed' => 'Failed',
+                        default => 'Not synced',
+                    };
+                    $driveColors = match ($driveStatus) {
+                        'synced' => ['bg' => 'rgba(22, 101, 52, 0.16)', 'border' => 'rgba(34, 197, 94, 0.35)', 'text' => '#bbf7d0'],
+                        'failed' => ['bg' => 'rgba(127, 29, 29, 0.2)', 'border' => 'rgba(248, 113, 113, 0.35)', 'text' => '#fecaca'],
+                        default => ['bg' => 'rgba(30, 41, 59, 0.55)', 'border' => 'rgba(148, 163, 184, 0.22)', 'text' => 'var(--text-main)'],
+                    };
+                @endphp
+
+                <div
+                    style="padding: 1.1rem 1.2rem; border-radius: 0.9rem; border: 1px solid {{ $driveColors['border'] }}; background: {{ $driveColors['bg'] }};">
+                    <div
+                        style="display: flex; justify-content: space-between; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <div>
+                            <div
+                                style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">
+                                Backup Status</div>
+                            <div style="margin-top: 0.35rem; font-size: 1.1rem; font-weight: 700; color: {{ $driveColors['text'] }};">
+                                {{ $driveLabel }}
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            @if($request->drive_backup_url)
+                                <a href="{{ $request->drive_backup_url }}" target="_blank" rel="noopener" class="btn btn-secondary">
+                                    <i data-feather="external-link" style="width: 16px; height: 16px;"></i>
+                                    Open Drive File
+                                </a>
+                                <button type="button" class="btn btn-ghost" onclick="copyDriveLink('{{ e($request->drive_backup_url) }}')">
+                                    <i data-feather="copy" style="width: 16px; height: 16px;"></i>
+                                    Copy Link
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                        <div>
+                            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">
+                                Last Synced</div>
+                            <div style="margin-top: 0.25rem; font-weight: 600; color: var(--text-main);">
+                                {{ $request->drive_backup_synced_at ? $request->drive_backup_synced_at->format('M d, Y h:i A') : 'Not synced yet' }}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">
+                                Drive File</div>
+                            <div style="margin-top: 0.25rem; font-weight: 600; color: var(--text-main); word-break: break-word;">
+                                {{ $request->drive_backup_file_name ?? 'No file stored yet' }}
+                            </div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">
+                                File ID</div>
+                            <div style="margin-top: 0.25rem; font-weight: 600; color: var(--text-main); word-break: break-all;">
+                                {{ $request->drive_backup_file_id ?? 'Not available yet' }}
+                            </div>
+                        </div>
+                    </div>
+
+                    @if($request->drive_backup_error)
+                        <div
+                            style="margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 0.75rem; border: 1px solid rgba(248, 113, 113, 0.3); background: rgba(127, 29, 29, 0.18); color: #fecaca;">
+                            <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.9;">Latest backup error</div>
+                            <div style="margin-top: 0.35rem; font-weight: 500;">{{ $request->drive_backup_error }}</div>
+                        </div>
+                    @endif
                 </div>
             </div>
 
@@ -601,6 +704,7 @@
 @section('scripts')
     <script>
         let currentLetterData = null;
+
         function syncStatusForm() {
             const statusSelect = document.getElementById('statusSelect');
             const adminMessageField = document.getElementById('adminMessageField');
@@ -628,6 +732,16 @@
                 syncStatusForm();
             }
         });
+
+        function copyDriveLink(url) {
+            if (!url) {
+                return;
+            }
+
+            navigator.clipboard.writeText(url)
+                .then(() => alert('Google Drive link copied.'))
+                .catch(() => alert('Could not copy the Google Drive link.'));
+        }
 
         function openPreviewModal() {
             document.getElementById('previewModal').style.display = 'flex';

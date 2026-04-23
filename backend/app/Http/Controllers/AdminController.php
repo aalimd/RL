@@ -14,9 +14,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Services\LetterService;
 use App\Services\AiService;
+use App\Services\BrowserLetterPdfService;
+use App\Services\GoogleDriveLetterBackupService;
 use App\Services\PublicAssetUrlService;
 use App\Services\RequestStatusService;
 use App\Services\TelegramService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -25,19 +28,40 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminController extends Controller
 {
+    private const REQUEST_STATUSES = [
+        'Submitted',
+        'Under Review',
+        'Needs Revision',
+        'Approved',
+        'Rejected',
+        'Archived',
+    ];
+
+    private const REQUEST_FILTER_KEYS = [
+        'status',
+        'search',
+        'university',
+        'date_from',
+        'date_to',
+    ];
+
     protected $letterService;
     protected $aiService;
     protected $telegramService;
     protected $requestStatusService;
     protected $publicAssetUrlService;
+    protected $browserLetterPdfService;
+    protected $googleDriveLetterBackupService;
 
-    public function __construct(LetterService $letterService, AiService $aiService, TelegramService $telegramService, RequestStatusService $requestStatusService, PublicAssetUrlService $publicAssetUrlService)
+    public function __construct(LetterService $letterService, AiService $aiService, TelegramService $telegramService, RequestStatusService $requestStatusService, PublicAssetUrlService $publicAssetUrlService, BrowserLetterPdfService $browserLetterPdfService, GoogleDriveLetterBackupService $googleDriveLetterBackupService)
     {
         $this->letterService = $letterService;
         $this->aiService = $aiService;
         $this->telegramService = $telegramService;
         $this->requestStatusService = $requestStatusService;
         $this->publicAssetUrlService = $publicAssetUrlService;
+        $this->browserLetterPdfService = $browserLetterPdfService;
+        $this->googleDriveLetterBackupService = $googleDriveLetterBackupService;
     }
 
     // ... existing ...
@@ -121,16 +145,45 @@ class AdminController extends Controller
     {
         $settings = $this->getSettings();
 
-        $query = RequestModel::orderBy('created_at', 'desc');
+        $filters = $this->normalizeRequestFilters($request->only(self::REQUEST_FILTER_KEYS));
+        $query = $this->applyRequestFilters(RequestModel::query(), $filters)
+            ->orderBy('created_at', 'desc');
 
-        // Filter by status
-        $status = $request->input('status', 'All');
-        if ($status && $status !== 'All') {
-            $query->where('status', $status);
+        $requests = $query->paginate(15)->appends($filters);
+
+        return view('admin.requests', compact('settings', 'requests'));
+    }
+
+    private function normalizeRequestFilters(array $filters): array
+    {
+        $status = trim((string) ($filters['status'] ?? 'All'));
+        if ($status === '' || !in_array($status, array_merge(['All'], self::REQUEST_STATUSES), true)) {
+            $status = 'All';
         }
 
-        // Search functionality
-        $search = $request->input('search');
+        $normalized = [
+            'status' => $status,
+        ];
+
+        foreach (['search', 'university', 'date_from', 'date_to'] as $key) {
+            $value = trim((string) ($filters[$key] ?? ''));
+            if ($value !== '') {
+                $normalized[$key] = $value;
+            }
+        }
+
+        return $normalized;
+    }
+
+    private function applyRequestFilters(Builder $query, array $filters): Builder
+    {
+        $filters = $this->normalizeRequestFilters($filters);
+
+        if (($filters['status'] ?? 'All') !== 'All') {
+            $query->where('status', $filters['status']);
+        }
+
+        $search = $filters['search'] ?? null;
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('student_name', 'like', "%{$search}%")
@@ -140,22 +193,19 @@ class AdminController extends Controller
             });
         }
 
-        $university = $request->input('university');
-        if ($university) {
-            $query->where('university', 'like', "%{$university}%");
-        }
-        $dateFrom = $request->input('date_from');
-        if ($dateFrom) {
-            $query->whereDate('created_at', '>=', $dateFrom);
-        }
-        $dateTo = $request->input('date_to');
-        if ($dateTo) {
-            $query->whereDate('created_at', '<=', $dateTo);
+        if (!empty($filters['university'])) {
+            $query->where('university', 'like', '%' . $filters['university'] . '%');
         }
 
-        $requests = $query->paginate(15)->appends($request->query());
+        if (!empty($filters['date_from'])) {
+            $query->whereDate('created_at', '>=', $filters['date_from']);
+        }
 
-        return view('admin.requests', compact('settings', 'requests'));
+        if (!empty($filters['date_to'])) {
+            $query->whereDate('created_at', '<=', $filters['date_to']);
+        }
+
+        return $query;
     }
 
     /**
@@ -342,32 +392,9 @@ class AdminController extends Controller
      */
     public function exportRequests(Request $request)
     {
-        $query = RequestModel::orderBy('created_at', 'desc');
-
-        // Apply same filters as requests page
-        $status = $request->input('status', 'All');
-        if ($status && $status !== 'All') {
-            $query->where('status', $status);
-        }
-
-        $search = $request->input('search');
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('student_name', 'like', "%{$search}%")
-                    ->orWhere('student_email', 'like', "%{$search}%")
-                    ->orWhere('tracking_id', 'like', "%{$search}%");
-            });
-        }
-
-        $dateFrom = $request->input('date_from');
-        if ($dateFrom) {
-            $query->whereDate('created_at', '>=', $dateFrom);
-        }
-
-        $dateTo = $request->input('date_to');
-        if ($dateTo) {
-            $query->whereDate('created_at', '<=', $dateTo);
-        }
+        $filters = $this->normalizeRequestFilters($request->only(self::REQUEST_FILTER_KEYS));
+        $query = $this->applyRequestFilters(RequestModel::query(), $filters)
+            ->orderBy('created_at', 'desc');
 
         $exportQuery = clone $query;
         $exportCount = (clone $query)->count();
@@ -421,7 +448,7 @@ class AdminController extends Controller
             'action' => 'export_requests',
             'target_type' => 'requests',
             'target_id' => null,
-            'details' => json_encode(['count' => $exportCount, 'filters' => $request->all()]),
+            'details' => json_encode(['count' => $exportCount, 'filters' => $filters]),
             'ip_address' => $request->ip(),
         ]);
 
@@ -831,45 +858,212 @@ class AdminController extends Controller
     public function bulkAction(Request $request)
     {
         $validated = $request->validate([
-            'ids' => 'required|json',
-            'action' => 'required|in:approve,reject,delete'
+            'operation' => 'nullable|in:status,delete',
+            'selection_scope' => 'nullable|in:selected,filtered',
+            'ids' => 'nullable|json',
+            'filters' => 'nullable|json',
+            'status' => 'nullable|in:' . implode(',', self::REQUEST_STATUSES),
+            'admin_message' => 'nullable|string|max:2000',
+            'action' => 'nullable|in:approve,reject,delete',
         ]);
 
-        $ids = json_decode($validated['ids'], true);
-        if (empty($ids)) {
-            return back()->with('error', 'No items selected');
+        [$operation, $selectionScope, $status, $studentMessage] = $this->normalizeBulkOperationPayload($validated);
+
+        if (!in_array($operation, ['status', 'delete'], true)) {
+            return back()
+                ->withErrors(['operation' => 'Please choose a valid bulk action.'])
+                ->withInput();
         }
 
-        $count = count($ids);
+        if ($operation === 'status' && $status === null) {
+            return back()
+                ->withErrors(['status' => 'Please choose the status you want to apply.'])
+                ->withInput();
+        }
 
-        if ($validated['action'] === 'delete') {
-            RequestModel::whereIn('id', $ids)->delete();
-            $logAction = "Bulk deleted $count requests";
-        } else {
-            $status = $validated['action'] === 'approve' ? 'Approved' : 'Rejected';
-            $requests = RequestModel::whereIn('id', $ids)->get();
+        if (
+            $operation === 'status'
+            && in_array($status, ['Needs Revision', 'Rejected'], true)
+            && $studentMessage === null
+        ) {
+            return back()
+                ->withErrors([
+                    'admin_message' => $status === 'Rejected'
+                        ? 'A shared rejection reason is required for bulk rejection.'
+                        : 'A shared student message is required for bulk Needs Revision updates.',
+                ])
+                ->withInput();
+        }
 
-            foreach ($requests as $requestModel) {
-                $transitionContext = [];
-                if ($status === 'Rejected') {
-                    $transitionContext['rejection_reason'] = 'Your request has been declined. Please contact support if you need more details.';
+        [$selectionQuery, $resolvedIds, $filters] = $this->resolveBulkSelection($selectionScope, $validated);
+        $targetCount = (clone $selectionQuery)->count();
+
+        if ($targetCount === 0) {
+            return back()->with('error', 'No matching requests were found for that bulk action.');
+        }
+
+        if ($operation === 'delete' && $selectionScope === 'filtered') {
+            return back()
+                ->withErrors(['selection_scope' => 'Bulk delete only supports explicitly selected requests.'])
+                ->withInput();
+        }
+
+        @set_time_limit(0);
+
+        if ($operation === 'delete') {
+            $deletedCount = (clone $selectionQuery)->delete();
+
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'bulk_request_delete',
+                'details' => json_encode([
+                    'selection_scope' => $selectionScope,
+                    'selected_ids' => $resolvedIds,
+                    'deleted_count' => $deletedCount,
+                ]),
+            ]);
+
+            return back()->with('success', "Deleted {$deletedCount} request(s) successfully.");
+        }
+
+        $transitionContext = [
+            'admin_message' => $studentMessage,
+        ];
+
+        if ($status === 'Rejected') {
+            $transitionContext['rejection_reason'] = $studentMessage;
+        }
+
+        $updatedCount = 0;
+        $skippedCount = 0;
+
+        (clone $selectionQuery)
+            ->select('requests.*')
+            ->orderBy('id')
+            ->chunkById(100, function ($requests) use (&$updatedCount, &$skippedCount, $status, $studentMessage, $transitionContext) {
+                foreach ($requests as $requestModel) {
+                    if (!$this->bulkStatusWouldChange($requestModel, $status, $studentMessage)) {
+                        $skippedCount++;
+                        continue;
+                    }
+
+                    $requestModel = $this->requestStatusService->transition($requestModel, $status, $transitionContext);
+                    $this->requestStatusService->notifyStudent($requestModel);
+                    $updatedCount++;
                 }
+            });
 
-                $requestModel = $this->requestStatusService->transition($requestModel, $status, $transitionContext);
-                $this->requestStatusService->notifyStudent($requestModel);
-            }
-
-            $logAction = "Bulk updated $count requests to $status";
-        }
-
-        // Audit Log
         AuditLog::create([
             'user_id' => auth()->id(),
-            'action' => 'bulk_request_action',
-            'details' => $logAction
+            'action' => 'bulk_request_status_update',
+            'details' => json_encode([
+                'selection_scope' => $selectionScope,
+                'filters' => $selectionScope === 'filtered' ? $filters : null,
+                'selected_ids' => $selectionScope === 'selected' ? $resolvedIds : null,
+                'target_count' => $targetCount,
+                'updated_count' => $updatedCount,
+                'skipped_count' => $skippedCount,
+                'status' => $status,
+                'shared_student_message' => $studentMessage,
+            ]),
         ]);
 
-        return back()->with('success', "$logAction successfully");
+        if ($updatedCount === 0) {
+            return back()->with('success', 'No requests needed updating. Everything already matched the selected status.');
+        }
+
+        $successMessage = "Updated {$updatedCount} request(s) to {$status}.";
+        if ($skippedCount > 0) {
+            $successMessage .= " {$skippedCount} request(s) already matched that status and were skipped.";
+        }
+
+        return back()->with('success', $successMessage);
+    }
+
+    private function normalizeBulkOperationPayload(array $validated): array
+    {
+        $legacyAction = $validated['action'] ?? null;
+        $operation = $validated['operation'] ?? null;
+        $selectionScope = $validated['selection_scope'] ?? 'selected';
+        $status = $validated['status'] ?? null;
+        $studentMessage = $this->normalizeBulkMessage($validated['admin_message'] ?? null);
+
+        if ($operation === null && $legacyAction !== null) {
+            return match ($legacyAction) {
+                'approve' => ['status', 'selected', 'Approved', null],
+                'reject' => [
+                    'status',
+                    'selected',
+                    'Rejected',
+                    'Your request has been declined. Please contact support if you need more details.',
+                ],
+                'delete' => ['delete', 'selected', null, null],
+            };
+        }
+
+        return [$operation, $selectionScope, $status, $studentMessage];
+    }
+
+    private function resolveBulkSelection(string $selectionScope, array $validated): array
+    {
+        if ($selectionScope === 'filtered') {
+            $filters = $this->normalizeRequestFilters($this->decodeJsonArray($validated['filters'] ?? null));
+
+            return [
+                $this->applyRequestFilters(RequestModel::query(), $filters),
+                [],
+                $filters,
+            ];
+        }
+
+        $ids = collect($this->decodeJsonArray($validated['ids'] ?? null))
+            ->map(static fn ($id) => (int) $id)
+            ->filter(static fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        return [
+            RequestModel::query()->whereIn('id', $ids),
+            $ids,
+            [],
+        ];
+    }
+
+    private function decodeJsonArray(?string $payload): array
+    {
+        if (!$payload) {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $e) {
+            return [];
+        }
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function normalizeBulkMessage(?string $message): ?string
+    {
+        $message = trim((string) $message);
+
+        return $message === '' ? null : $message;
+    }
+
+    private function bulkStatusWouldChange(RequestModel $requestModel, string $status, ?string $studentMessage): bool
+    {
+        if ($requestModel->status !== $status) {
+            return true;
+        }
+
+        $currentMessage = match ($status) {
+            'Rejected' => $this->normalizeBulkMessage($requestModel->rejection_reason),
+            default => $this->normalizeBulkMessage($requestModel->admin_message),
+        };
+
+        return $currentMessage !== $studentMessage;
     }
 
     /**
@@ -882,8 +1076,9 @@ class AdminController extends Controller
         }
 
         $settings = $this->getSettings();
+        $googleDriveSummary = $this->googleDriveLetterBackupService->configurationSummary();
 
-        return view('admin.settings', compact('settings'));
+        return view('admin.settings', compact('settings', 'googleDriveSummary'));
     }
 
     /**
@@ -1046,6 +1241,37 @@ class AdminController extends Controller
             if ($request->has('maintenanceMode') || $request->has('maintenanceMessage')) {
                 cache()->forget('maintenance_mode');
             }
+        } elseif ($request->input('settingsGroup') === 'google_drive') {
+            $enabled = $request->has('googleDriveEnabled') ? 'true' : 'false';
+            $existingJson = trim((string) Settings::getValue('googleDriveServiceAccountJson', ''));
+            $existingFolderId = trim((string) Settings::getValue('googleDriveFolderId', ''));
+            $submittedJson = trim((string) $request->input('googleDriveServiceAccountJson', ''));
+            $submittedFolder = trim((string) $request->input('googleDriveFolderId', $existingFolderId));
+            $normalizedFolderId = $this->googleDriveLetterBackupService->normalizeFolderReference($submittedFolder);
+
+            if ($submittedJson !== '') {
+                try {
+                    $this->googleDriveLetterBackupService->parseServiceAccountJsonString($submittedJson);
+                } catch (\Throwable $e) {
+                    return back()->withInput()->with('error', $e->getMessage());
+                }
+            } elseif ($enabled === 'true' && $existingJson === '') {
+                return back()->withInput()->with('error', 'Paste your Google Drive service account JSON before enabling Drive backup.');
+            }
+
+            if ($enabled === 'true' && $normalizedFolderId === null && $existingFolderId === '') {
+                return back()->withInput()->with('error', 'Enter the Google Drive folder ID or folder URL before enabling Drive backup.');
+            }
+
+            Settings::updateOrCreate(['key' => 'googleDriveEnabled'], ['value' => $enabled]);
+
+            if ($submittedJson !== '') {
+                Settings::updateOrCreate(['key' => 'googleDriveServiceAccountJson'], ['value' => $submittedJson]);
+            }
+
+            if ($submittedFolder !== '') {
+                Settings::updateOrCreate(['key' => 'googleDriveFolderId'], ['value' => $normalizedFolderId]);
+            }
         } elseif ($request->has('telegram_bot_token') || $request->has('telegram_chat_id')) {
             // Processing Telegram Settings
             $keys = ['telegram_bot_token', 'telegram_chat_id'];
@@ -1086,6 +1312,30 @@ class AdminController extends Controller
         }
 
         return redirect()->route('admin.settings')->with('success', 'Settings updated successfully!');
+    }
+
+    public function testGoogleDrive()
+    {
+        if (Auth::user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $result = $this->googleDriveLetterBackupService->testConnection();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Google Drive connection verified successfully.',
+                'service_account_email' => $result['service_account_email'] ?? null,
+                'folder_name' => $result['folder_name'] ?? null,
+                'folder_url' => $result['folder_url'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     /**
@@ -1357,6 +1607,216 @@ class AdminController extends Controller
         }
 
         return \Illuminate\Support\Facades\Storage::download($request->document_path);
+    }
+
+    public function downloadRequestLetterPdf($id)
+    {
+        $request = RequestModel::findOrFail($id);
+
+        if ($request->status !== 'Approved') {
+            return back()->with('error', 'Only approved requests can be downloaded as official letters.');
+        }
+
+        try {
+            $pdf = $this->browserLetterPdfService->renderRequestPdf($request);
+        } catch (\Throwable $e) {
+            Log::error('Admin single letter PDF export failed: ' . $e->getMessage(), [
+                'request_id' => $request->id,
+                'tracking_id' => $request->tracking_id,
+            ]);
+
+            return back()->with('error', 'We could not generate that PDF right now. Please try again in a moment.');
+        }
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'admin_download_letter_pdf',
+            'target_type' => 'request',
+            'target_id' => $request->id,
+            'details' => json_encode([
+                'tracking_id' => $request->tracking_id,
+                'filename' => $pdf['filename'],
+            ]),
+        ]);
+
+        return response($pdf['binary'], 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $pdf['filename'] . '"',
+        ]);
+    }
+
+    public function exportRequestLettersPdf(Request $request)
+    {
+        $validated = $request->validate([
+            'selection_scope' => 'required|in:selected,filtered',
+            'ids' => 'nullable|json',
+            'filters' => 'nullable|json',
+        ]);
+
+        [$selectionQuery, $selectedIds, $filters] = $this->resolveBulkSelection($validated['selection_scope'], $validated);
+        $matchedCount = (clone $selectionQuery)->count();
+
+        if ($matchedCount === 0) {
+            return back()->with('error', 'No requests matched that export selection.');
+        }
+
+        $approvedQuery = (clone $selectionQuery)
+            ->where('status', 'Approved')
+            ->orderBy('id');
+
+        $approvedCount = (clone $approvedQuery)->count();
+        if ($approvedCount === 0) {
+            return back()->with('error', 'No approved letters were found in that selection.');
+        }
+
+        try {
+            $archive = $this->browserLetterPdfService->buildZipArchive($approvedQuery->cursor());
+        } catch (\Throwable $e) {
+            Log::error('Admin bulk letter PDF export failed: ' . $e->getMessage(), [
+                'selection_scope' => $validated['selection_scope'],
+                'matched_count' => $matchedCount,
+                'approved_count' => $approvedCount,
+            ]);
+
+            return back()->with('error', 'We could not export those letters right now. Please try again in a moment.');
+        }
+
+        $skippedCount = max(0, $matchedCount - $approvedCount);
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'admin_export_letters_pdf_zip',
+            'target_type' => 'requests',
+            'target_id' => null,
+            'details' => json_encode([
+                'selection_scope' => $validated['selection_scope'],
+                'filters' => $validated['selection_scope'] === 'filtered' ? $filters : null,
+                'selected_ids' => $validated['selection_scope'] === 'selected' ? $selectedIds : null,
+                'matched_count' => $matchedCount,
+                'approved_count' => $approvedCount,
+                'exported_count' => $archive['exported_count'],
+                'skipped_unapproved_count' => $skippedCount,
+                'failed_count' => count($archive['failed'] ?? []),
+            ]),
+        ]);
+
+        $downloadResponse = response()->download($archive['path'], $archive['filename'], [
+            'Content-Type' => 'application/zip',
+        ])->deleteFileAfterSend(true);
+
+        if ($skippedCount > 0 || !empty($archive['failed'])) {
+            $message = "Exported {$archive['exported_count']} approved letter(s).";
+            if ($skippedCount > 0) {
+                $message .= " {$skippedCount} request(s) were skipped because they are not approved.";
+            }
+            if (!empty($archive['failed'])) {
+                $message .= ' ' . count($archive['failed']) . ' export(s) failed and were left out of the ZIP.';
+            }
+
+            session()->flash('success', $message);
+        }
+
+        return $downloadResponse;
+    }
+
+    public function syncRequestLetterToGoogleDrive($id)
+    {
+        $request = RequestModel::findOrFail($id);
+
+        if ($request->status !== 'Approved') {
+            return back()->with('error', 'Only approved requests can be backed up to Google Drive.');
+        }
+
+        try {
+            $result = $this->googleDriveLetterBackupService->syncRequest($request);
+        } catch (\Throwable $e) {
+            Log::error('Admin single letter Google Drive export failed: ' . $e->getMessage(), [
+                'request_id' => $request->id,
+                'tracking_id' => $request->tracking_id,
+            ]);
+
+            return back()->with('error', 'We could not back up that letter to Google Drive right now. ' . $e->getMessage());
+        }
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'admin_sync_letter_google_drive',
+            'target_type' => 'request',
+            'target_id' => $request->id,
+            'details' => json_encode([
+                'tracking_id' => $request->tracking_id,
+                'file_id' => $result['file_id'] ?? null,
+                'file_name' => $result['file_name'] ?? null,
+            ]),
+        ]);
+
+        return back()->with('success', 'Letter backed up to Google Drive successfully.');
+    }
+
+    public function exportRequestLettersGoogleDrive(Request $request)
+    {
+        $validated = $request->validate([
+            'selection_scope' => 'required|in:selected,filtered',
+            'ids' => 'nullable|json',
+            'filters' => 'nullable|json',
+        ]);
+
+        [$selectionQuery, $selectedIds, $filters] = $this->resolveBulkSelection($validated['selection_scope'], $validated);
+        $matchedCount = (clone $selectionQuery)->count();
+
+        if ($matchedCount === 0) {
+            return back()->with('error', 'No requests matched that Google Drive export selection.');
+        }
+
+        $approvedQuery = (clone $selectionQuery)
+            ->where('status', 'Approved')
+            ->orderBy('id');
+
+        $approvedCount = (clone $approvedQuery)->count();
+        if ($approvedCount === 0) {
+            return back()->with('error', 'No approved letters were found in that selection.');
+        }
+
+        try {
+            $summary = $this->googleDriveLetterBackupService->syncMany($approvedQuery->cursor());
+        } catch (\Throwable $e) {
+            Log::error('Admin bulk Google Drive export failed: ' . $e->getMessage(), [
+                'selection_scope' => $validated['selection_scope'],
+                'matched_count' => $matchedCount,
+                'approved_count' => $approvedCount,
+            ]);
+
+            return back()->with('error', 'We could not back up those letters to Google Drive right now. ' . $e->getMessage());
+        }
+
+        $skippedCount = max(0, $matchedCount - $approvedCount);
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'admin_export_letters_google_drive',
+            'target_type' => 'requests',
+            'target_id' => null,
+            'details' => json_encode([
+                'selection_scope' => $validated['selection_scope'],
+                'filters' => $validated['selection_scope'] === 'filtered' ? $filters : null,
+                'selected_ids' => $validated['selection_scope'] === 'selected' ? $selectedIds : null,
+                'matched_count' => $matchedCount,
+                'approved_count' => $approvedCount,
+                'synced_count' => $summary['synced_count'],
+                'skipped_unapproved_count' => $skippedCount,
+                'failed_count' => count($summary['failed'] ?? []),
+            ]),
+        ]);
+
+        $message = 'Backed up ' . $summary['synced_count'] . ' approved letter(s) to Google Drive.';
+        if ($skippedCount > 0) {
+            $message .= ' ' . $skippedCount . ' request(s) were skipped because they are not approved.';
+        }
+        if (!empty($summary['failed'])) {
+            $message .= ' ' . count($summary['failed']) . ' backup(s) failed and need another try.';
+        }
+
+        return back()->with('success', $message);
     }
 
     /**

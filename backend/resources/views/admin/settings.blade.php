@@ -17,6 +17,18 @@
         </div>
     @endif
 
+    @if($errors->any())
+        <div
+            style="background: var(--error-bg); color: var(--error-text); padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; border: 1px solid var(--error-border);">
+            <strong>Could not save settings.</strong>
+            <ul style="margin: 0.5rem 0 0; padding-left: 1.25rem;">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <!-- General Settings -->
     <div class="card" style="margin-bottom: 1.5rem;">
         <div class="card-header">
@@ -279,6 +291,117 @@
         </div>
     </div>
 
+    <div class="card" style="margin-bottom: 1.5rem; border-color: rgba(34, 197, 94, 0.2);">
+        <div class="card-header" style="background: linear-gradient(135deg, #166534 0%, #15803d 100%); color: white;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-feather="hard-drive" style="width: 20px; height: 20px;"></i>
+                <h3 style="color: white; margin: 0;">Google Drive Letter Backup</h3>
+            </div>
+            <span style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">Keep approved letters backed up outside the app</span>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ route('admin.settings.update') }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="settingsGroup" value="google_drive">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                            <div>
+                                <label class="form-label" style="margin-bottom: 0;">Enable Google Drive backup</label>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0.25rem 0 0;">
+                                    Keep approved letters in a Drive folder so admins can recover them during outages.
+                                </p>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" name="googleDriveEnabled" {{ ($settings['googleDriveEnabled'] ?? 'false') === 'true' ? 'checked' : '' }}>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Service Account JSON</label>
+                        <textarea name="googleDriveServiceAccountJson" class="form-textarea" rows="7"
+                            placeholder="{{ !empty($settings['googleDriveServiceAccountJson']) ? 'Configured. Paste a new JSON key only if you want to replace it.' : 'Paste the full Google service account JSON key here...' }}"></textarea>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Leave this blank to keep the current saved key.
+                            @if(!empty($googleDriveSummary['service_account_email']))
+                                Current service account:
+                                <strong>{{ $googleDriveSummary['service_account_email'] }}</strong>.
+                            @endif
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Drive Folder ID or URL</label>
+                        <input type="text" name="googleDriveFolderId" class="form-input"
+                            value="{{ $settings['googleDriveFolderId'] ?? '' }}"
+                            placeholder="Paste the folder ID or the full Google Drive folder URL">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Create a folder in your Google Drive, share that folder with the service account email above, then paste the folder URL or ID here.
+                        </p>
+                    </div>
+
+                    <div
+                        style="padding: 1rem 1.125rem; border-radius: 0.85rem; border: 1px solid var(--border-color); background: rgba(255,255,255,0.03);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-main);">Current backup target</div>
+                                <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                    @if($googleDriveSummary['configured'])
+                                        Ready to sync approved letters into the configured folder.
+                                    @else
+                                        Not fully configured yet.
+                                    @endif
+                                </div>
+                            </div>
+                            @if(!empty($googleDriveSummary['folder_url']))
+                                <a href="{{ $googleDriveSummary['folder_url'] }}" target="_blank" rel="noopener" class="btn btn-secondary">
+                                    <i data-feather="external-link" style="width: 16px; height: 16px;"></i>
+                                    Open Drive Folder
+                                </a>
+                            @endif
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
+                            <div>
+                                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Status</div>
+                                <div style="font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">
+                                    {{ $googleDriveSummary['configured'] ? 'Configured' : 'Needs setup' }}
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Service account</div>
+                                <div style="font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">
+                                    {{ $googleDriveSummary['service_account_email'] ?? 'Not saved yet' }}
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Folder</div>
+                                <div style="font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">
+                                    {{ $googleDriveSummary['folder_id'] ?? 'Not saved yet' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem;">
+                        <button type="submit" class="btn btn-primary">Save Drive Settings</button>
+                        <button type="button" class="btn btn-secondary" onclick="testGoogleDrive()">
+                            <i data-feather="shield" style="width: 16px; height: 16px;"></i>
+                            Test Drive Connection
+                        </button>
+                    </div>
+
+                    <div id="googleDriveResult"
+                        style="display: none; padding: 1rem; border-radius: 0.75rem; margin-top: 1rem;"></div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- System Maintenance & Backup -->
     <div class="card" style="border-color: var(--primary);">
         <div class="card-header" style="background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%); color: white;">
@@ -435,6 +558,45 @@
                     result.innerHTML = '✗ Error: ' + error.message;
                 });
         }
+
+        function testGoogleDrive() {
+            const result = document.getElementById('googleDriveResult');
+            result.style.display = 'block';
+            result.style.background = 'var(--info-bg, #dbeafe)';
+            result.style.color = 'var(--info-text, #1e40af)';
+            result.innerHTML = '<i data-feather="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Checking Google Drive access...';
+            feather.replace();
+
+            fetch('{{ route("admin.settings.test-google-drive") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        result.style.background = 'var(--success-bg)';
+                        result.style.color = 'var(--success-text)';
+                        const folderLink = data.folder_url
+                            ? ` <a href="${data.folder_url}" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">Open folder</a>`
+                            : '';
+                        result.innerHTML = `✓ ${data.message}${data.folder_name ? ` Folder: <strong>${data.folder_name}</strong>.` : ''}${folderLink}`;
+                    } else {
+                        result.style.background = 'var(--error-bg)';
+                        result.style.color = 'var(--error-text)';
+                        result.innerHTML = '✗ ' + (data.message || 'Could not connect to Google Drive.');
+                    }
+                })
+                .catch(error => {
+                    result.style.background = 'var(--error-bg)';
+                    result.style.color = 'var(--error-text)';
+                    result.innerHTML = '✗ Error: ' + error.message;
+                });
+        }
+
         function toggleMaintenanceMessage(isChecked) {
             const group = document.getElementById('maintenanceMessageGroup');
             if (isChecked) {

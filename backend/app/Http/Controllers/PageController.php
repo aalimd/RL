@@ -6,8 +6,6 @@ use App\Mail\TrackingVerificationCode;
 use App\Models\Request as RequestModel;
 use App\Models\Settings;
 use App\Models\User;
-use Dompdf\Dompdf;
-use Dompdf\Options;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cookie;
@@ -18,6 +16,7 @@ use App\Mail\RequestSubmittedToAdmin;
 
 
 use App\Services\LetterService;
+use App\Services\LetterPdfService;
 use App\Services\PublicAssetUrlService;
 use App\Services\WizardService;
 
@@ -32,10 +31,12 @@ class PageController extends Controller
     protected $wizardService;
     protected $telegramService;
     protected $publicAssetUrlService;
+    protected $letterPdfService;
 
-    public function __construct(LetterService $letterService, WizardService $wizardService, \App\Services\TelegramService $telegramService, PublicAssetUrlService $publicAssetUrlService)
+    public function __construct(LetterService $letterService, LetterPdfService $letterPdfService, WizardService $wizardService, \App\Services\TelegramService $telegramService, PublicAssetUrlService $publicAssetUrlService)
     {
         $this->letterService = $letterService;
+        $this->letterPdfService = $letterPdfService;
         $this->wizardService = $wizardService;
         $this->telegramService = $telegramService;
         $this->publicAssetUrlService = $publicAssetUrlService;
@@ -1175,7 +1176,6 @@ class PageController extends Controller
 
         $content = $this->letterService->generateLetterContent($request, $template);
 
-        // Prepare View Data - use Purifier for proper XSS sanitization
         $data = [
             'request' => $request,
             'layout' => $content['layout'],
@@ -1197,65 +1197,28 @@ class PageController extends Controller
         $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
         $this->ensureApprovedLetterAccess($request);
 
-        // Get Template
-        $templateId = null;
-        $formData = $request->form_data ?? [];
-        $templateId = $formData['template_id'] ?? null;
-
-        $template = null;
-        if ($templateId) {
-            $template = \App\Models\Template::find($templateId);
-        }
-
-        if (!$template) {
-            $template = $this->resolveTemplate($request);
-        }
-
-        if (!$template) {
-            abort(404, 'Template not found');
-        }
-
-        $content = $this->letterService->generateLetterContent($request, $template);
-
-        $data = [
-            'request' => $request,
-            'layout' => $content['layout'],
-            'header' => $this->letterService->prepareHtmlForPdf($this->letterService->sanitizeHtml($content['header'])),
-            'body' => $this->letterService->prepareHtmlForPdf($this->letterService->sanitizeHtml($content['body'])),
-            'footer' => $this->letterService->prepareHtmlForPdf($this->letterService->sanitizeHtml($content['footer'])),
-            'signature' => $this->letterService->prepareSignatureForPdf($content['signature']),
-            'qrCode' => $content['qrCode'] ?? '',
-        ];
-
-        // PDF default font override if needed or ensure defaults
-        if (!isset($data['layout']['fontFamily']))
-            $data['layout']['fontFamily'] = 'DejaVu Sans';
-
-        if (!isset($data['layout']['direction']))
-            $data['layout']['direction'] = 'ltr';
-
         try {
-            $html = view('pdf.letter', $data)->render();
-            $options = new Options();
-            $options->set('isHtml5ParserEnabled', true);
-            $options->set('isRemoteEnabled', true);
-            $options->set('defaultFont', $data['layout']['fontFamily'] ?? 'DejaVu Sans');
+            $compiled = $this->letterPdfService->compile($request);
 
-            $pdf = new Dompdf($options);
-            $pdf->loadHtml($html, 'UTF-8');
-            $pdf->setPaper('a4', 'portrait');
-            $pdf->render();
+            if (($compiled['fit']['status'] ?? null) === 'too_long') {
+                return response('This recommendation letter is being adjusted to fit one official A4 page. Please contact administration.', 409);
+            }
 
             $filename = 'Recommendation_Letter_' . $request->tracking_id . '.pdf';
             $disposition = $httpRequest->boolean('download') ? 'attachment' : 'inline';
 
-            return response($pdf->output(), 200, [
+            return response($compiled['pdf_binary'], 200, [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => $disposition . '; filename="' . $filename . '"',
             ]);
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('PDF Generation Failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to generate PDF. Please try again later.');
+        } catch (\RuntimeException $e) {
+            abort(404, 'Template not found');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('PDF Generation Failed: ' . $e->getMessage(), [
+                'request_id' => $request->id,
+                'tracking_id' => $request->tracking_id,
+            ]);
+            abort(500, 'Failed to generate PDF. Please try again later.');
         }
     }
 

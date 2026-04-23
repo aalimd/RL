@@ -21,6 +21,7 @@ class Settings extends Model
         'geminiApiKey',
         'smtpPassword',
         'telegram_webhook_secret',
+        'googleDriveServiceAccountJson',
     ];
 
     /**
@@ -67,4 +68,3 @@ class Settings extends Model
         return $setting ? $setting->value : $default;
     }
 }
-

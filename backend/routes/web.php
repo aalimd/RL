@@ -42,9 +42,6 @@ Route::middleware(['auth', 'active', 'twofactor'])->prefix('admin')->name('admin
     // ============================================
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/requests', [AdminController::class, 'requests'])->name('requests');
-    Route::get('/requests/{id}', [AdminController::class, 'requestDetails'])->name('requests.show');
-    Route::get('/requests/{id}/document', [AdminController::class, 'downloadDocument'])->name('requests.document');
-    Route::get('/requests/{id}/preview', [AdminController::class, 'previewLetter'])->name('requests.preview');
     Route::get('/analytics', [AdminController::class, 'analytics'])->name('analytics');
     Route::get('/templates', [AdminController::class, 'templates'])->name('templates');
     Route::get('/settings', [AdminController::class, 'settings'])->middleware('role:admin')->name('settings');
@@ -62,10 +59,8 @@ Route::middleware(['auth', 'active', 'twofactor'])->prefix('admin')->name('admin
     Route::middleware('role:admin,editor')->group(function () {
         // Request management
         Route::post('/requests/bulk', [AdminController::class, 'bulkAction'])->name('requests.bulk');
-        Route::patch('/requests/{id}/status', [AdminController::class, 'updateRequestStatus'])->name('requests.update-status');
-        Route::put('/requests/{id}', [AdminController::class, 'updateRequest'])->name('requests.update');
-        Route::post('/requests/{id}/rewrite-ai', [AdminController::class, 'rewriteWithAi'])->name('requests.rewrite-ai');
-
+        Route::post('/requests/letters/export-pdf', [AdminController::class, 'exportRequestLettersPdf'])->name('requests.letters.export-pdf');
+        Route::post('/requests/letters/export-drive', [AdminController::class, 'exportRequestLettersGoogleDrive'])->name('requests.letters.export-drive');
         // Template management
         Route::get('/templates/create', [AdminController::class, 'createTemplate'])->name('templates.create');
         Route::post('/templates', [AdminController::class, 'storeTemplate'])->name('templates.store');
@@ -77,6 +72,20 @@ Route::middleware(['auth', 'active', 'twofactor'])->prefix('admin')->name('admin
 
         // Export
         Route::get('/requests/export', [AdminController::class, 'exportRequests'])->name('requests.export');
+    });
+
+    Route::prefix('requests/{id}')->whereNumber('id')->group(function () {
+        Route::get('/', [AdminController::class, 'requestDetails'])->name('requests.show');
+        Route::get('/document', [AdminController::class, 'downloadDocument'])->name('requests.document');
+        Route::get('/preview', [AdminController::class, 'previewLetter'])->name('requests.preview');
+    });
+
+    Route::middleware('role:admin,editor')->prefix('requests/{id}')->whereNumber('id')->group(function () {
+        Route::patch('/status', [AdminController::class, 'updateRequestStatus'])->name('requests.update-status');
+        Route::put('/', [AdminController::class, 'updateRequest'])->name('requests.update');
+        Route::get('/letter-pdf', [AdminController::class, 'downloadRequestLetterPdf'])->name('requests.letter-pdf');
+        Route::post('/letter-drive', [AdminController::class, 'syncRequestLetterToGoogleDrive'])->name('requests.letter-drive');
+        Route::post('/rewrite-ai', [AdminController::class, 'rewriteWithAi'])->name('requests.rewrite-ai');
     });
 
     // ============================================
@@ -94,6 +103,7 @@ Route::middleware(['auth', 'active', 'twofactor'])->prefix('admin')->name('admin
         Route::put('/appearance', [AdminController::class, 'updateAppearance'])->name('appearance.update');
         Route::post('/appearance/reset', [AdminController::class, 'resetAppearance'])->name('appearance.reset');
         Route::post('/settings/test-email', [AdminController::class, 'sendTestEmail'])->name('settings.test-email');
+        Route::post('/settings/test-google-drive', [AdminController::class, 'testGoogleDrive'])->name('settings.test-google-drive');
         Route::put('/form-settings', [AdminController::class, 'updateFormSettings'])->name('form-settings.update');
         Route::post('/settings/backup', [AdminController::class, 'downloadDatabaseBackup'])->name('settings.backup');
 

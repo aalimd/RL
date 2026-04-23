@@ -32,12 +32,19 @@ class Request extends Model
         'admin_message',
         'rejection_reason',
         'document_path',
+        'drive_backup_status',
+        'drive_backup_file_id',
+        'drive_backup_file_name',
+        'drive_backup_url',
+        'drive_backup_error',
+        'drive_backup_synced_at',
         'form_data',
     ];
 
     protected $casts = [
         'gpa' => 'decimal:2',
         'deadline' => 'date',
+        'drive_backup_synced_at' => 'datetime',
         'form_data' => 'array',
     ];
 

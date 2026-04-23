@@ -1,12 +1,12 @@
 @php
     $margins = $layout['margins'] ?? [];
     $pageMargins = [
-        'top' => max(14, min((int) ($margins['top'] ?? 20), 24)),
-        'right' => max(14, min((int) ($margins['right'] ?? 20), 24)),
-        'bottom' => max(14, min((int) ($margins['bottom'] ?? 20), 24)),
-        'left' => max(14, min((int) ($margins['left'] ?? 20), 24)),
+        'top' => max(12, min((float) ($margins['top'] ?? 20), 24)),
+        'right' => max(12, min((float) ($margins['right'] ?? 20), 24)),
+        'bottom' => max(12, min((float) ($margins['bottom'] ?? 20), 24)),
+        'left' => max(12, min((float) ($margins['left'] ?? 20), 24)),
     ];
-    $fontSize = max(10.5, min((float) ($layout['fontSize'] ?? 12), 12));
+    $fontSize = max(9.8, min((float) ($layout['fontSize'] ?? 12), 12));
     $fontFamily = $layout['fontFamily'] ?? 'DejaVu Sans, sans-serif';
     $direction = $layout['direction'] ?? 'ltr';
     $language = $layout['language'] ?? ($direction === 'rtl' ? 'ar' : 'en');
@@ -14,6 +14,26 @@
     $watermarkEnabled = (bool) ($watermarkConfig['enabled'] ?? false);
     $watermarkText = !empty($watermarkConfig['text']) ? $watermarkConfig['text'] : ($request->tracking_id ?? 'OFFICIAL COPY');
     $showDigitalFooter = $layout['footer']['enabled'] ?? true;
+    $pdfFit = $layout['pdfFit'] ?? [];
+    $lineHeight = max(1.22, min((float) ($pdfFit['lineHeight'] ?? ($direction === 'rtl' ? 1.52 : 1.45)), 1.6));
+    $paragraphGap = max(3, min((float) ($pdfFit['paragraphGap'] ?? 8), 10));
+    $headerGap = max(6, min((float) ($pdfFit['headerGap'] ?? 14), 20));
+    $bodyGap = max(6, min((float) ($pdfFit['bodyGap'] ?? 14), 20));
+    $signatureTop = max(6, min((float) ($pdfFit['signatureTop'] ?? 14), 20));
+    $signatureNameSize = max(9.3, min((float) ($pdfFit['signatureNameSize'] ?? 11), 12));
+    $signatureTitleSize = max(8.6, min((float) ($pdfFit['signatureTitleSize'] ?? 10), 11));
+    $signatureDetailSize = max(7.2, min((float) ($pdfFit['signatureDetailSize'] ?? 9), 10));
+    $signatureImageHeight = max(42, min((float) ($pdfFit['signatureImageHeight'] ?? 70), 80));
+    $stampSize = max(68, min((float) ($pdfFit['stampSize'] ?? 96), 110));
+    $qrSize = max(56, min((float) ($pdfFit['qrSize'] ?? 72), 84));
+    $digitalFooterTop = max(6, min((float) ($pdfFit['digitalFooterTop'] ?? 10), 14));
+    $digitalFooterPadY = max(5, min((float) ($pdfFit['digitalFooterPadY'] ?? 8), 10));
+    $digitalFooterPadX = max(6, min((float) ($pdfFit['digitalFooterPadX'] ?? 8), 12));
+    $digitalFooterFontSize = max(6.0, min((float) ($pdfFit['digitalFooterFontSize'] ?? 7.1), 8));
+    $footerTop = max(5, min((float) ($pdfFit['footerTop'] ?? 8), 12));
+    $footerFontSize = max(6.3, min((float) ($pdfFit['footerFontSize'] ?? 8), 8.5));
+    $footerLineHeight = max(1.0, min((float) ($pdfFit['footerLineHeight'] ?? 1.15), 1.25));
+    $borderPadding = max(8, min((float) ($pdfFit['borderPadding'] ?? 12), 14));
 @endphp
 <!DOCTYPE html>
 <html lang="{{ $language }}" dir="{{ $direction }}">
@@ -25,7 +45,7 @@
     <style>
         @page {
             size: A4;
-            margin: {{ $pageMargins['top'] }}px {{ $pageMargins['right'] }}px {{ $pageMargins['bottom'] }}px {{ $pageMargins['left'] }}px;
+            margin: {{ $pageMargins['top'] }}mm {{ $pageMargins['right'] }}mm {{ $pageMargins['bottom'] }}mm {{ $pageMargins['left'] }}mm;
         }
 
         * {
@@ -37,7 +57,7 @@
         body {
             font-family: {{ $fontFamily }};
             font-size: {{ $fontSize }}pt;
-            line-height: 1.45;
+            line-height: {{ $lineHeight }};
             color: #000;
             direction: {{ $direction }};
             margin: 0;
@@ -49,12 +69,12 @@
             position: static;
             @if(isset($layout['border']['enabled']) && $layout['border']['enabled'])
                 border: {{ max(1, min((int) ($layout['border']['width'] ?? 2), 3)) }}px {{ $layout['border']['style'] ?? 'solid' }} {{ $layout['border']['color'] ?? '#057f3a' }};
-                padding: 12px;
+                padding: {{ $borderPadding }}px;
             @endif
         }
 
         .header {
-            margin-bottom: 14px;
+            margin-bottom: {{ $headerGap }}px;
         }
 
         .header img {
@@ -72,11 +92,12 @@
         }
 
         .body-content {
-            margin-bottom: 14px;
+            margin-bottom: {{ $bodyGap }}px;
+            line-height: {{ $lineHeight }};
         }
 
         .body-content p {
-            margin-bottom: 8px;
+            margin-bottom: {{ $paragraphGap }}px;
         }
 
         .body-content h1,
@@ -85,7 +106,8 @@
         .body-content h4,
         .body-content h5,
         .body-content h6 {
-            margin-bottom: 8px;
+            margin-bottom: {{ $paragraphGap }}px;
+            line-height: {{ max(1.1, min($lineHeight - 0.1, 1.35)) }};
         }
 
         .body-content img,
@@ -95,8 +117,16 @@
             height: auto;
         }
 
+        .body-content div,
+        .body-content li,
+        .body-content td,
+        .body-content th,
+        .body-content span {
+            line-height: inherit;
+        }
+
         .signature-section {
-            margin-top: 14px;
+            margin-top: {{ $signatureTop }}px;
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -114,17 +144,17 @@
 
         .signature-name {
             font-weight: bold;
-            font-size: 11pt;
+            font-size: {{ $signatureNameSize }}pt;
             margin-bottom: 2px;
         }
 
         .signature-title {
-            font-size: 10pt;
+            font-size: {{ $signatureTitleSize }}pt;
             color: #333;
         }
 
         .signature-details {
-            font-size: 9pt;
+            font-size: {{ $signatureDetailSize }}pt;
             color: #555;
             margin-top: 5px;
             line-height: 1.3;
@@ -136,12 +166,12 @@
 
         .signature-image img {
             max-width: 150px;
-            max-height: 70px;
+            max-height: {{ $signatureImageHeight }}px;
         }
 
         .stamp-image img {
-            max-width: 96px;
-            max-height: 96px;
+            max-width: {{ $stampSize }}px;
+            max-height: {{ $stampSize }}px;
         }
 
         .qr-block {
@@ -151,25 +181,25 @@
 
         .qr-block svg,
         .qr-block img {
-            width: 72px !important;
-            height: 72px !important;
-            max-width: 72px !important;
-            max-height: 72px !important;
+            width: {{ $qrSize }}px !important;
+            height: {{ $qrSize }}px !important;
+            max-width: {{ $qrSize }}px !important;
+            max-height: {{ $qrSize }}px !important;
         }
 
         .qr-block p,
         .qr-block span,
         .qr-block div {
-            font-size: 6.8pt !important;
+            font-size: {{ max(5.8, $digitalFooterFontSize - 0.2) }}pt !important;
             line-height: 1.1 !important;
             margin-top: 1px !important;
         }
 
         .digital-footer {
-            margin-top: 10px;
+            margin-top: {{ $digitalFooterTop }}px;
             border-top: 1px solid #e5e7eb;
-            padding: 8px;
-            font-size: 7.1pt;
+            padding: {{ $digitalFooterPadY }}px {{ $digitalFooterPadX }}px;
+            font-size: {{ $digitalFooterFontSize }}pt;
             color: #666;
             text-align: center;
             background-color: #f9fafb;
@@ -185,11 +215,11 @@
         }
 
         .footer {
-            margin-top: 8px;
-            padding-top: 8px;
+            margin-top: {{ $footerTop }}px;
+            padding-top: {{ $footerTop }}px;
             border-top: 1px solid #ddd;
-            font-size: 8pt;
-            line-height: 1.15;
+            font-size: {{ $footerFontSize }}pt;
+            line-height: {{ $footerLineHeight }};
             page-break-inside: avoid;
             break-inside: avoid;
         }
