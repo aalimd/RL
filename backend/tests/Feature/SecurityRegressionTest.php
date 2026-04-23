@@ -16,6 +16,7 @@ use App\Services\LetterService;
 use ArPHP\I18N\Arabic as ArabicText;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -1120,6 +1121,33 @@ class SecurityRegressionTest extends TestCase
         $this->assertNotSame($serviceAccountJson, Settings::where('key', 'googleDriveServiceAccountJson')->value('value'));
     }
 
+    public function test_admin_can_save_browserless_settings_and_encrypt_token(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+
+        $token = 'browserless-secret-token';
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->from(route('admin.settings'))
+            ->put(route('admin.settings.update'), [
+                'settingsGroup' => 'pdf_export',
+                'pdfExportDriver' => 'browserless',
+                'browserlessBaseUrl' => 'https://production-sfo.browserless.io',
+                'browserlessToken' => $token,
+            ])
+            ->assertRedirect(route('admin.settings'))
+            ->assertSessionHas('success', 'Settings updated successfully!');
+
+        $this->assertSame('browserless', Settings::getValue('pdfExportDriver'));
+        $this->assertSame('https://production-sfo.browserless.io', Settings::getValue('browserlessBaseUrl'));
+        $this->assertSame($token, Settings::getValue('browserlessToken'));
+        $this->assertNotSame($token, Settings::where('key', 'browserlessToken')->value('value'));
+    }
+
     public function test_bulk_rejected_status_requires_shared_message(): void
     {
         Mail::fake();
@@ -1185,6 +1213,65 @@ class SecurityRegressionTest extends TestCase
             'action' => 'admin_download_letter_pdf',
             'target_id' => $request->id,
         ]);
+    }
+
+    public function test_browser_letter_pdf_service_uses_browserless_when_configured(): void
+    {
+        Http::fake([
+            'https://production-sfo.browserless.io/pdf?token=browserless-secret-token' => Http::response('%PDF-BROWSERLESS', 200, [
+                'Content-Type' => 'application/pdf',
+            ]),
+        ]);
+
+        Settings::updateOrCreate(['key' => 'pdfExportDriver'], ['value' => 'browserless']);
+        Settings::updateOrCreate(['key' => 'browserlessBaseUrl'], ['value' => 'https://production-sfo.browserless.io']);
+        Settings::updateOrCreate(['key' => 'browserlessToken'], ['value' => 'browserless-secret-token']);
+
+        $request = $this->createApprovedRequest();
+
+        $pdf = app(BrowserLetterPdfService::class)->renderRequestPdf($request);
+
+        $this->assertSame('%PDF-BROWSERLESS', $pdf['binary']);
+
+        Http::assertSent(function ($request) {
+            if ($request->url() !== 'https://production-sfo.browserless.io/pdf?token=browserless-secret-token') {
+                return false;
+            }
+
+            $data = $request->data();
+
+            return isset($data['html'], $data['options'])
+                && $data['options']['format'] === 'A4'
+                && $data['options']['printBackground'] === true
+                && $data['options']['preferCSSPageSize'] === true;
+        });
+    }
+
+    public function test_admin_can_test_browserless_connection(): void
+    {
+        Http::fake([
+            'https://production-sfo.browserless.io/pdf?token=browserless-secret-token' => Http::response('%PDF-TEST', 200, [
+                'Content-Type' => 'application/pdf',
+            ]),
+        ]);
+
+        Settings::updateOrCreate(['key' => 'pdfExportDriver'], ['value' => 'browserless']);
+        Settings::updateOrCreate(['key' => 'browserlessBaseUrl'], ['value' => 'https://production-sfo.browserless.io']);
+        Settings::updateOrCreate(['key' => 'browserlessToken'], ['value' => 'browserless-secret-token']);
+
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->post(route('admin.settings.test-browserless'))
+            ->assertOk()
+            ->assertJson([
+                'success' => true,
+                'message' => 'Browserless generated a PDF successfully.',
+            ]);
     }
 
     public function test_admin_can_export_selected_approved_letters_as_zip(): void

@@ -1077,8 +1077,9 @@ class AdminController extends Controller
 
         $settings = $this->getSettings();
         $googleDriveSummary = $this->googleDriveLetterBackupService->configurationSummary();
+        $pdfRendererSummary = $this->browserLetterPdfService->configurationSummary();
 
-        return view('admin.settings', compact('settings', 'googleDriveSummary'));
+        return view('admin.settings', compact('settings', 'googleDriveSummary', 'pdfRendererSummary'));
     }
 
     /**
@@ -1241,6 +1242,29 @@ class AdminController extends Controller
             if ($request->has('maintenanceMode') || $request->has('maintenanceMessage')) {
                 cache()->forget('maintenance_mode');
             }
+        } elseif ($request->input('settingsGroup') === 'pdf_export') {
+            $driver = trim((string) $request->input('pdfExportDriver', 'local_browser'));
+            $driver = in_array($driver, ['local_browser', 'browserless'], true) ? $driver : 'local_browser';
+            $baseUrl = trim((string) $request->input('browserlessBaseUrl', ''));
+            $existingToken = trim((string) Settings::getValue('browserlessToken', ''));
+            $token = trim((string) $request->input('browserlessToken', ''));
+
+            if ($driver === 'browserless') {
+                if ($baseUrl === '') {
+                    $baseUrl = 'https://production-sfo.browserless.io';
+                }
+
+                if ($token === '' && $existingToken === '') {
+                    return back()->withInput()->with('error', 'Browserless token is required when the PDF export driver is set to Browserless.');
+                }
+            }
+
+            Settings::updateOrCreate(['key' => 'pdfExportDriver'], ['value' => $driver]);
+            Settings::updateOrCreate(['key' => 'browserlessBaseUrl'], ['value' => $baseUrl]);
+
+            if ($token !== '') {
+                Settings::updateOrCreate(['key' => 'browserlessToken'], ['value' => $token]);
+            }
         } elseif ($request->input('settingsGroup') === 'google_drive') {
             $enabled = $request->has('googleDriveEnabled') ? 'true' : 'false';
             $existingJson = trim((string) Settings::getValue('googleDriveServiceAccountJson', ''));
@@ -1312,6 +1336,29 @@ class AdminController extends Controller
         }
 
         return redirect()->route('admin.settings')->with('success', 'Settings updated successfully!');
+    }
+
+    public function testBrowserless()
+    {
+        if (Auth::user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        try {
+            $result = $this->browserLetterPdfService->testBrowserlessConnection();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Browserless generated a PDF successfully.',
+                'base_url' => $result['base_url'] ?? null,
+                'response_bytes' => $result['response_bytes'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 
     public function testGoogleDrive()

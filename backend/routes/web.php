@@ -103,6 +103,7 @@ Route::middleware(['auth', 'active', 'twofactor'])->prefix('admin')->name('admin
         Route::put('/appearance', [AdminController::class, 'updateAppearance'])->name('appearance.update');
         Route::post('/appearance/reset', [AdminController::class, 'resetAppearance'])->name('appearance.reset');
         Route::post('/settings/test-email', [AdminController::class, 'sendTestEmail'])->name('settings.test-email');
+        Route::post('/settings/test-browserless', [AdminController::class, 'testBrowserless'])->name('settings.test-browserless');
         Route::post('/settings/test-google-drive', [AdminController::class, 'testGoogleDrive'])->name('settings.test-google-drive');
         Route::put('/form-settings', [AdminController::class, 'updateFormSettings'])->name('form-settings.update');
         Route::post('/settings/backup', [AdminController::class, 'downloadDatabaseBackup'])->name('settings.backup');

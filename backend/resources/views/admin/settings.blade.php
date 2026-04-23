@@ -402,6 +402,107 @@
         </div>
     </div>
 
+    <div class="card" style="margin-bottom: 1.5rem; border-color: rgba(59, 130, 246, 0.2);">
+        <div class="card-header" style="background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%); color: white;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i data-feather="printer" style="width: 20px; height: 20px;"></i>
+                <h3 style="color: white; margin: 0;">PDF Export Renderer</h3>
+            </div>
+            <span style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">Use Browserless on shared hosting instead of local Chrome</span>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ route('admin.settings.update') }}">
+                @csrf
+                @method('PUT')
+                <input type="hidden" name="settingsGroup" value="pdf_export">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">PDF Export Driver</label>
+                        <select name="pdfExportDriver" class="form-select">
+                            <option value="local_browser" {{ ($settings['pdfExportDriver'] ?? 'local_browser') === 'local_browser' ? 'selected' : '' }}>
+                                Local Chrome / Chromium
+                            </option>
+                            <option value="browserless" {{ ($settings['pdfExportDriver'] ?? 'local_browser') === 'browserless' ? 'selected' : '' }}>
+                                Browserless (recommended for Hostinger shared hosting)
+                            </option>
+                        </select>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            On shared hosting, choose <strong>Browserless</strong>. Local Chrome export needs a real browser binary on the server.
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Browserless Base URL</label>
+                        <input type="text" name="browserlessBaseUrl" class="form-input"
+                            value="{{ $settings['browserlessBaseUrl'] ?? ($pdfRendererSummary['browserless_base_url'] ?? 'https://production-sfo.browserless.io') }}"
+                            placeholder="https://production-sfo.browserless.io">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Use the Browserless region URL from your account. The default production endpoint is shown above.
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Browserless Token</label>
+                        <input type="password" name="browserlessToken" class="form-input" value=""
+                            placeholder="••••••••{{ !empty($settings['browserlessToken']) ? ' (configured)' : '' }}">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Leave this blank to keep the current token.
+                        </p>
+                    </div>
+
+                    <div
+                        style="padding: 1rem 1.125rem; border-radius: 0.85rem; border: 1px solid var(--border-color); background: rgba(255,255,255,0.03);">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-main);">Current renderer status</div>
+                                <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                    @if(($pdfRendererSummary['driver'] ?? 'local_browser') === 'browserless')
+                                        Browserless is selected for official admin PDF export.
+                                    @else
+                                        Local browser rendering is selected.
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-top: 1rem;">
+                            <div>
+                                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Driver</div>
+                                <div style="font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">
+                                    {{ ($pdfRendererSummary['driver'] ?? 'local_browser') === 'browserless' ? 'Browserless' : 'Local browser' }}
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Browserless URL</div>
+                                <div style="font-weight: 600; color: var(--text-main); margin-top: 0.2rem; word-break: break-word;">
+                                    {{ $pdfRendererSummary['browserless_base_url'] ?? 'Not configured' }}
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Token</div>
+                                <div style="font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">
+                                    {{ !empty($pdfRendererSummary['browserless_token_configured']) ? 'Configured' : 'Not configured' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem;">
+                        <button type="submit" class="btn btn-primary">Save PDF Export Settings</button>
+                        <button type="button" class="btn btn-secondary" onclick="testBrowserless()">
+                            <i data-feather="shield" style="width: 16px; height: 16px;"></i>
+                            Test Browserless
+                        </button>
+                    </div>
+
+                    <div id="browserlessResult"
+                        style="display: none; padding: 1rem; border-radius: 0.75rem; margin-top: 1rem;"></div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- System Maintenance & Backup -->
     <div class="card" style="border-color: var(--primary);">
         <div class="card-header" style="background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%); color: white;">
@@ -588,6 +689,41 @@
                         result.style.background = 'var(--error-bg)';
                         result.style.color = 'var(--error-text)';
                         result.innerHTML = '✗ ' + (data.message || 'Could not connect to Google Drive.');
+                    }
+                })
+                .catch(error => {
+                    result.style.background = 'var(--error-bg)';
+                    result.style.color = 'var(--error-text)';
+                    result.innerHTML = '✗ Error: ' + error.message;
+                });
+        }
+
+        function testBrowserless() {
+            const result = document.getElementById('browserlessResult');
+            result.style.display = 'block';
+            result.style.background = 'var(--info-bg, #dbeafe)';
+            result.style.color = 'var(--info-text, #1e40af)';
+            result.innerHTML = '<i data-feather="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Checking Browserless PDF export...';
+            feather.replace();
+
+            fetch('{{ route("admin.settings.test-browserless") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        result.style.background = 'var(--success-bg)';
+                        result.style.color = 'var(--success-text)';
+                        result.innerHTML = `✓ ${data.message}${data.response_bytes ? ` Returned <strong>${data.response_bytes}</strong> bytes.` : ''}`;
+                    } else {
+                        result.style.background = 'var(--error-bg)';
+                        result.style.color = 'var(--error-text)';
+                        result.innerHTML = '✗ ' + (data.message || 'Could not connect to Browserless.');
                     }
                 })
                 .catch(error => {

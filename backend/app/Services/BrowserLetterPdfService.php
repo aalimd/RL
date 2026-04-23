@@ -2,6 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Settings;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Http;
 use App\Models\Request as RequestModel;
 use RuntimeException;
 use Symfony\Component\Process\Process;
@@ -9,6 +12,10 @@ use ZipArchive;
 
 class BrowserLetterPdfService
 {
+    private const DRIVER_LOCAL_BROWSER = 'local_browser';
+    private const DRIVER_BROWSERLESS = 'browserless';
+    private const DEFAULT_BROWSERLESS_BASE_URL = 'https://production-sfo.browserless.io';
+
     public function __construct(private LetterService $letterService)
     {
     }
@@ -86,6 +93,33 @@ class BrowserLetterPdfService
         return 'Recommendation_Letter_' . $request->tracking_id . '.pdf';
     }
 
+    public function configurationSummary(): array
+    {
+        $driver = $this->preferredDriver();
+        $browserlessBaseUrl = $this->browserlessBaseUrl();
+        $browserlessToken = trim((string) Settings::getValue('browserlessToken', env('BROWSERLESS_TOKEN', '')));
+
+        return [
+            'driver' => $driver,
+            'browserless_configured' => $browserlessBaseUrl !== '' && $browserlessToken !== '',
+            'browserless_base_url' => $browserlessBaseUrl,
+            'browserless_token_configured' => $browserlessToken !== '',
+        ];
+    }
+
+    public function testBrowserlessConnection(): array
+    {
+        $binary = $this->renderPdfViaBrowserless(
+            '<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:32px;}h1{margin:0 0 12px;}</style></head><body><h1>Browserless PDF Export Test</h1><p>This confirms Browserless can generate PDFs for this app.</p></body></html>',
+            'browserless-test'
+        );
+
+        return [
+            'base_url' => $this->browserlessBaseUrl(),
+            'response_bytes' => strlen($binary),
+        ];
+    }
+
     /**
      * @throws RuntimeException
      */
@@ -112,6 +146,28 @@ class BrowserLetterPdfService
      * @throws RuntimeException
      */
     private function renderPdfFromHtml(string $html, string $trackingId): string
+    {
+        $preferredDriver = $this->preferredDriver();
+
+        if ($preferredDriver === self::DRIVER_BROWSERLESS) {
+            return $this->renderPdfViaBrowserless($html, $trackingId);
+        }
+
+        try {
+            return $this->renderPdfViaLocalBrowser($html, $trackingId);
+        } catch (\Throwable $e) {
+            if (!$this->isMissingLocalBrowserError($e) || !$this->isBrowserlessConfigured()) {
+                throw $e;
+            }
+
+            return $this->renderPdfViaBrowserless($html, $trackingId);
+        }
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    private function renderPdfViaLocalBrowser(string $html, string $trackingId): string
     {
         $browserBinary = $this->resolveBrowserBinary();
         $htmlPath = $this->makeTempPath('letter-export-', '.html');
@@ -180,6 +236,42 @@ class BrowserLetterPdfService
         }
     }
 
+    /**
+     * @throws RuntimeException
+     */
+    private function renderPdfViaBrowserless(string $html, string $trackingId): string
+    {
+        $config = $this->browserlessConfig(true);
+
+        $response = Http::timeout(120)
+            ->accept('application/pdf')
+            ->withHeaders([
+                'Cache-Control' => 'no-cache',
+                'Content-Type' => 'application/json',
+            ])
+            ->post($config['endpoint'], [
+                'html' => $html,
+                'options' => [
+                    'printBackground' => true,
+                    'format' => 'A4',
+                    'preferCSSPageSize' => true,
+                ],
+            ]);
+
+        if (!$response->successful()) {
+            throw new RuntimeException(
+                'Browserless PDF export failed for ' . $trackingId . ': ' . $this->browserlessErrorMessage($response)
+            );
+        }
+
+        $binary = $response->body();
+        if (!is_string($binary) || $binary === '') {
+            throw new RuntimeException('Browserless did not return a PDF file for ' . $trackingId . '.');
+        }
+
+        return $binary;
+    }
+
     private function waitForPdfOutput(Process $process, string $pdfPath, int $timeoutSeconds): array
     {
         $deadline = microtime(true) + $timeoutSeconds;
@@ -243,6 +335,68 @@ class BrowserLetterPdfService
         }
 
         throw new RuntimeException('No supported Chrome or Chromium browser binary is available for PDF export.');
+    }
+
+    private function preferredDriver(): string
+    {
+        $driver = trim((string) Settings::getValue('pdfExportDriver', env('LETTER_EXPORT_DRIVER', self::DRIVER_LOCAL_BROWSER)));
+
+        return in_array($driver, [self::DRIVER_LOCAL_BROWSER, self::DRIVER_BROWSERLESS], true)
+            ? $driver
+            : self::DRIVER_LOCAL_BROWSER;
+    }
+
+    private function browserlessBaseUrl(): string
+    {
+        return rtrim(trim((string) Settings::getValue('browserlessBaseUrl', env('BROWSERLESS_BASE_URL', self::DEFAULT_BROWSERLESS_BASE_URL))), '/');
+    }
+
+    private function isBrowserlessConfigured(): bool
+    {
+        $baseUrl = $this->browserlessBaseUrl();
+        $token = trim((string) Settings::getValue('browserlessToken', env('BROWSERLESS_TOKEN', '')));
+
+        return $baseUrl !== '' && $token !== '';
+    }
+
+    /**
+     * @return array{base_url:string,token:string,endpoint:string}
+     */
+    private function browserlessConfig(bool $require = false): array
+    {
+        $baseUrl = $this->browserlessBaseUrl();
+        $token = trim((string) Settings::getValue('browserlessToken', env('BROWSERLESS_TOKEN', '')));
+
+        if ($require && ($baseUrl === '' || $token === '')) {
+            throw new RuntimeException('Browserless is not fully configured. Save the Browserless base URL and token in admin settings first.');
+        }
+
+        return [
+            'base_url' => $baseUrl,
+            'token' => $token,
+            'endpoint' => $baseUrl . '/pdf?token=' . urlencode($token),
+        ];
+    }
+
+    private function browserlessErrorMessage(Response $response): string
+    {
+        $payload = $response->json();
+
+        if (is_array($payload)) {
+            $message = $payload['error'] ?? $payload['message'] ?? $payload['data'] ?? null;
+            if (is_string($message) && trim($message) !== '') {
+                return trim($message);
+            }
+        }
+
+        $body = trim((string) $response->body());
+
+        return $body !== '' ? $body : ('HTTP ' . $response->status());
+    }
+
+    private function isMissingLocalBrowserError(\Throwable $e): bool
+    {
+        return str_contains($e->getMessage(), 'No supported Chrome or Chromium browser binary is available for PDF export.');
     }
 
     private function shouldDisableSandbox(): bool

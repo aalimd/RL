@@ -22,6 +22,7 @@ class Settings extends Model
         'smtpPassword',
         'telegram_webhook_secret',
         'googleDriveServiceAccountJson',
+        'browserlessToken',
     ];
 
     /**
