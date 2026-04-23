@@ -6,394 +6,252 @@
     <style>
         .tracking-page {
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem 1rem;
-            position: relative;
-            overflow: hidden;
-            background: var(--bg-primary);
+            padding: clamp(1.5rem, 3vw, 2.5rem) 1rem 3rem;
+            background:
+                linear-gradient(180deg, rgba(var(--primary-rgb), 0.04), transparent 18%),
+                var(--bg-primary);
         }
 
-        /* Ambient Background Effect */
-        .ambient-bg {
-            position: absolute;
+        .tracking-shell {
             width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            overflow: hidden;
-            z-index: 0;
-        }
-
-        .ambient-bg::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 120%;
-            height: 120%;
-            background: radial-gradient(ellipse at center, var(--primary) 0%, var(--secondary) 30%, transparent 70%);
-            opacity: 0.08;
-            animation: float-ambient 15s infinite ease-in-out;
-        }
-
-        html.dark .ambient-bg::before {
-            opacity: 0.15;
-        }
-
-        @keyframes float-ambient {
-
-            0%,
-            100% {
-                transform: translate(-50%, -50%) scale(1);
-            }
-
-            50% {
-                transform: translate(-48%, -52%) scale(1.1);
-            }
-        }
-
-        /* Particles */
-        .particles {
-            position: absolute;
-            inset: 0;
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .particle {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: var(--primary);
-            border-radius: 50%;
-            opacity: 0.3;
-            animation: float-particle 20s infinite linear;
-        }
-
-        @keyframes float-particle {
-            0% {
-                transform: translateY(100vh) scale(0);
-                opacity: 0;
-            }
-
-            10% {
-                opacity: 0.4;
-            }
-
-            90% {
-                opacity: 0.4;
-            }
-
-            100% {
-                transform: translateY(-10vh) scale(1);
-                opacity: 0;
-            }
-        }
-
-        .tracking-wrapper {
-            width: 100%;
-            max-width: 500px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            z-index: 10;
-        }
-
-        /* Animated Icon */
-        .tracking-icon {
-            width: 80px;
-            height: 80px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 2rem;
-            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.4);
-            animation: float-icon 3s ease-in-out infinite;
-        }
-
-        @keyframes float-icon {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-10px);
-            }
-        }
-
-        .tracking-icon svg {
-            width: 40px;
-            height: 40px;
-            color: white;
-        }
-
-        .tracking-header {
-            text-align: center;
-            margin-bottom: 2.5rem;
-            animation: slide-up 0.6s ease-out;
-        }
-
-        .tracking-header h1 {
-            font-size: 2.25rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            margin-bottom: 0.75rem;
-            letter-spacing: -0.025em;
-        }
-
-        .tracking-header p {
-            color: var(--text-secondary);
-            font-size: 1.125rem;
-            line-height: 1.6;
-            max-width: 400px;
+            max-width: 720px;
             margin: 0 auto;
         }
 
+        .tracking-head {
+            margin-bottom: 1.1rem;
+        }
+
+        .tracking-head h1 {
+            margin: 0.8rem 0 0.45rem;
+            font-family: var(--font-heading);
+            font-size: clamp(1.95rem, 4vw, 2.65rem);
+            line-height: 1.05;
+            letter-spacing: -0.045em;
+            color: var(--text-primary);
+            font-weight: 800;
+        }
+
+        .tracking-head p {
+            margin: 0;
+            max-width: 36rem;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .tracking-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid rgba(var(--primary-rgb), 0.14);
+            background: rgba(var(--primary-rgb), 0.08);
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
         .tracking-card {
-            width: 100%;
             background: var(--glass-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-lg);
-            padding: 2.5rem;
             border: 1px solid var(--glass-border);
-            animation: slide-up 0.6s ease-out 0.1s backwards;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: calc(var(--border-radius) + 0.5rem);
+            box-shadow: var(--shadow-lg);
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
 
-        .tracking-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 35px 60px -15px var(--shadow-color);
+        .alert-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.7rem;
+            padding: 0.95rem 1rem;
+            border-radius: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            line-height: 1.55;
         }
 
-        @keyframes slide-up {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
+        .alert-box.success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.16);
+            color: #047857;
+        }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        .alert-box.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #dc2626;
+        }
+
+        .search-form,
+        .action-stack,
+        .result-stack {
+            display: grid;
+            gap: 1rem;
         }
 
         .form-group {
-            margin-bottom: 1.75rem;
+            display: grid;
+            gap: 0.5rem;
         }
 
         .form-label {
-            display: block;
-            font-size: 0.9375rem;
+            font-size: 0.95rem;
             font-weight: 700;
             color: var(--text-primary);
-            margin-bottom: 0.625rem;
-            padding-left: 0.25rem;
         }
 
         .form-input {
             width: 100%;
-            padding: 1rem 1.25rem;
+            padding: 1rem 1.05rem;
             border: 1px solid var(--border-color);
             border-radius: 1rem;
             font-size: 1rem;
-            transition: all 0.25s ease;
             background: var(--input-bg);
             color: var(--text-primary);
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
-        }
-
-        html.dark .form-input {
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(0, 0, 0, 0.2);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         .form-input:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.02);
-            transform: translateY(-1px);
+            box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.12);
         }
 
-        .track-btn {
-            width: 100%;
-            padding: 1.125rem;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            border-radius: 1rem;
-            font-weight: 700;
-            font-size: 1.125rem;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 10px 25px -5px rgba(var(--primary-rgb), 0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            position: relative;
-            overflow: hidden;
+        .form-input.error {
+            border-color: #ef4444;
         }
 
-        .track-btn::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 50%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transform: skewX(-20deg);
-            transition: all 0.5s ease;
-        }
-
-        .track-btn:hover::after {
-            left: 150%;
-        }
-
-        .track-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 20px 35px -8px rgba(var(--primary-rgb), 0.5);
-            opacity: 0.95;
-            color: white;
-        }
-
-        .track-btn:active {
-            transform: translateY(-1px);
-        }
-
-        .status-info-box {
-            background: rgba(99, 102, 241, 0.05);
-            border: 1px solid rgba(99, 102, 241, 0.1);
-            border-radius: 1rem;
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-        }
-
-        html.dark .status-info-box {
-            background: rgba(99, 102, 241, 0.1);
-            border-color: rgba(99, 102, 241, 0.2);
-        }
-
-        .status-info-text {
-            margin: 0;
-            color: var(--text-secondary);
-            font-size: 0.9375rem;
+        .field-help,
+        .field-error,
+        .card-note {
+            font-size: 0.88rem;
             line-height: 1.5;
         }
 
-        .error-box {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+        .field-help,
+        .card-note {
+            color: var(--text-muted);
+        }
+
+        .field-error {
             color: #ef4444;
-            padding: 1.25rem;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-            display: flex;
+            font-weight: 600;
+        }
+
+        .card-note {
+            padding: 0.9rem 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(var(--primary-rgb), 0.04);
+        }
+
+        .card-note strong {
+            color: var(--text-primary);
+        }
+
+        .track-btn,
+        .primary-action,
+        .secondary-action {
+            width: 100%;
+            display: inline-flex;
             align-items: center;
-            gap: 0.75rem;
-            font-size: 0.9375rem;
-            animation: shake 0.5s ease-in-out;
+            justify-content: center;
+            gap: 0.7rem;
+            padding: 1rem 1.1rem;
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 700;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         }
 
-        @keyframes shake {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            25% {
-                transform: translateX(-5px);
-            }
-
-            75% {
-                transform: translateX(5px);
-            }
+        .track-btn,
+        .primary-action {
+            border: none;
+            background: var(--btn-gradient);
+            color: white;
+            box-shadow: var(--shadow-md);
+            cursor: pointer;
         }
 
-        /* Result Section */
-        .result-section {
-            margin-top: 2.5rem;
-            padding-top: 2.5rem;
-            border-top: 2px dashed var(--border-color);
+        .track-btn:hover,
+        .primary-action:hover {
+            transform: translateY(-1px);
+            color: white;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .secondary-action {
+            border: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .secondary-action:hover {
+            transform: translateY(-1px);
+            border-color: var(--primary);
+            color: var(--primary);
         }
 
         .result-header {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: space-between;
-            margin-bottom: 2rem;
-        }
-
-        .result-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .telegram-btn {
-            width: 100%;
-            padding: 1rem;
-            background: linear-gradient(135deg, #0088cc, #00a2ed);
-            color: white;
-            border-radius: 1rem;
-            text-decoration: none;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 10px 20px -5px rgba(0, 136, 204, 0.3);
+            gap: 1rem;
             margin-bottom: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .telegram-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 20px 30px -8px rgba(0, 136, 204, 0.4);
-            filter: brightness(1.05);
+        .result-title-block {
+            display: grid;
+            gap: 0.45rem;
         }
 
-        .telegram-btn:active {
-            transform: translateY(0);
+        .result-kicker,
+        .result-panel-label,
+        .meta-label,
+        .history-label {
+            display: block;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
         }
 
-        .telegram-icon-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
+        .result-headline {
+            margin: 0;
+            font-family: var(--font-heading);
+            font-size: clamp(1.65rem, 3vw, 2.15rem);
+            line-height: 1.1;
+            letter-spacing: -0.04em;
+            color: var(--text-primary);
+            font-weight: 800;
         }
 
-        .status-badge {
+        .result-description {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .status-chip {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 700;
+            justify-content: center;
+            padding: 0.55rem 0.9rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.025em;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
         }
 
         .status-approved {
@@ -416,7 +274,7 @@
 
         .status-revision {
             background: rgba(245, 158, 11, 0.15);
-            color: #f59e0b;
+            color: #d97706;
             border: 1px solid rgba(245, 158, 11, 0.2);
         }
 
@@ -426,551 +284,661 @@
             border: 1px solid rgba(139, 92, 246, 0.2);
         }
 
-        /* Timeline */
-        .timeline {
-            position: relative;
-            margin: 2.5rem 0;
-            padding-right: 0.5rem;
+        .result-panel {
+            padding: 1rem 1.05rem;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            background: rgba(var(--bg-secondary-rgb), 0.46);
         }
 
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 20px;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: var(--border-color);
-            border-radius: 3px;
-        }
-
-        .timeline-item {
-            position: relative;
-            padding-left: 3.5rem;
-            padding-bottom: 2.5rem;
-        }
-
-        .timeline-item:last-child {
-            padding-bottom: 0;
-        }
-
-        .timeline-marker {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: var(--bg-secondary);
-            border: 3px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            color: var(--text-muted);
-        }
-
-        .timeline-item.completed .timeline-marker {
-            background: var(--success, #10b981);
-            border-color: var(--success, #10b981);
-            color: white;
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-        }
-
-        .timeline-item.active .timeline-marker {
-            background: var(--bg-secondary);
-            border-color: var(--primary);
-            color: var(--primary);
-            box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.15);
-        }
-
-        .timeline-item.active .timeline-marker::after {
-            content: '';
-            position: absolute;
-            top: -4px;
-            left: -4px;
-            right: -4px;
-            bottom: -4px;
-            border-radius: 50%;
-            border: 2px solid var(--primary);
-            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-            pointer-events: none;
-        }
-
-        @keyframes pulse-ring {
-            0% {
-                transform: scale(0.9);
-                opacity: 0.8;
-            }
-
-            70%,
-            100% {
-                transform: scale(1.4);
-                opacity: 0;
-            }
-        }
-
-        .timeline-item.completed::after {
-            content: '';
-            position: absolute;
-            left: 20px;
-            top: 44px;
-            bottom: -20px;
-            width: 3px;
-            background: var(--success, #10b981);
-            z-index: 1;
-        }
-
-        .timeline-content h4 {
-            margin: 0;
-            font-size: 1.125rem;
-            font-weight: 700;
+        .result-panel p {
+            margin: 0.45rem 0 0;
             color: var(--text-primary);
-        }
-
-        .timeline-content p {
-            margin: 0.375rem 0 0;
-            font-size: 0.9375rem;
-            color: var(--text-secondary);
-            line-height: 1.5;
-        }
-
-        .timeline-date {
-            font-size: 0.8125rem;
-            color: var(--text-muted);
-            margin-top: 0.5rem;
-            font-weight: 500;
-        }
-
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 0;
-            border-bottom: 1px solid var(--border-light);
-        }
-
-        .info-row:last-child {
-            border-bottom: none;
-        }
-
-        .info-label {
-            color: var(--text-muted);
-            font-size: 0.9375rem;
-            font-weight: 500;
-        }
-
-        .info-value {
-            color: var(--text-primary);
-            font-weight: 700;
-            font-size: 0.9375rem;
-        }
-
-        .admin-message {
-            background: rgba(99, 102, 241, 0.05);
-            border-right: 4px solid var(--primary);
-            padding: 1.25rem;
-            border-radius: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        .admin-message-title {
-            font-size: 0.8125rem;
-            font-weight: 800;
-            color: var(--primary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.5rem;
-        }
-
-        .admin-message-text {
-            color: var(--text-secondary);
-            font-size: 1rem;
+            font-size: 0.97rem;
             line-height: 1.6;
         }
 
-        .view-btn {
+        .admin-message-card {
+            position: relative;
+            display: grid;
+            gap: 0.9rem;
+            padding: 1.15rem 1.15rem 1.15rem 1.35rem;
+            border-radius: calc(var(--border-radius) + 0.15rem);
+            border: 1px solid rgba(var(--primary-rgb), 0.18);
+            background: linear-gradient(180deg, rgba(var(--primary-rgb), 0.1), rgba(var(--bg-secondary-rgb), 0.52));
+            overflow: hidden;
+        }
+
+        .admin-message-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--primary);
+        }
+
+        .admin-message-card.is-approved {
+            border-color: rgba(16, 185, 129, 0.24);
+            background: linear-gradient(180deg, rgba(16, 185, 129, 0.12), rgba(var(--bg-secondary-rgb), 0.52));
+        }
+
+        .admin-message-card.is-approved::before {
+            background: #10b981;
+        }
+
+        .admin-message-card.is-rejected {
+            border-color: rgba(239, 68, 68, 0.24);
+            background: linear-gradient(180deg, rgba(239, 68, 68, 0.12), rgba(var(--bg-secondary-rgb), 0.52));
+        }
+
+        .admin-message-card.is-rejected::before {
+            background: #ef4444;
+        }
+
+        .admin-message-card.is-revision {
+            border-color: rgba(245, 158, 11, 0.24);
+            background: linear-gradient(180deg, rgba(245, 158, 11, 0.13), rgba(var(--bg-secondary-rgb), 0.52));
+        }
+
+        .admin-message-card.is-revision::before {
+            background: #f59e0b;
+        }
+
+        .admin-message-card.is-review {
+            border-color: rgba(139, 92, 246, 0.22);
+            background: linear-gradient(180deg, rgba(139, 92, 246, 0.12), rgba(var(--bg-secondary-rgb), 0.52));
+        }
+
+        .admin-message-card.is-review::before {
+            background: #8b5cf6;
+        }
+
+        .admin-message-head {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            width: 100%;
-            padding: 1rem;
-            border-radius: 1rem;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            margin-top: 1.5rem;
+            align-items: flex-start;
+            gap: 0.85rem;
         }
 
-        .btn-success {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
-        }
-
-        .btn-success:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4);
-        }
-
-        .btn-telegram {
-            background: #0088cc;
-            color: white;
-            box-shadow: 0 10px 20px rgba(0, 136, 204, 0.3);
-        }
-
-        .btn-telegram:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(0, 136, 204, 0.4);
-        }
-
-        .home-btn {
+        .admin-message-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: calc(var(--border-radius) + 0.05rem);
             display: inline-flex;
             align-items: center;
-            gap: 0.625rem;
-            margin-top: 2.5rem;
-            padding: 0.875rem 1.75rem;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 1rem;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 0.9375rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px var(--shadow-color);
-        }
-
-        .home-btn:hover {
-            background: var(--bg-card);
-            border-color: var(--primary);
+            justify-content: center;
+            flex-shrink: 0;
+            background: rgba(var(--primary-rgb), 0.12);
             color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px var(--shadow-color);
         }
 
-        .note-text {
-            margin-top: 1.5rem;
-            text-align: center;
-            font-size: 0.875rem;
+        .admin-message-card.is-approved .admin-message-icon {
+            background: rgba(16, 185, 129, 0.14);
+            color: #10b981;
+        }
+
+        .admin-message-card.is-rejected .admin-message-icon {
+            background: rgba(239, 68, 68, 0.14);
+            color: #ef4444;
+        }
+
+        .admin-message-card.is-revision .admin-message-icon {
+            background: rgba(245, 158, 11, 0.14);
+            color: #d97706;
+        }
+
+        .admin-message-card.is-review .admin-message-icon {
+            background: rgba(139, 92, 246, 0.14);
+            color: #8b5cf6;
+        }
+
+        .admin-message-copy {
+            display: grid;
+            gap: 0.2rem;
+        }
+
+        .admin-message-eyebrow {
+            display: block;
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
             color: var(--text-muted);
-            line-height: 1.5;
         }
 
-        .view-letter-btn {
+        .admin-message-title {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1.02rem;
+            font-weight: 800;
+            line-height: 1.3;
+        }
+
+        .admin-message-body {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1rem;
+            line-height: 1.7;
+            white-space: pre-line;
+            word-break: break-word;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.85rem;
+        }
+
+        .meta-card {
+            padding: 0.95rem 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            background: rgba(var(--bg-secondary-rgb), 0.55);
+        }
+
+        .meta-value {
+            margin: 0.3rem 0 0;
+            color: var(--text-primary);
+            font-size: 0.98rem;
+            font-weight: 700;
+            line-height: 1.45;
+        }
+
+        .meta-value.mono,
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        .history-card {
+            border: 1px solid var(--border-color);
+            border-radius: calc(var(--border-radius) + 0.2rem);
+            background: rgba(var(--bg-secondary-rgb), 0.55);
+            overflow: hidden;
+        }
+
+        .history-card summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 1rem 1.1rem;
             display: flex;
             align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            color: var(--text-primary);
+            font-size: 0.97rem;
+            font-weight: 700;
+        }
+
+        .history-card summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .history-card summary::after {
+            content: '+';
+            color: var(--text-muted);
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+
+        .history-card[open] summary::after {
+            content: '-';
+        }
+
+        .history-list {
+            padding: 0 1.1rem 1.1rem;
+            display: grid;
+            gap: 0.9rem;
+        }
+
+        .history-item {
+            display: grid;
+            gap: 0.3rem;
+            padding-top: 0.9rem;
+            border-top: 1px solid rgba(148, 163, 184, 0.14);
+        }
+
+        .history-item:first-child {
+            border-top: none;
+            padding-top: 0.1rem;
+        }
+
+        .history-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.8rem;
+        }
+
+        .history-title {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 0.98rem;
+            font-weight: 700;
+        }
+
+        .history-text {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.94rem;
+            line-height: 1.55;
+        }
+
+        .history-meta {
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .history-state {
+            display: inline-flex;
+            align-items: center;
             justify-content: center;
-            gap: 0.75rem;
-            width: 100%;
-            padding: 1.125rem;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border-radius: 1rem;
+            padding: 0.35rem 0.7rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .history-state.done {
+            background: rgba(16, 185, 129, 0.12);
+            color: #10b981;
+        }
+
+        .history-state.active {
+            background: rgba(59, 130, 246, 0.12);
+            color: #3b82f6;
+        }
+
+        .history-state.attention {
+            background: rgba(245, 158, 11, 0.14);
+            color: #d97706;
+        }
+
+        .history-state.pending {
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--text-muted);
+        }
+
+        .tracking-links {
+            margin-top: 1.15rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.85rem;
+            flex-wrap: wrap;
+        }
+
+        .link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-muted);
             text-decoration: none;
             font-weight: 700;
-            font-size: 1.125rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
-            margin-top: 1.5rem;
+            font-size: 0.94rem;
+            transition: color 0.2s ease;
         }
 
-        .view-letter-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 20px 35px -8px rgba(99, 102, 241, 0.5);
-            filter: brightness(1.05);
+        .link-btn:hover {
+            color: var(--primary);
         }
 
-        .view-letter-btn:active {
-            transform: translateY(-1px);
-        }
+        @media (max-width: 640px) {
+            .tracking-page {
+                padding-top: 1.2rem;
+            }
 
-        /* Responsive */
-        @media (max-width: 480px) {
             .tracking-card {
-                padding: 1.75rem;
+                padding: 1.2rem;
+                border-radius: calc(var(--border-radius) + 0.25rem);
             }
 
-            .tracking-header h1 {
-                font-size: 1.875rem;
+            .tracking-head h1 {
+                font-size: 1.8rem;
             }
 
-            .tracking-icon {
-                width: 70px;
-                height: 70px;
+            .result-header,
+            .history-title-row,
+            .tracking-links {
+                flex-direction: column;
+                align-items: flex-start;
             }
 
-            .tracking-icon svg {
-                width: 32px;
-                height: 32px;
+            .meta-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-chip {
+                width: 100%;
             }
         }
     </style>
 @endsection
 
 @section('content')
+    @php
+        $hasRequest = isset($request) && $request;
+        $trustedDeviceActive = $trustedDeviceActive ?? false;
+    @endphp
+
     <div class="tracking-page">
-        <!-- Ambient Background -->
-        <div class="ambient-bg"></div>
-
-        <!-- Particles -->
-        <div class="particles">
-            @for($i = 0; $i < 10; $i++)
-                <div class="particle"
-                    style="left: {{ rand(0, 100) }}%; animation-delay: {{ rand(0, 10) }}s; animation-duration: {{ rand(15, 30) }}s;">
+        <div class="tracking-shell">
+            @if(!$hasRequest)
+                <div class="tracking-head">
+                    <span class="tracking-label">Student tracker</span>
+                    <h1>{{ $settings['trackingTitle'] ?? 'Track Your Request' }}</h1>
+                    <p>Enter your Tracking ID and Student / National ID to check your request status.</p>
                 </div>
-            @endfor
-        </div>
 
-        <!-- Theme Toggle -->
-        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme"
-            style="position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100;">
-            <i data-lucide="moon" class="moon-icon"></i>
-            <i data-lucide="sun" class="sun-icon"></i>
-        </button>
+                <div class="tracking-card">
+                    @if(session('success'))
+                        <div class="alert-box success">
+                            <i data-lucide="check-circle" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+                            <span>{{ session('success') }}</span>
+                        </div>
+                    @endif
 
-        <div class="tracking-wrapper">
-            <!-- Animated Icon -->
-            <div class="tracking-icon">
-                <i data-lucide="search"></i>
-            </div>
+                    @if(session('error'))
+                        <div class="alert-box error">
+                            <i data-lucide="alert-circle" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+                            <span>{{ session('error') }}</span>
+                        </div>
+                    @endif
 
-            <div class="tracking-header">
-                <h1>{{ $settings['trackingTitle'] ?? 'Track Your Request' }}</h1>
-                <p>{{ $settings['trackingSubtitle'] ?? 'View the real-time status and progress of your academic recommendation letter.' }}
-                </p>
-            </div>
+                    <form method="POST" action="{{ url('/track') }}" class="search-form">
+                        @csrf
 
-            <div class="tracking-card">
-                @if(session('success'))
-                    <div class="status-info-box" style="margin-bottom: 1.5rem;">
-                        <i data-lucide="check-circle"
-                            style="width: 18px; height: 18px; color: #10b981; flex-shrink: 0; margin-top: 2px;"></i>
-                        <p class="status-info-text">{{ session('success') }}</p>
-                    </div>
-                @endif
+                        <div class="form-group">
+                            <label class="form-label" for="trackingId">Tracking ID</label>
+                            <input type="text" id="trackingId" name="trackingId"
+                                class="form-input @error('trackingId') error @enderror"
+                                placeholder="REC-2026-AB12CD34"
+                                value="{{ strtoupper((string) old('trackingId', $id ?? '')) }}" required maxlength="17"
+                                autocapitalize="characters" autocomplete="off" spellcheck="false">
+                            @if($errors->has('trackingId'))
+                                <span class="field-error">{{ $errors->first('trackingId') }}</span>
+                            @else
+                                <span class="field-help">Example: REC-2026-AB12CD34</span>
+                            @endif
+                        </div>
 
-                @if(session('error'))
-                    <div class="error-box">
-                        <i data-lucide="alert-circle" style="width: 20px; height: 20px; flex-shrink: 0;"></i>
-                        <span>{{ session('error') }}</span>
-                    </div>
-                @endif
+                        <div class="form-group">
+                            <label class="form-label" for="verificationToken">Student / National ID</label>
+                            <input type="text" id="verificationToken" name="verificationToken"
+                                class="form-input @error('verificationToken') error @enderror"
+                                placeholder="Enter the same ID used in your request"
+                                value="{{ old('verificationToken') }}" required maxlength="100" autocomplete="off">
+                            @if($errors->has('verificationToken'))
+                                <span class="field-error">{{ $errors->first('verificationToken') }}</span>
+                            @endif
+                        </div>
 
-                <form method="POST" action="{{ url('/track') }}">
-                    @csrf
+                        <p class="card-note">
+                            <strong>Privacy:</strong> We’ll email a 6-digit verification code before showing your request details.
+                        </p>
 
-                    <div class="form-group">
-                        <label class="form-label">Tracking ID</label>
-                        <input type="text" name="trackingId" class="form-input" placeholder="REC-2026-XXXXX"
-                            value="{{ old('trackingId', $id ?? '') }}" required>
-                    </div>
+                        <button type="submit" class="track-btn">
+                            <span>{{ $settings['trackingSearchBtn'] ?? 'Track Request' }}</span>
+                            <i data-lucide="arrow-right" style="width: 20px; height: 20px;"></i>
+                        </button>
+                    </form>
+                </div>
 
-                    <div class="form-group">
-                        <label class="form-label">ID Number</label>
-                        <input type="text" name="verificationToken" class="form-input" placeholder="Enter your ID Number"
-                            value="{{ old('verificationToken') }}" required>
-                    </div>
+                <div class="tracking-links">
+                    <a href="{{ url('/') }}" class="link-btn">
+                        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                        Back to Home
+                    </a>
+                </div>
+            @endif
 
-                    <button type="submit" class="track-btn">
-                        <span>{{ $settings['trackingSearchBtn'] ?? 'Track Request' }}</span>
-                        <i data-lucide="arrow-right" style="width: 20px; height: 20px;"></i>
-                    </button>
-                </form>
+            @if($hasRequest)
+                @php
+                    $statusBadgeClass = 'status-pending';
+                    if ($request->status === 'Approved') {
+                        $statusBadgeClass = 'status-approved';
+                    } elseif ($request->status === 'Rejected') {
+                        $statusBadgeClass = 'status-rejected';
+                    } elseif ($request->status === 'Needs Revision') {
+                        $statusBadgeClass = 'status-revision';
+                    } elseif ($request->status === 'Under Review') {
+                        $statusBadgeClass = 'status-review';
+                    }
 
-                @if(isset($request) && $request)
-                    <div class="result-section">
+                    $studentStatusMessage = $request->status === 'Rejected'
+                        ? ($request->rejection_reason ?? $request->admin_message)
+                        : ($request->admin_message ?? $request->rejection_reason);
+
+                    $studentMessageLabel = 'Message from administration';
+                    $studentMessageTitle = 'A note from administration';
+
+                    $summaryTone = 'pending';
+                    $summaryHeadline = 'We received your request.';
+                    $summaryDescription = 'Your request is in the queue and will move into review soon.';
+                    $summaryNextStep = 'No action is needed yet. Keep your Tracking ID handy and check back for updates.';
+
+                    if ($request->status === 'Under Review') {
+                        $summaryTone = 'review';
+                        $summaryHeadline = 'Your request is under review.';
+                        $summaryDescription = 'Administration is checking your information and supporting details now.';
+                        $summaryNextStep = 'No action is needed from you right now. Wait for another status update or message from administration.';
+                    } elseif ($request->status === 'Needs Revision') {
+                        $summaryTone = 'revision';
+                        $summaryHeadline = 'Your request needs updates before it can continue.';
+                        $summaryDescription = 'Administration reviewed your details and asked for corrections or missing information.';
+                        $summaryNextStep = 'Use the edit button below, update the requested details, and resubmit your request.';
+                    } elseif ($request->status === 'Approved') {
+                        $summaryTone = 'approved';
+                        $summaryHeadline = 'Your recommendation letter is ready.';
+                        $summaryDescription = 'Your request has been approved and your official letter is now available.';
+                        $summaryNextStep = 'Open your letter, review it, and download the PDF if you need a copy.';
+                    } elseif ($request->status === 'Rejected') {
+                        $summaryTone = 'rejected';
+                        $summaryHeadline = 'This request was not approved.';
+                        $summaryDescription = 'Administration recorded a final decision for this request.';
+                        $summaryNextStep = 'Review the reason below. If anything is unclear, contact administration before creating a new request.';
+                    }
+
+                    $adminMessageTone = $summaryTone;
+                    if ($request->status === 'Needs Revision') {
+                        $adminMessageTone = 'revision';
+                        $studentMessageLabel = 'Requested changes';
+                        $studentMessageTitle = 'Please update your request';
+                    } elseif ($request->status === 'Rejected') {
+                        $adminMessageTone = 'rejected';
+                        $studentMessageLabel = 'Decision note';
+                        $studentMessageTitle = 'Reason provided by administration';
+                    } elseif ($request->status === 'Under Review') {
+                        $adminMessageTone = 'review';
+                        $studentMessageTitle = 'Update from administration';
+                    } elseif ($request->status === 'Approved') {
+                        $adminMessageTone = 'approved';
+                        $studentMessageTitle = 'Final note from administration';
+                    }
+
+                    $verifiedRequestId = session('tracking_verified_request_id');
+                    $verifiedTrackingId = session('tracking_verified_tracking_id');
+                    $verifiedUntil = (int) session('tracking_verified_until', 0);
+                    $hasVerifiedSession = $verifiedRequestId
+                        && $verifiedTrackingId
+                        && $verifiedUntil >= now()->timestamp
+                        && (int) $verifiedRequestId === (int) $request->id
+                        && (string) $verifiedTrackingId === (string) $request->tracking_id;
+                    $canEditRequest = $request->status === 'Needs Revision' && $hasVerifiedSession;
+
+                    $reviewState = 'Pending';
+                    $reviewTone = 'pending';
+                    $reviewDescription = 'Checking your information and requirements.';
+                    $reviewMeta = 'Waiting';
+
+                    if ($request->status === 'Under Review') {
+                        $reviewState = 'In Progress';
+                        $reviewTone = 'active';
+                        $reviewMeta = 'In Progress';
+                    } elseif ($request->status === 'Needs Revision') {
+                        $reviewState = 'Action Required';
+                        $reviewTone = 'attention';
+                        $reviewDescription = 'We reviewed your request and sent it back with requested changes.';
+                        $reviewMeta = 'Action Required';
+                    } elseif (in_array($request->status, ['Approved', 'Rejected'], true)) {
+                        $reviewState = 'Completed';
+                        $reviewTone = 'done';
+                        $reviewMeta = 'Completed';
+                    }
+
+                    $decisionState = in_array($request->status, ['Approved', 'Rejected'], true) ? 'Completed' : 'Pending';
+                    $decisionTone = in_array($request->status, ['Approved', 'Rejected'], true) ? 'done' : 'pending';
+                    $decisionDescription = 'Awaiting final approval.';
+
+                    if ($request->status === 'Approved') {
+                        $decisionDescription = 'Congratulations! Your letter is ready.';
+                    } elseif ($request->status === 'Rejected') {
+                        $decisionDescription = 'Request declined. See admin message.';
+                    }
+                @endphp
+
+                <div class="tracking-head">
+                    <span class="tracking-label">Verified request</span>
+                    <p>Tracking ID <span class="mono">{{ $request->tracking_id }}</span></p>
+                </div>
+
+                <div class="tracking-card">
+                    <div class="result-stack">
                         <div class="result-header">
-                            <span class="result-title">Request Status</span>
-                            <span
-                                class="status-badge 
-                                                                                                                                                                                    @if($request->status === 'Approved') status-approved
-                                                                                                                                                                                    @elseif($request->status === 'Rejected') status-rejected
-                                                                                                                                                                                    @elseif($request->status === 'Needs Revision') status-revision
-                                                                                                                                                                                    @elseif($request->status === 'Under Review') status-review
-                                                                                                                                                                                    @else status-pending @endif">
-                                {{ $request->status }}
-                            </span>
-                            </span>
+                            <div class="result-title-block">
+                                <span class="result-kicker">Current status</span>
+                                <h1 class="result-headline">{{ $summaryHeadline }}</h1>
+                                <p class="result-description">{{ $summaryDescription }}</p>
+                            </div>
+                            <span class="status-chip {{ $statusBadgeClass }}">{{ $request->status }}</span>
                         </div>
 
-                        <!-- Visual Timeline -->
-                        <div class="timeline">
-                            <!-- Step 1: Submitted -->
-                            <div class="timeline-item completed">
-                                <div class="timeline-marker">
-                                    <i data-lucide="check" style="width: 20px; height: 20px;"></i>
-                                </div>
-                                <div class="timeline-content">
-                                    <h4>Request Submitted</h4>
-                                    <p>Your request has been received.</p>
-                                    <div class="timeline-date">{{ $request->created_at->format('M d, Y h:i A') }}</div>
-                                </div>
-                            </div>
-
-                            <!-- Step 2: Under Review -->
-                            @php
-                                $isReviewActive = in_array($request->status, ['Under Review', 'Needs Revision']);
-                                $isReviewCompleted = in_array($request->status, ['Approved', 'Rejected']);
-                                $reviewClass = $isReviewCompleted ? 'completed' : ($isReviewActive ? 'active' : '');
-                                $reviewIcon = $isReviewCompleted ? 'check' : 'search';
-                            @endphp
-                            <div class="timeline-item {{ $reviewClass }}">
-                                <div class="timeline-marker">
-                                    <i data-lucide="{{ $reviewIcon }}" style="width: 20px; height: 20px;"></i>
-                                </div>
-                                <div class="timeline-content">
-                                    <h4>Details Review</h4>
-                                    <p>Checking your information and requirements.</p>
-                                    @if($isReviewActive || $isReviewCompleted)
-                                        <div class="timeline-date">In Progress</div>
-                                    @endif
-                                </div>
-                            </div>
-
-                            <!-- Step 3: Final Decision -->
-                            @php
-                                $isDecisionActive = in_array($request->status, ['Approved', 'Rejected']);
-                                $decisionClass = $isDecisionActive ? ($request->status == 'Approved' ? 'completed' : 'active') : ''; // Green if approved, Active if rejected/final
-                                $decisionIcon = $request->status == 'Approved' ? 'check' : ($request->status == 'Rejected' ? 'x' : 'file-text');
-
-                                // Override for Rejected to show red marker
-                                $markerStyle = $request->status == 'Rejected' ? 'border-color: #ef4444; color: #ef4444;' : '';
-                            @endphp
-                            <div class="timeline-item {{ $decisionClass }}">
-                                <div class="timeline-marker" style="{{ $markerStyle }}">
-                                    <i data-lucide="{{ $decisionIcon }}" style="width: 20px; height: 20px;"></i>
-                                </div>
-                                <div class="timeline-content">
-                                    <h4>Final Decision</h4>
-                                    <p>
-                                        @if($request->status == 'Approved')
-                                            Congratulations! Your letter is ready.
-                                        @elseif($request->status == 'Rejected')
-                                            Request declined. See admin message.
-                                        @else
-                                            Awaiting final approval.
-                                        @endif
-                                    </p>
-                                    @if($isDecisionActive)
-                                        <div class="timeline-date">{{ $request->updated_at->format('M d, Y') }}</div>
-                                    @endif
-                                </div>
-                            </div>
+                        <div class="result-panel">
+                            <span class="result-panel-label">What happens next</span>
+                            <p>{{ $summaryNextStep }}</p>
                         </div>
-
-                        <div>
-                            <div class="info-row">
-                                <span class="info-label">Tracking ID</span>
-                                <span class="info-value" style="font-family: monospace;">{{ $request->tracking_id }}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Submitted</span>
-                                <span class="info-value">{{ $request->created_at->format('M d, Y') }}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Last Updated</span>
-                                <span class="info-value">{{ $request->updated_at->format('M d, Y') }}</span>
-                            </div>
-                        </div>
-
-                        @php
-                            $studentStatusMessage = $request->status === 'Rejected'
-                                ? ($request->rejection_reason ?? $request->admin_message)
-                                : ($request->admin_message ?? $request->rejection_reason);
-                        @endphp
 
                         @if($studentStatusMessage)
-                            <div class="admin-message">
-                                <div class="admin-message-title">Message from Admin</div>
-                                <p class="admin-message-text">{{ $studentStatusMessage }}</p>
-                            </div>
-                        @endif
-
-                        {{-- Status-Based Message from Settings --}}
-                        @php
-                            $statusMessage = '';
-                            if ($request->status === 'Approved') {
-                                $statusMessage = $settings['trackingApprovedMessage'] ?? '';
-                            } elseif ($request->status === 'Rejected') {
-                                $statusMessage = $settings['trackingRejectedMessage'] ?? '';
-                            } elseif ($request->status === 'Under Review') {
-                                $statusMessage = $settings['trackingReviewMessage'] ?? '';
-                            } elseif ($request->status === 'Needs Revision') {
-                                $statusMessage = $settings['trackingRevisionMessage'] ?? '';
-                            } else {
-                                $statusMessage = $settings['trackingPendingMessage'] ?? '';
-                            }
-                        @endphp
-
-                        @if($statusMessage)
-                            <div class="status-info-box">
-                                <i data-lucide="info"
-                                    style="width: 18px; height: 18px; color: var(--primary); flex-shrink: 0; margin-top: 2px;"></i>
-                                <p class="status-info-text">{{ $statusMessage }}</p>
-                            </div>
-                        @endif
-
-                        @if(isset($telegramBotUsername) && $telegramBotUsername && !$request->telegram_chat_id)
-                            <a href="https://t.me/{{ $telegramBotUsername }}?start={{ $request->tracking_id }}" target="_blank"
-                                class="telegram-btn">
-                                <div class="telegram-icon-wrapper">
-                                    <i data-lucide="send" style="width: 14px; height: 14px;"></i>
+                            <div class="admin-message-card is-{{ $adminMessageTone }}">
+                                <div class="admin-message-head">
+                                    <div class="admin-message-icon">
+                                        <i data-lucide="message-square" style="width: 18px; height: 18px;"></i>
+                                    </div>
+                                    <div class="admin-message-copy">
+                                        <span class="admin-message-eyebrow">{{ $studentMessageLabel }}</span>
+                                        <h2 class="admin-message-title">{{ $studentMessageTitle }}</h2>
+                                    </div>
                                 </div>
-                                <span>Subscribe to Updates</span>
-                            </a>
+                                <p class="admin-message-body">{{ $studentStatusMessage }}</p>
+                            </div>
                         @endif
-
-                        @php
-                            $verifiedRequestId = session('tracking_verified_request_id');
-                            $verifiedTrackingId = session('tracking_verified_tracking_id');
-                            $verifiedUntil = (int) session('tracking_verified_until', 0);
-                            $hasVerifiedSession = $verifiedRequestId
-                                && $verifiedTrackingId
-                                && $verifiedUntil >= now()->timestamp
-                                && (int) $verifiedRequestId === (int) $request->id
-                                && (string) $verifiedTrackingId === (string) $request->tracking_id;
-                            $canEditRequest = $request->status === 'Needs Revision' && $hasVerifiedSession;
-                        @endphp
 
                         @if($canEditRequest)
-                            <form method="POST" action="{{ route('public.request.edit') }}">
+                            <div class="action-stack">
+                                <form method="POST" action="{{ route('public.request.edit') }}">
+                                    @csrf
+                                    <input type="hidden" name="tracking_id" value="{{ $request->tracking_id }}">
+                                    <button type="submit" class="primary-action">
+                                        <i data-lucide="square-pen" style="width: 18px; height: 18px;"></i>
+                                        Edit Request
+                                    </button>
+                                </form>
+                            </div>
+                        @elseif($request->status === 'Approved')
+                            <div class="action-stack">
+                                <a href="{{ route('public.letter', ['tracking_id' => $request->tracking_id]) }}"
+                                    class="primary-action" target="_blank">
+                                    <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                                    View Recommendation Letter
+                                </a>
+                            </div>
+                        @endif
+
+                        <div class="meta-grid">
+                            <div class="meta-card">
+                                <span class="meta-label">Tracking ID</span>
+                                <p class="meta-value mono">{{ $request->tracking_id }}</p>
+                            </div>
+                            <div class="meta-card">
+                                <span class="meta-label">Submitted</span>
+                                <p class="meta-value">{{ $request->created_at->format('M d, Y') }}</p>
+                            </div>
+                            <div class="meta-card">
+                                <span class="meta-label">Last updated</span>
+                                <p class="meta-value">{{ $request->updated_at->format('M d, Y') }}</p>
+                            </div>
+                        </div>
+
+                        <details class="history-card">
+                            <summary>
+                                <span>View request history</span>
+                                <span class="history-label">3 updates</span>
+                            </summary>
+                            <div class="history-list">
+                                <div class="history-item">
+                                    <div class="history-title-row">
+                                        <h3 class="history-title">Request Submitted</h3>
+                                        <span class="history-state done">Completed</span>
+                                    </div>
+                                    <p class="history-text">Your request has been received.</p>
+                                    <span class="history-meta">{{ $request->created_at->format('M d, Y h:i A') }}</span>
+                                </div>
+
+                                <div class="history-item">
+                                    <div class="history-title-row">
+                                        <h3 class="history-title">Details Review</h3>
+                                        <span class="history-state {{ $reviewTone }}">{{ $reviewState }}</span>
+                                    </div>
+                                    <p class="history-text">{{ $reviewDescription }}</p>
+                                    <span class="history-meta">{{ $reviewMeta }}</span>
+                                </div>
+
+                                <div class="history-item">
+                                    <div class="history-title-row">
+                                        <h3 class="history-title">Final Decision</h3>
+                                        <span class="history-state {{ $decisionTone }}">{{ $decisionState }}</span>
+                                    </div>
+                                    <p class="history-text">{{ $decisionDescription }}</p>
+                                    <span class="history-meta">
+                                        @if(in_array($request->status, ['Approved', 'Rejected'], true))
+                                            {{ $request->updated_at->format('M d, Y') }}
+                                        @else
+                                            Waiting
+                                        @endif
+                                    </span>
+                                </div>
+                            </div>
+                        </details>
+
+                        @if($trustedDeviceActive)
+                            <form method="POST" action="{{ route('public.tracking.verify.forget-browser') }}">
                                 @csrf
                                 <input type="hidden" name="tracking_id" value="{{ $request->tracking_id }}">
-                                <button type="submit" class="view-letter-btn"
-                                    style="background: linear-gradient(135deg, #f59e0b, #d97706); margin-top: 1rem;">
-                                    <i data-lucide="square-pen" style="width: 18px; height: 18px;"></i>
-                                    Edit Request
+                                <button type="submit" class="secondary-action">
+                                    <i data-lucide="shield-off" style="width: 18px; height: 18px;"></i>
+                                    Require a code on this browser
                                 </button>
                             </form>
                         @endif
-
-                        @if($request->status === 'Approved')
-                            <a href="{{ route('public.letter', ['tracking_id' => $request->tracking_id]) }}"
-                                class="view-letter-btn" target="_blank">
-                                <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
-                                View Recommendation Letter
-                            </a>
-                        @endif
-
-                        {{-- Fixed Message from Settings --}}
-                        @php
-                            $fixedMessage = $settings['trackingFixedMessage'] ?? 'If you need to submit additional documents, please wait for the "Needs Revision" status.';
-                        @endphp
-                        @if($fixedMessage)
-                            <p class="note-text">{{ $fixedMessage }}</p>
-                        @endif
                     </div>
-                @endif
-            </div>
 
-            <a href="{{ url('/') }}" class="home-btn">
-                <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
-                Back to Home
-            </a>
+                    <div class="tracking-links">
+                        <a href="{{ route('public.tracking') }}" class="link-btn">
+                            <i data-lucide="search" style="width: 16px; height: 16px;"></i>
+                            Track another request
+                        </a>
+
+                        <a href="{{ url('/') }}" class="link-btn">
+                            <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+                            Back to Home
+                        </a>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 @endsection

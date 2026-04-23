@@ -131,7 +131,7 @@
                                         $isRequired = isset($submittedFields[$fieldKey]['required']);
                                     } else {
                                         $isVisible = $fieldConfig[$fieldKey]['visible'] ?? true;
-                                        $isRequired = $fieldConfig[$fieldKey]['required'] ?? in_array($fieldKey, ['student_name', 'last_name', 'student_email', 'gender', 'verification_token', 'training_period', 'purpose', 'deadline']);
+                                        $isRequired = $fieldConfig[$fieldKey]['required'] ?? in_array($fieldKey, ['student_name', 'last_name', 'student_email', 'gender', 'university', 'verification_token', 'training_period', 'purpose', 'deadline']);
                                     }
 
                                     if (!$isVisible) {

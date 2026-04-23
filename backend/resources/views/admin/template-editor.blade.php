@@ -10,9 +10,9 @@
     .template-editor-page {
         display: flex;
         flex-direction: column;
-        height: calc(100vh - 60px);
+        min-height: calc(100vh - 60px);
         background: #f8fafc;
-        overflow: hidden;
+        overflow: visible;
     }
     
     /* Header Bar */
@@ -162,19 +162,21 @@
     
     /* Main Content Area */
     .te-main {
-        flex: 1;
+        flex: 1 1 auto;
+        min-height: 26rem;
         display: flex;
         flex-direction: column;
-        overflow: hidden;
+        overflow: visible;
     }
     
     /* Editor Panel */
     .te-editor-panel {
-        flex: 1;
+        flex: 1 1 auto;
+        min-height: 100%;
         display: flex;
         flex-direction: column;
         background: white;
-        overflow: hidden;
+        overflow: visible;
     }
     
     .te-panel-header {
@@ -195,7 +197,8 @@
     }
     
     .te-editor-content {
-        flex: 1;
+        flex: 1 1 auto;
+        min-height: 24rem;
         overflow-y: auto;
         padding: 1rem;
     }
@@ -484,20 +487,60 @@
     }
     
     /* Variable Bar */
-    .te-variable-bar {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.75rem 1.5rem;
+    .te-variable-toolbar {
         background: white;
         border-top: 1px solid #e2e8f0;
         flex-shrink: 0;
     }
-    
+
+    .te-variable-bar {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0.9rem 1.5rem 0.8rem;
+        background: white;
+    }
+
+    .te-variable-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.6rem 0.9rem;
+    }
+
     .te-variable-label {
         font-size: 0.75rem;
         font-weight: 600;
         color: #64748b;
+    }
+
+    .te-variable-target {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.28rem 0.65rem;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #4338ca;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
+    .te-variable-target.is-empty {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .te-variable-target.is-error {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .te-variable-help {
+        margin: 0;
+        font-size: 0.74rem;
+        color: #64748b;
+        line-height: 1.45;
     }
     
     .te-variable-chips {
@@ -515,6 +558,7 @@
         color: #4338ca;
         border: 1px solid #c7d2fe;
         border-radius: 20px;
+        appearance: none;
         font-size: 0.75rem;
         font-weight: 600;
         cursor: pointer;
@@ -527,6 +571,153 @@
     .te-chip svg {
         width: 12px;
         height: 12px;
+    }
+
+    .te-chip[data-advanced="true"] {
+        color: white;
+        border-color: transparent;
+    }
+
+    .te-variable-manager {
+        padding: 0.85rem 1.5rem 1rem;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        max-height: 18rem;
+        overflow-y: auto;
+    }
+
+    .te-variable-manager-title {
+        margin: 0 0 0.3rem 0;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .te-variable-manager-copy {
+        margin: 0 0 0.9rem 0;
+        font-size: 0.74rem;
+        color: #64748b;
+        line-height: 1.55;
+    }
+
+    .te-variable-manager-empty {
+        font-size: 0.76rem;
+        color: #64748b;
+        line-height: 1.5;
+    }
+
+    .te-variable-source {
+        padding: 0.85rem 0.95rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: white;
+        margin-bottom: 0.75rem;
+    }
+
+    .te-variable-source:last-child {
+        margin-bottom: 0;
+    }
+
+    .te-variable-source-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .te-variable-source-link {
+        background: none;
+        border: none;
+        padding: 0;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: #4338ca;
+        cursor: pointer;
+        text-align: left;
+    }
+
+    .te-variable-source-link:hover {
+        text-decoration: underline;
+    }
+
+    .te-variable-source-count {
+        font-size: 0.72rem;
+        color: #64748b;
+        white-space: nowrap;
+    }
+
+    .te-variable-token-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.85rem;
+        padding-top: 0.6rem;
+        margin-top: 0.6rem;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .te-variable-token-row:first-of-type {
+        margin-top: 0;
+        padding-top: 0;
+        border-top: none;
+    }
+
+    .te-variable-token-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+        font-size: 0.75rem;
+        color: #0f172a;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 0.32rem 0.65rem;
+    }
+
+    .te-variable-token-count {
+        font-family: inherit;
+        color: #475569;
+        font-weight: 700;
+    }
+
+    .te-variable-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .te-mini-btn {
+        appearance: none;
+        border: 1px solid #cbd5e1;
+        background: white;
+        color: #334155;
+        border-radius: 999px;
+        padding: 0.3rem 0.7rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.18s ease;
+    }
+
+    .te-mini-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    }
+
+    .te-mini-btn.warning {
+        border-color: #fbbf24;
+        color: #92400e;
+        background: #fffbeb;
+    }
+
+    .te-mini-btn.danger {
+        border-color: #fecaca;
+        color: #b91c1c;
+        background: #fef2f2;
     }
     
     /* TinyMCE Overrides */
@@ -593,8 +784,23 @@
     body.dark-mode .te-modal-title { color: var(--text-main); }
     body.dark-mode .te-modal-close { background: var(--border-color); color: var(--text-muted); }
     body.dark-mode .te-modal-close:hover { background: var(--text-muted); color: var(--bg-color); }
+    body.dark-mode .te-variable-toolbar { background: var(--card-bg); border-color: var(--border-color); }
     body.dark-mode .te-variable-bar { background: var(--card-bg); border-color: var(--border-color); }
     body.dark-mode .te-variable-label { color: var(--text-muted); }
+    body.dark-mode .te-variable-target.is-empty { background: var(--bg-color); color: var(--text-muted); }
+    body.dark-mode .te-variable-target.is-error { background: rgba(239, 68, 68, 0.18); color: #fecaca; }
+    body.dark-mode .te-variable-help { color: var(--text-muted); }
+    body.dark-mode .te-variable-manager { background: var(--bg-color); border-color: var(--border-color); }
+    body.dark-mode .te-variable-manager-title { color: var(--text-main); }
+    body.dark-mode .te-variable-manager-copy,
+    body.dark-mode .te-variable-manager-empty,
+    body.dark-mode .te-variable-source-count { color: var(--text-muted); }
+    body.dark-mode .te-variable-source { background: var(--card-bg); border-color: var(--border-color); }
+    body.dark-mode .te-variable-token-row { border-color: rgba(255, 255, 255, 0.06); }
+    body.dark-mode .te-variable-token-label { background: var(--bg-color); border-color: var(--border-color); color: var(--text-main); }
+    body.dark-mode .te-mini-btn { background: var(--card-bg); border-color: var(--border-color); color: var(--text-main); }
+    body.dark-mode .te-mini-btn.warning { background: rgba(251, 191, 36, 0.12); color: #fcd34d; border-color: rgba(251, 191, 36, 0.35); }
+    body.dark-mode .te-mini-btn.danger { background: rgba(239, 68, 68, 0.12); color: #fecaca; border-color: rgba(239, 68, 68, 0.35); }
     body.dark-mode .tox-tinymce { border-color: var(--border-color) !important; }
     body.dark-mode .tox .tox-toolbar__primary { background: var(--bg-color) !important; }
     body.dark-mode .te-error-alert { background: var(--error-bg); border-color: var(--error-text); color: var(--error-text); }
@@ -924,49 +1130,59 @@
     </div>
     
     <!-- Variable Bar -->
-    <div class="te-variable-bar">
-        <span class="te-variable-label">Insert Variable:</span>
-        <div class="te-variable-chips">
-            <span class="te-chip" onclick="insertVar('fullName')">
-                <i data-feather="users"></i> Full Name
-            </span>
-            <span class="te-chip" onclick="insertVar('studentName')">
-                <i data-feather="user"></i> First Name
-            </span>
-            <span class="te-chip" onclick="insertVar('middleName')">
-                <i data-feather="user"></i> Middle Name
-            </span>
-            <span class="te-chip" onclick="insertVar('lastName')">
-                <i data-feather="user"></i> Last Name
-            </span>
-            <span class="te-chip" onclick="insertVar('university')">
-                <i data-feather="book"></i> University
-            </span>
-            <span class="te-chip" onclick="insertVar('trainingPeriod')">
-                <i data-feather="calendar"></i> Training Period
-            </span>
-            <span class="te-chip" onclick="insertVar('purpose')">
-                <i data-feather="target"></i> Purpose
-            </span>
-            <span class="te-chip" onclick="insertVar('date')">
-                <i data-feather="calendar"></i> Date
-            </span>
-            <span class="te-chip" onclick="insertVar('trackingId')">
-                <i data-feather="hash"></i> Tracking
-            </span>
-            <span class="te-chip" onclick="insertVar('qrCode')" style="background: #059669;">
-                <i data-feather="maximize"></i> QR Code
-            </span>
-            <span class="te-chip" onclick="insertVar('signature')" style="background: #7c3aed;">
-                <i data-feather="pen-tool"></i> Signature
-            </span>
-            <span class="te-chip" onclick="insertVar('he')" style="background: #0891b2;">
-                <i data-feather="user"></i> He/She
-            </span>
-            <span class="te-chip" onclick="insertVar('his')" style="background: #0891b2;">
-                <i data-feather="user"></i> His/Her
-            </span>
+    <div class="te-variable-toolbar">
+        <div class="te-variable-bar">
+            <div class="te-variable-meta">
+                <span class="te-variable-label">Insert Variable:</span>
+                <span class="te-variable-target is-empty" id="insertTargetStatus">No field selected</span>
+                <p class="te-variable-help" id="insertTargetHelp">
+                    Click inside Header, Body, Footer, or a signature field first. Inline `Signature` and `QR Code`
+                    variables only work in Header, Body, or Footer content.
+                </p>
+            </div>
+            <div class="te-variable-chips">
+                <button type="button" class="te-chip" onclick="insertVar('fullName')">
+                    <i data-feather="users"></i> Full Name
+                </button>
+                <button type="button" class="te-chip" onclick="insertVar('studentName')">
+                    <i data-feather="user"></i> First Name
+                </button>
+                <button type="button" class="te-chip" onclick="insertVar('middleName')">
+                    <i data-feather="user"></i> Middle Name
+                </button>
+                <button type="button" class="te-chip" onclick="insertVar('lastName')">
+                    <i data-feather="user"></i> Last Name
+                </button>
+                <button type="button" class="te-chip" onclick="insertVar('university')">
+                    <i data-feather="book"></i> University
+                </button>
+                <button type="button" class="te-chip" onclick="insertVar('trainingPeriod')">
+                    <i data-feather="calendar"></i> Training Period
+                </button>
+                <button type="button" class="te-chip" onclick="insertVar('purpose')">
+                    <i data-feather="target"></i> Purpose
+                </button>
+                <button type="button" class="te-chip" onclick="insertVar('date')">
+                    <i data-feather="calendar"></i> Date
+                </button>
+                <button type="button" class="te-chip" onclick="insertVar('trackingId')">
+                    <i data-feather="hash"></i> Tracking
+                </button>
+                <button type="button" class="te-chip" data-advanced="true" onclick="insertVar('qrCode')" style="background: #059669;">
+                    <i data-feather="maximize"></i> QR Code
+                </button>
+                <button type="button" class="te-chip" data-advanced="true" onclick="insertVar('signature')" style="background: #7c3aed;">
+                    <i data-feather="pen-tool"></i> Signature
+                </button>
+                <button type="button" class="te-chip" data-advanced="true" onclick="insertVar('he')" style="background: #0891b2;">
+                    <i data-feather="user"></i> He/She
+                </button>
+                <button type="button" class="te-chip" data-advanced="true" onclick="insertVar('his')" style="background: #0891b2;">
+                    <i data-feather="user"></i> His/Her
+                </button>
+            </div>
         </div>
+        <div class="te-variable-manager" id="variableManager"></div>
     </div>
 </form>
 
@@ -1003,6 +1219,8 @@
 <script>
     // State
     let currentEditor = 'headerEditor';
+    let currentTab = 'header';
+    let currentInsertTarget = null;
     let hasChanges = false;
     let hasUnsyncedDraft = false;
     let autoSaveInFlight = false;
@@ -1010,6 +1228,22 @@
     let editors = {};
     const autosaveUrl = @json(isset($template) ? route('admin.templates.autosave', $template->id) : null);
     const draftRestored = @json($draftLoaded);
+    const singletonVariableNames = ['qrCode', 'signature'];
+    const editorOnlyVariables = new Set(singletonVariableNames);
+    const variableRegex = /\{\{[A-Za-z][A-Za-z0-9]*\}\}/g;
+    const insertTargets = {
+        headerEditor: { id: 'headerEditor', type: 'editor', tab: 'header', label: 'Header HTML', acceptsInsert: true },
+        bodyEditor: { id: 'bodyEditor', type: 'editor', tab: 'body', label: 'Body Content', acceptsInsert: true },
+        footerEditor: { id: 'footerEditor', type: 'editor', tab: 'footer', label: 'Footer Content', acceptsInsert: true },
+        sigName: { id: 'sigName', type: 'input', tab: 'signature', label: 'Signature Full Name', acceptsInsert: true },
+        sigTitle: { id: 'sigTitle', type: 'input', tab: 'signature', label: 'Signature Job Title', acceptsInsert: true },
+        sigDept: { id: 'sigDept', type: 'input', tab: 'signature', label: 'Signature Department', acceptsInsert: true },
+        sigInst: { id: 'sigInst', type: 'input', tab: 'signature', label: 'Signature Institution', acceptsInsert: true },
+        sigEmail: { id: 'sigEmail', type: 'input', tab: 'signature', label: 'Signature Email', acceptsInsert: true },
+        sigPhone: { id: 'sigPhone', type: 'input', tab: 'signature', label: 'Signature Phone', acceptsInsert: true },
+        sigImage: { id: 'sigImage', type: 'input', tab: 'signature', label: 'Signature Image URL', acceptsInsert: false },
+        stampImage: { id: 'stampImage', type: 'input', tab: 'signature', label: 'Stamp Image URL', acceptsInsert: false },
+    };
 
     function setAutoSaveStatus(message, isError = false) {
         const statusEl = document.getElementById('autoSaveStatus');
@@ -1031,6 +1265,325 @@
             .replaceAll('>', '&gt;')
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#039;');
+    }
+
+    function escapeRegExp(value) {
+        return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function buildVariableTag(name) {
+        const openBrace = String.fromCharCode(123, 123);
+        const closeBrace = String.fromCharCode(125, 125);
+        return openBrace + name + closeBrace;
+    }
+
+    function getTargetConfig(targetId) {
+        return insertTargets[targetId] || null;
+    }
+
+    function setVariableHelp(message, isError = false) {
+        const helpEl = document.getElementById('insertTargetHelp');
+        if (!helpEl) return;
+        helpEl.textContent = message;
+        helpEl.style.color = isError ? '#b91c1c' : '#64748b';
+    }
+
+    function setCurrentInsertTarget(targetId = null, options = {}) {
+        const targetEl = document.getElementById('insertTargetStatus');
+        const config = targetId ? getTargetConfig(targetId) : null;
+        currentInsertTarget = config ? config.id : null;
+
+        if (!targetEl) {
+            return;
+        }
+
+        targetEl.classList.remove('is-empty', 'is-error');
+
+        if (!config) {
+            targetEl.textContent = 'No field selected';
+            targetEl.classList.add(options.isError ? 'is-error' : 'is-empty');
+            return;
+        }
+
+        targetEl.textContent = `Target: ${config.label}`;
+        if (options.isError) {
+            targetEl.classList.add('is-error');
+        }
+    }
+
+    function setInsertTarget(targetId = null, options = {}) {
+        const config = targetId ? getTargetConfig(targetId) : null;
+        const helpMessage = options.helpMessage;
+        const errorState = Boolean(options.isError);
+
+        setCurrentInsertTarget(targetId, { isError: errorState });
+
+        if (typeof helpMessage === 'string') {
+            setVariableHelp(helpMessage, errorState);
+            return config;
+        }
+
+        if (!config) {
+            setVariableHelp('Click inside Header, Body, Footer, or a signature text field first. Inline Signature and QR Code variables only work inside rich content editors.');
+            return null;
+        }
+
+        if (!config.acceptsInsert) {
+            setVariableHelp(`${config.label} is a direct URL field. Variables cannot be inserted there.`, true);
+            return config;
+        }
+
+        setVariableHelp(`Variables will insert into ${config.label}.`);
+        return config;
+    }
+
+    function getFieldContent(targetId) {
+        const config = getTargetConfig(targetId);
+        if (!config) {
+            return '';
+        }
+
+        if (config.type === 'editor') {
+            if (editors[targetId]) {
+                return editors[targetId].getContent() || '';
+            }
+
+            return document.getElementById(targetId)?.value || '';
+        }
+
+        return document.getElementById(targetId)?.value || '';
+    }
+
+    function setFieldContent(targetId, value) {
+        const config = getTargetConfig(targetId);
+        if (!config) {
+            return;
+        }
+
+        if (config.type === 'editor') {
+            if (editors[targetId]) {
+                editors[targetId].setContent(value);
+            } else {
+                const textarea = document.getElementById(targetId);
+                if (textarea) {
+                    textarea.value = value;
+                }
+            }
+
+            return;
+        }
+
+        const input = document.getElementById(targetId);
+        if (input) {
+            input.value = value;
+        }
+    }
+
+    function insertIntoPlainField(field, text) {
+        const start = field.selectionStart ?? field.value.length;
+        const end = field.selectionEnd ?? field.value.length;
+        const value = field.value || '';
+
+        field.value = value.substring(0, start) + text + value.substring(end);
+        field.selectionStart = field.selectionEnd = start + text.length;
+        field.focus();
+    }
+
+    function activateTab(tabName) {
+        currentTab = tabName;
+
+        document.querySelectorAll('.te-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === tabName);
+        });
+
+        document.querySelectorAll('.te-pane').forEach(pane => {
+            pane.classList.toggle('active', pane.id === 'pane-' + tabName);
+        });
+
+        if (tabName === 'header') {
+            currentEditor = 'headerEditor';
+            setInsertTarget('headerEditor', {
+                helpMessage: 'Header variables will insert into Header HTML unless you click a different field.',
+            });
+        } else if (tabName === 'body') {
+            currentEditor = 'bodyEditor';
+            setInsertTarget('bodyEditor', {
+                helpMessage: 'Body variables will insert into Body Content unless you click a different field.',
+            });
+        } else if (tabName === 'footer') {
+            currentEditor = 'footerEditor';
+            setInsertTarget('footerEditor', {
+                helpMessage: 'Footer variables will insert into Footer Content unless you click a different field.',
+            });
+        } else if (tabName === 'signature') {
+            setInsertTarget(null, {
+                helpMessage: 'Click inside a signature text field before inserting a variable. Image URL fields do not accept variables.',
+            });
+        } else {
+            setInsertTarget(null, {
+                helpMessage: 'Variable insertion is available in Header, Body, Footer, and signature text fields.',
+            });
+        }
+    }
+
+    function focusTemplateField(targetId) {
+        const config = getTargetConfig(targetId);
+        if (!config) {
+            return;
+        }
+
+        activateTab(config.tab);
+
+        if (config.type === 'editor') {
+            const editor = editors[targetId];
+            if (editor) {
+                editor.focus();
+                currentEditor = targetId;
+                setInsertTarget(targetId);
+            } else {
+                const textarea = document.getElementById(targetId);
+                if (textarea) {
+                    textarea.focus();
+                    currentEditor = targetId;
+                    setInsertTarget(targetId);
+                }
+            }
+            return;
+        }
+
+        const input = document.getElementById(targetId);
+        if (input) {
+            input.focus();
+            input.select?.();
+            setInsertTarget(targetId, { isError: !config.acceptsInsert });
+        }
+    }
+
+    function getTemplateSources() {
+        return Object.values(insertTargets);
+    }
+
+    function refreshVariableManager() {
+        const container = document.getElementById('variableManager');
+        if (!container) return;
+
+        const sources = getTemplateSources().map((source) => {
+            const matches = getFieldContent(source.id).match(variableRegex) || [];
+            if (!matches.length) {
+                return null;
+            }
+
+            const grouped = matches.reduce((carry, token) => {
+                carry[token] = (carry[token] || 0) + 1;
+                return carry;
+            }, {});
+
+            return {
+                ...source,
+                totalCount: matches.length,
+                tokens: Object.entries(grouped).map(([token, count]) => ({
+                    token,
+                    count,
+                    encoded: encodeURIComponent(token),
+                })),
+            };
+        }).filter(Boolean);
+
+        if (!sources.length) {
+            container.innerHTML = `
+                <div class="te-variable-manager-title">Variables currently used</div>
+                <p class="te-variable-manager-empty">
+                    No placeholders are stored right now. Click a field first, then use the chips above to insert a variable intentionally.
+                </p>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="te-variable-manager-title">Variables currently used</div>
+            <p class="te-variable-manager-copy">
+                Use this panel to locate placeholders, keep only one copy of a duplicated variable, or remove it completely from any field.
+            </p>
+            ${sources.map((source) => `
+                <div class="te-variable-source">
+                    <div class="te-variable-source-header">
+                        <button type="button" class="te-variable-source-link" onclick="focusTemplateField('${source.id}')">${escapeHtml(source.label)}</button>
+                        <span class="te-variable-source-count">${source.totalCount} variable${source.totalCount === 1 ? '' : 's'}</span>
+                    </div>
+                    ${source.tokens.map((item) => `
+                        <div class="te-variable-token-row">
+                            <span class="te-variable-token-label">
+                                ${escapeHtml(item.token)}
+                                ${item.count > 1 ? `<span class="te-variable-token-count">x ${item.count}</span>` : ''}
+                            </span>
+                            <div class="te-variable-actions">
+                                <button type="button" class="te-mini-btn" onclick="focusTemplateField('${source.id}')">Focus</button>
+                                ${item.count > 1 ? `<button type="button" class="te-mini-btn warning" onclick="keepSingleVariableOccurrence('${source.id}', '${item.encoded}')">Keep 1</button>` : ''}
+                                <button type="button" class="te-mini-btn danger" onclick="removeVariableOccurrences('${source.id}', '${item.encoded}')">Remove</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `).join('')}
+        `;
+    }
+
+    function keepSingleVariableOccurrence(targetId, encodedToken) {
+        const token = decodeURIComponent(encodedToken);
+        const pattern = new RegExp(escapeRegExp(token), 'g');
+        let seen = false;
+        const original = getFieldContent(targetId);
+        const updated = original.replace(pattern, () => {
+            if (!seen) {
+                seen = true;
+                return token;
+            }
+
+            return '';
+        });
+
+        setFieldContent(targetId, updated);
+        markDirty();
+        setCurrentInsertTarget(targetId);
+        setVariableHelp(`Kept one ${token} in ${getTargetConfig(targetId)?.label || 'the selected field'}.`);
+        updatePreview();
+    }
+
+    function removeVariableOccurrences(targetId, encodedToken) {
+        const token = decodeURIComponent(encodedToken);
+        const pattern = new RegExp(escapeRegExp(token), 'g');
+        const original = getFieldContent(targetId);
+        const updated = original.replace(pattern, '');
+
+        setFieldContent(targetId, updated);
+        markDirty();
+        setCurrentInsertTarget(targetId);
+        setVariableHelp(`Removed ${token} from ${getTargetConfig(targetId)?.label || 'the selected field'}.`);
+        updatePreview();
+    }
+
+    function normalizePreviewSingletons(blocks) {
+        const seen = new Set();
+
+        return blocks.map((block) => {
+            let normalized = block || '';
+
+            singletonVariableNames.forEach((name) => {
+                const token = buildVariableTag(name);
+                const pattern = new RegExp(escapeRegExp(token), 'g');
+
+                normalized = normalized.replace(pattern, () => {
+                    if (seen.has(name)) {
+                        return '';
+                    }
+
+                    seen.add(name);
+                    return token;
+                });
+            });
+
+            return normalized;
+        });
     }
 
     function getFieldValue(id) {
@@ -1099,6 +1652,7 @@
                 
                 editor.on('focus', function() {
                     currentEditor = editor.id;
+                    setInsertTarget(editor.id);
                 });
             }
         });
@@ -1122,20 +1676,24 @@
         // Tab switching
         document.querySelectorAll('.te-tab').forEach(tab => {
             tab.addEventListener('click', function() {
-                const tabName = this.dataset.tab;
-                
-                // Update tabs
-                document.querySelectorAll('.te-tab').forEach(t => t.classList.remove('active'));
-                this.classList.add('active');
-                
-                // Update panes
-                document.querySelectorAll('.te-pane').forEach(p => p.classList.remove('active'));
-                document.getElementById('pane-' + tabName).classList.add('active');
-                
-                // Track current editor
-                if (tabName === 'header') currentEditor = 'headerEditor';
-                else if (tabName === 'body') currentEditor = 'bodyEditor';
-                else if (tabName === 'footer') currentEditor = 'footerEditor';
+                activateTab(this.dataset.tab);
+            });
+        });
+
+        Object.values(insertTargets).forEach((target) => {
+            if (target.type !== 'input') {
+                return;
+            }
+
+            const field = document.getElementById(target.id);
+            if (!field) {
+                return;
+            }
+
+            ['focus', 'click'].forEach((eventName) => {
+                field.addEventListener(eventName, function() {
+                    setInsertTarget(target.id, { isError: !target.acceptsInsert });
+                });
             });
         });
         
@@ -1164,6 +1722,9 @@
             }
         });
         
+        activateTab(currentTab);
+        refreshVariableManager();
+
         // Initial preview (delayed to wait for TinyMCE)
         setTimeout(updatePreview, 1000);
         
@@ -1193,31 +1754,64 @@
     
     // Insert variable into current editor
     function insertVar(name) {
-        // Build the tag using character codes to avoid Blade escaping issues
-        const openBrace = String.fromCharCode(123, 123);
-        const closeBrace = String.fromCharCode(125, 125);
-        const tag = openBrace + name + closeBrace;
-        const editor = editors[currentEditor];
-        
-        if (editor) {
-            // Insert as plain text to avoid HTML encoding issues
-            editor.execCommand('mceInsertContent', false, tag);
-            markDirty();
-            updatePreview();
-        } else {
-            // Fallback for non-TinyMCE fields
-            const textarea = document.getElementById(currentEditor);
-            if (textarea) {
-                const start = textarea.selectionStart;
-                const end = textarea.selectionEnd;
-                const text = textarea.value;
-                textarea.value = text.substring(0, start) + tag + text.substring(end);
-                textarea.selectionStart = textarea.selectionEnd = start + tag.length;
-                textarea.focus();
-                markDirty();
-                updatePreview();
-            }
+        const tag = buildVariableTag(name);
+        const config = currentInsertTarget ? getTargetConfig(currentInsertTarget) : null;
+
+        if (!config) {
+            setInsertTarget(null, {
+                isError: true,
+                helpMessage: 'Select Header, Body, Footer, or a signature text field before inserting a variable.',
+            });
+            return;
         }
+
+        if (!config.acceptsInsert) {
+            setInsertTarget(config.id, {
+                isError: true,
+                helpMessage: `${config.label} is a direct URL field. Variables cannot be inserted there.`,
+            });
+            return;
+        }
+
+        if (editorOnlyVariables.has(name) && config.type !== 'editor') {
+            setInsertTarget(config.id, {
+                isError: true,
+                helpMessage: `${tag} can only be inserted into Header, Body, or Footer content.`,
+            });
+            return;
+        }
+
+        if (config.type === 'editor') {
+            const editor = editors[config.id];
+
+            if (editor) {
+                editor.focus();
+                editor.execCommand('mceInsertContent', false, tag);
+            } else {
+                const textarea = document.getElementById(config.id);
+                if (!textarea) {
+                    return;
+                }
+
+                textarea.focus();
+                insertIntoPlainField(textarea, tag);
+            }
+
+            currentEditor = config.id;
+        } else {
+            const field = document.getElementById(config.id);
+            if (!field) {
+                return;
+            }
+
+            insertIntoPlainField(field, tag);
+        }
+
+        markDirty();
+        setInsertTarget(config.id, {
+            helpMessage: `${tag} inserted into ${config.label}.`,
+        });
+        updatePreview();
     }
     
     // Generate header
@@ -1311,6 +1905,8 @@
         } else {
             footer = document.getElementById('footerEditor')?.value || '';
         }
+
+        [header, body, footer] = normalizePreviewSingletons([header, body, footer]);
         
         const sigName = document.getElementById('sigName')?.value || '';
         const sigTitle = document.getElementById('sigTitle')?.value || '';
@@ -1438,6 +2034,8 @@
                 paper.style.border = 'none';
             }
         }
+
+        refreshVariableManager();
     }
     
     // Toggle border controls panel

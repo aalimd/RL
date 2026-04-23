@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\TwoFactorCodeMail;
 use App\Mail\RequestStatusUpdated;
+use App\Mail\TrackingVerificationCode;
 use App\Models\Request as RequestRecord;
 use App\Models\Template;
 use App\Models\User;
@@ -113,6 +114,505 @@ class SecurityRegressionTest extends TestCase
             ->assertHeader('content-disposition', 'inline; filename="Recommendation_Letter_' . $request->tracking_id . '.pdf"');
     }
 
+    public function test_tracking_lookup_rejects_malformed_tracking_id_before_lookup(): void
+    {
+        Mail::fake();
+
+        $this->post(route('public.tracking.post'), [
+            'trackingId' => 'aaa',
+            'verificationToken' => 'ID-TRACK-1',
+        ])
+            ->assertSessionHasErrors([
+                'trackingId' => 'Tracking ID must be in the format REC-2026-AB12CD34.',
+            ])
+            ->assertSessionMissing('2fa_request_id');
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_tracking_lookup_shows_specific_message_for_valid_format_but_wrong_id_pair(): void
+    {
+        Mail::fake();
+
+        $request = $this->createTrackableRequest([
+            'tracking_id' => 'REC-2026-TRACK001',
+            'verification_token' => 'ID-TRACK-1',
+        ]);
+
+        $this->post(route('public.tracking.post'), [
+            'trackingId' => $request->tracking_id,
+            'verificationToken' => 'WRONG-ID-TRACK',
+        ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'We could not find a request matching this Tracking ID and Student / National ID. Please check both values and try again.')
+            ->assertSessionMissing('2fa_request_id');
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_tracking_lookup_normalizes_valid_tracking_id_and_starts_otp_verification(): void
+    {
+        Mail::fake();
+
+        $request = $this->createTrackableRequest([
+            'tracking_id' => 'REC-2026-TRACK002',
+            'student_email' => 'tracking.student@example.test',
+            'verification_token' => 'ID-TRACK-2',
+        ]);
+
+        $this->post(route('public.tracking.post'), [
+            'trackingId' => 'rec-2026-track002',
+            'verificationToken' => 'ID-TRACK-2',
+        ])
+            ->assertRedirect(route('public.tracking.verify'))
+            ->assertSessionHas('2fa_request_id', $request->id)
+            ->assertSessionHas('2fa_tracking_id', $request->tracking_id)
+            ->assertSessionHas('success', function ($message) {
+                return is_string($message)
+                    && str_contains($message, 'Request found.')
+                    && str_contains($message, '6-digit verification code');
+            });
+
+        Mail::assertSent(TrackingVerificationCode::class);
+    }
+
+    public function test_tracking_lookup_shows_state_message_for_archived_request(): void
+    {
+        Mail::fake();
+
+        $request = $this->createTrackableRequest([
+            'tracking_id' => 'REC-2026-ARCH0001',
+            'verification_token' => 'ID-ARCH-1',
+            'status' => 'Archived',
+        ]);
+
+        $this->post(route('public.tracking.post'), [
+            'trackingId' => $request->tracking_id,
+            'verificationToken' => 'ID-ARCH-1',
+        ])
+            ->assertRedirect()
+            ->assertSessionHas('error', 'This request is archived and is no longer available in the student tracker. Please contact administration if you still need help.')
+            ->assertSessionMissing('2fa_request_id');
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_tracking_verify_page_shows_masked_delivery_hint_and_resend_controls(): void
+    {
+        $request = $this->createTrackableRequest([
+            'tracking_id' => 'REC-2026-TRACK003',
+        ]);
+
+        $this->withSession([
+            '2fa_otp' => '123456',
+            '2fa_expires' => now()->addMinutes(5)->toDateTimeString(),
+            '2fa_request_id' => $request->id,
+            '2fa_tracking_id' => $request->tracking_id,
+            '2fa_delivery_method' => 'email',
+            '2fa_delivery_hint' => 'tr***@ex***.test',
+        ])->get(route('public.tracking.verify'))
+            ->assertOk()
+            ->assertSee('Verify Access')
+            ->assertSee($request->tracking_id)
+            ->assertSee('tr***@ex***.test')
+            ->assertSee('Code expires in')
+            ->assertSee('Send New Code');
+    }
+
+    public function test_public_tracking_verification_shows_clear_message_for_wrong_code(): void
+    {
+        $request = $this->createTrackableRequest([
+            'tracking_id' => 'REC-2026-TRACK004',
+        ]);
+
+        $this->from(route('public.tracking.verify'))
+            ->withSession([
+                '2fa_otp' => '654321',
+                '2fa_expires' => now()->addMinutes(5)->toDateTimeString(),
+                '2fa_request_id' => $request->id,
+                '2fa_tracking_id' => $request->tracking_id,
+                '2fa_delivery_method' => 'email',
+                '2fa_delivery_hint' => 'tr***@ex***.test',
+            ])->post(route('public.tracking.verify.post'), [
+                'otp' => '123456',
+            ])
+            ->assertRedirect(route('public.tracking.verify'))
+            ->assertSessionHas('error', 'Invalid verification code. Please check the 6-digit code and try again.')
+            ->assertSessionHas('2fa_request_id', $request->id)
+            ->assertSessionHas('2fa_tracking_id', $request->tracking_id);
+    }
+
+    public function test_expired_public_tracking_code_keeps_request_context_for_resend(): void
+    {
+        $request = $this->createTrackableRequest([
+            'tracking_id' => 'REC-2026-TRACK005',
+        ]);
+
+        $this->from(route('public.tracking.verify'))
+            ->withSession([
+                '2fa_otp' => '123456',
+                '2fa_expires' => now()->subMinute()->toDateTimeString(),
+                '2fa_request_id' => $request->id,
+                '2fa_tracking_id' => $request->tracking_id,
+                '2fa_delivery_method' => 'email',
+                '2fa_delivery_hint' => 'tr***@ex***.test',
+            ])->post(route('public.tracking.verify.post'), [
+                'otp' => '123456',
+            ])
+            ->assertRedirect(route('public.tracking.verify'))
+            ->assertSessionHas('error', 'This verification code has expired. Request a new code below.')
+            ->assertSessionMissing('2fa_otp')
+            ->assertSessionMissing('2fa_expires')
+            ->assertSessionHas('2fa_request_id', $request->id)
+            ->assertSessionHas('2fa_tracking_id', $request->tracking_id);
+    }
+
+    public function test_public_tracking_verification_resend_requires_an_active_tracking_session(): void
+    {
+        Mail::fake();
+
+        $this->post(route('public.tracking.verify.resend'))
+            ->assertRedirect(route('public.tracking'))
+            ->assertSessionHas('error', 'Your verification session expired. Please track your request again.');
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_public_tracking_verification_resend_issues_a_fresh_code(): void
+    {
+        Mail::fake();
+
+        $request = $this->createTrackableRequest([
+            'tracking_id' => 'REC-2026-TRACK006',
+            'student_email' => 'tracking.resend@example.test',
+        ]);
+
+        $previousOtp = '123456';
+
+        $this->withSession([
+            '2fa_otp' => $previousOtp,
+            '2fa_expires' => now()->addMinute()->toDateTimeString(),
+            '2fa_request_id' => $request->id,
+            '2fa_tracking_id' => $request->tracking_id,
+            '2fa_delivery_method' => 'email',
+            '2fa_delivery_hint' => 'tr***@ex***.test',
+        ])->post(route('public.tracking.verify.resend'))
+            ->assertRedirect(route('public.tracking.verify'))
+            ->assertSessionHas('2fa_request_id', $request->id)
+            ->assertSessionHas('2fa_tracking_id', $request->tracking_id)
+            ->assertSessionHas('2fa_delivery_method', 'email')
+            ->assertSessionHas('2fa_delivery_hint', function ($hint) use ($request) {
+                return is_string($hint)
+                    && str_contains($hint, 'tr')
+                    && str_contains($hint, '.test');
+            })
+            ->assertSessionHas('2fa_otp', function ($otp) use ($previousOtp) {
+                return is_string($otp)
+                    && preg_match('/^\d{6}$/', $otp) === 1
+                    && $otp !== $previousOtp;
+            })
+            ->assertSessionHas('2fa_expires', function ($expiresAt) {
+                return $expiresAt !== null;
+            })
+            ->assertSessionHas('success', function ($message) {
+                return is_string($message)
+                    && str_contains($message, 'We sent a new 6-digit verification code');
+            });
+
+        Mail::assertSent(TrackingVerificationCode::class, function ($mail) use ($request) {
+            return $mail->hasTo($request->student_email);
+        });
+    }
+
+    public function test_public_tracking_verification_can_remember_browser_for_future_visits(): void
+    {
+        $request = $this->createTrackableRequest([
+            'tracking_id' => 'REC-2026-TRACK007',
+            'student_email' => 'remember.browser@example.test',
+        ]);
+
+        $response = $this->withSession([
+            '2fa_otp' => '123456',
+            '2fa_expires' => now()->addMinutes(5)->toDateTimeString(),
+            '2fa_request_id' => $request->id,
+            '2fa_tracking_id' => $request->tracking_id,
+            '2fa_delivery_method' => 'email',
+            '2fa_delivery_hint' => 're***@ex***.test',
+        ])->post(route('public.tracking.verify.post'), [
+            'otp' => '123456',
+            'remember_browser' => '1',
+        ]);
+
+        $response->assertOk()
+            ->assertDontSee('Trusted browser')
+            ->assertSee('Require a code on this browser');
+
+        $cookie = collect($response->headers->getCookies())
+            ->first(fn ($candidate) => $candidate->getName() === 'trusted_tracking_browser');
+
+        $this->assertNotNull($cookie);
+    }
+
+    public function test_tracking_lookup_skips_email_code_on_a_trusted_browser(): void
+    {
+        Mail::fake();
+
+        $request = $this->createTrackableRequest([
+            'tracking_id' => 'REC-2026-TRACK008',
+            'student_email' => 'trusted.browser@example.test',
+            'verification_token' => 'ID-TRACK-TRUST',
+            'status' => 'Approved',
+        ]);
+
+        $rememberUntil = now()->addDays(30)->timestamp;
+        $trustedCookie = json_encode([
+            'remember_until' => $rememberUntil,
+            'proof' => $this->trackingTrustedBrowserProof($request, $rememberUntil),
+        ], JSON_UNESCAPED_SLASHES);
+
+        $this->withCookie('trusted_tracking_browser', $trustedCookie)
+            ->post(route('public.tracking.post'), [
+                'trackingId' => $request->tracking_id,
+                'verificationToken' => 'ID-TRACK-TRUST',
+            ])
+            ->assertOk()
+            ->assertDontSee('Trusted browser')
+            ->assertSee('Your recommendation letter is ready.')
+            ->assertSee('Require a code on this browser');
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_tracking_results_show_clear_next_steps_for_student_statuses(): void
+    {
+        $cases = [
+            [
+                'tracking_id' => 'REC-2026-STAT0001',
+                'status' => 'Submitted',
+                'expected' => 'No action is needed yet. Keep your Tracking ID handy and check back for updates.',
+            ],
+            [
+                'tracking_id' => 'REC-2026-STAT0002',
+                'status' => 'Under Review',
+                'expected' => 'No action is needed from you right now. Wait for another status update or message from administration.',
+            ],
+            [
+                'tracking_id' => 'REC-2026-STAT0003',
+                'status' => 'Needs Revision',
+                'expected' => 'Use the edit button below, update the requested details, and resubmit your request.',
+                'admin_message' => 'Please correct your training period before we continue.',
+            ],
+            [
+                'tracking_id' => 'REC-2026-STAT0004',
+                'status' => 'Approved',
+                'expected' => 'Open your letter, review it, and download the PDF if you need a copy.',
+            ],
+            [
+                'tracking_id' => 'REC-2026-STAT0005',
+                'status' => 'Rejected',
+                'expected' => 'Review the reason below. If anything is unclear, contact administration before creating a new request.',
+                'rejection_reason' => 'We could not verify the required eligibility information.',
+            ],
+        ];
+
+        foreach ($cases as $case) {
+            $request = $this->createTrackableRequest([
+                'tracking_id' => $case['tracking_id'],
+                'status' => $case['status'],
+                'admin_message' => $case['admin_message'] ?? null,
+                'rejection_reason' => $case['rejection_reason'] ?? null,
+            ]);
+
+            $this->withSession([
+                '2fa_otp' => '123456',
+                '2fa_expires' => now()->addMinutes(5)->toDateTimeString(),
+                '2fa_request_id' => $request->id,
+                '2fa_tracking_id' => $request->tracking_id,
+                '2fa_delivery_method' => 'email',
+                '2fa_delivery_hint' => 'tr***@ex***.test',
+            ])->post(route('public.tracking.verify.post'), [
+                'otp' => '123456',
+            ])
+                ->assertOk()
+                ->assertSee('What happens next')
+                ->assertSee($case['expected']);
+        }
+    }
+
+    public function test_final_tracking_states_mark_review_step_as_completed(): void
+    {
+        foreach (['Approved', 'Rejected'] as $status) {
+            $request = $this->createTrackableRequest([
+                'tracking_id' => 'REC-2026-' . strtoupper(substr($status, 0, 4)) . 'DONE',
+                'status' => $status,
+                'rejection_reason' => $status === 'Rejected' ? 'Missing required eligibility information.' : null,
+            ]);
+
+            $this->withSession([
+                '2fa_otp' => '123456',
+                '2fa_expires' => now()->addMinutes(5)->toDateTimeString(),
+                '2fa_request_id' => $request->id,
+                '2fa_tracking_id' => $request->tracking_id,
+                '2fa_delivery_method' => 'email',
+                '2fa_delivery_hint' => 'tr***@ex***.test',
+            ])->post(route('public.tracking.verify.post'), [
+                'otp' => '123456',
+            ])
+                ->assertOk()
+                ->assertSee('Completed')
+                ->assertDontSee('In Progress');
+        }
+    }
+
+    public function test_request_wizard_step_one_requires_purpose_details_when_other_is_selected(): void
+    {
+        $response = $this->post(route('public.request.wizard'), [
+            'step' => 1,
+            'action' => 'next',
+            'data' => [
+                'student_name' => 'Wizard',
+                'last_name' => 'Student',
+                'student_email' => 'wizard.student@example.test',
+                'gender' => 'male',
+                'university' => 'Test University',
+                'verification_token' => 'ID-WIZ-001',
+                'training_period' => '2026-04',
+                'purpose' => 'Other',
+                'deadline' => now()->addDays(5)->format('Y-m-d'),
+            ],
+        ]);
+
+        $response->assertRedirect()
+            ->assertSessionHasErrors([
+                'data.purpose_other' => 'Please describe the purpose when you select Other',
+            ]);
+
+        $this->get(route('public.request'))
+            ->assertOk()
+            ->assertSee('Student & Request Information', false)
+            ->assertSee('Purpose Details')
+            ->assertSee('Email remains the main update channel. Add a phone number only if you want administration to have another contact method.');
+    }
+
+    public function test_request_wizard_review_step_is_read_only(): void
+    {
+        $template = Template::create([
+            'name' => 'Wizard Template',
+            'language' => 'en',
+            'header_content' => '<p>Header</p>',
+            'body_content' => '<p>Body</p>',
+            'footer_content' => '<p>Footer</p>',
+            'layout_settings' => [],
+            'is_active' => true,
+        ]);
+
+        $this->withSession([
+            'wizard_step' => 3,
+            'wizard_data' => [
+                'student_name' => 'Wizard',
+                'last_name' => 'Student',
+                'student_email' => 'wizard.student@example.test',
+                'university' => 'Test University',
+                'verification_token' => 'ID-WIZ-002',
+                'training_period' => '2026-04',
+                'purpose' => 'Other',
+                'purpose_other' => 'Saudi Board application',
+                'deadline' => now()->addDays(7)->format('Y-m-d'),
+                'content_option' => 'template',
+                'template_id' => $template->id,
+                'notes' => 'Please emphasize clinical teamwork.',
+            ],
+        ])->get(route('public.request'))
+            ->assertOk()
+            ->assertSee('Step 3 is read-only.')
+            ->assertSee('Other: Saudi Board application')
+            ->assertDontSee('<select name="data[purpose]"', false)
+            ->assertDontSee('<input type="date" name="data[deadline]"', false)
+            ->assertDontSee('<textarea name="data[notes]"', false);
+    }
+
+    public function test_request_wizard_keeps_student_on_content_step_when_template_validation_fails(): void
+    {
+        $this->withSession([
+            'wizard_step' => 2,
+            'wizard_data' => [
+                'student_name' => 'Wizard',
+                'last_name' => 'Student',
+                'student_email' => 'wizard.content@example.test',
+                'gender' => 'female',
+                'university' => 'Test University',
+                'verification_token' => 'ID-WIZ-004',
+                'training_period' => '2026-04',
+                'purpose' => 'Residency',
+                'deadline' => now()->addDays(8)->format('Y-m-d'),
+            ],
+        ])->post(route('public.request.wizard'), [
+            'step' => 2,
+            'action' => 'next',
+            'data' => [
+                'content_option' => 'template',
+                'template_id' => '',
+            ],
+        ])
+            ->assertRedirect()
+            ->assertSessionHasErrors([
+                'template' => 'Please select a template',
+            ]);
+
+        $this->get(route('public.request'))
+            ->assertOk()
+            ->assertSee('Letter Content')
+            ->assertSee('Please select a template');
+    }
+
+    public function test_request_wizard_submission_persists_other_purpose_details_in_form_data(): void
+    {
+        Mail::fake();
+
+        $template = Template::create([
+            'name' => 'Wizard Submit Template',
+            'language' => 'en',
+            'header_content' => '<p>Header</p>',
+            'body_content' => '<p>Body</p>',
+            'footer_content' => '<p>Footer</p>',
+            'layout_settings' => [],
+            'is_active' => true,
+        ]);
+
+        $wizardData = [
+            'student_name' => 'Wizard',
+            'last_name' => 'Student',
+            'student_email' => 'wizard.submit@example.test',
+            'gender' => 'female',
+            'university' => 'Test University',
+            'verification_token' => 'ID-WIZ-003',
+            'training_period' => '2026-04',
+            'purpose' => 'Other',
+            'purpose_other' => 'Saudi Board application',
+            'deadline' => now()->addDays(10)->format('Y-m-d'),
+            'content_option' => 'template',
+            'template_id' => $template->id,
+            'notes' => 'Please highlight leadership and reliability.',
+        ];
+
+        $this->withSession([
+            'wizard_step' => 3,
+            'wizard_data' => $wizardData,
+        ])->post(route('public.request.wizard'), [
+            'step' => 3,
+            'action' => 'submit',
+        ])
+            ->assertRedirect(route('public.request'))
+            ->assertSessionMissing('wizard_step');
+
+        $request = RequestRecord::query()->latest('id')->firstOrFail();
+
+        $this->assertSame('Other', $request->purpose);
+        $this->assertIsArray($request->form_data);
+        $this->assertSame('Saudi Board application', $request->form_data['purpose_other'] ?? null);
+        $this->assertSame('Other', $request->form_data['purpose'] ?? null);
+    }
+
     public function test_pdf_letter_template_renders_single_page_for_standard_letter_content(): void
     {
         $request = $this->createApprovedRequest();
@@ -190,6 +690,26 @@ class SecurityRegressionTest extends TestCase
         $pdf->render();
 
         $this->assertSame(1, $pdf->getCanvas()->get_page_count());
+    }
+
+    public function test_letter_service_keeps_only_one_inline_signature_and_qr_placeholder_across_template_sections(): void
+    {
+        $request = $this->createApprovedRequest();
+        $template = Template::findOrFail($request->template_id);
+
+        $template->update([
+            'header_content' => '<div>{{signature}}</div><div>{{signature}}</div>',
+            'body_content' => '<div>{{qrCode}}</div><div>{{qrCode}}</div><div>{{signature}}</div>',
+            'footer_content' => '<div>{{qrCode}}</div>',
+            'signature_image' => 'https://example.test/signature.png',
+            'stamp_image' => 'https://example.test/stamp.png',
+        ]);
+
+        $content = app(LetterService::class)->generateLetterContent($request->fresh(), $template->fresh());
+        $combined = ($content['header'] ?? '') . ($content['body'] ?? '') . ($content['footer'] ?? '');
+
+        $this->assertSame(1, substr_count($combined, 'official-signature'));
+        $this->assertSame(1, substr_count($combined, 'qr-code-container'));
     }
 
     public function test_pdf_html_preparation_shapes_arabic_and_removes_rtl_direction_for_visual_glyphs(): void
@@ -403,6 +923,49 @@ class SecurityRegressionTest extends TestCase
         $this->assertStringContainsString('Missing required documentation.', $html);
     }
 
+    public function test_admin_approved_status_message_survives_to_student_tracking_view(): void
+    {
+        $user = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+
+        $request = RequestRecord::create([
+            'tracking_id' => 'REC-2026-APPROVE1',
+            'student_name' => 'Approved',
+            'last_name' => 'Student',
+            'student_email' => 'approved@example.test',
+            'verification_token' => 'ID-APPROVED',
+            'university' => 'Test University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-04',
+            'status' => 'Submitted',
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['2fa_verified' => true])
+            ->patch('/admin/requests/' . $request->id . '/status', [
+                'status' => 'Approved',
+                'admin_message' => 'Please review the final wording before you submit it to programs.',
+            ])
+            ->assertRedirect();
+
+        $request->refresh();
+
+        $this->assertSame('Approved', $request->status);
+        $this->assertSame('Please review the final wording before you submit it to programs.', $request->admin_message);
+        $this->assertNull($request->rejection_reason);
+
+        $html = view('public.tracking', [
+            'settings' => [],
+            'request' => $request,
+            'id' => $request->tracking_id,
+        ])->render();
+
+        $this->assertStringContainsString('Message from administration', $html);
+        $this->assertStringContainsString('Please review the final wording before you submit it to programs.', $html);
+    }
+
     public function test_admin_request_details_page_renders_attachment_link_even_with_unexpected_training_period(): void
     {
         $user = $this->createAdminUser([
@@ -546,6 +1109,21 @@ class SecurityRegressionTest extends TestCase
         ], $overrides));
     }
 
+    private function createTrackableRequest(array $overrides = []): RequestRecord
+    {
+        return RequestRecord::create(array_merge([
+            'tracking_id' => 'REC-2026-TRACK100',
+            'student_name' => 'Tracking',
+            'last_name' => 'Student',
+            'student_email' => 'tracking@example.test',
+            'verification_token' => 'ID-TRACK-100',
+            'university' => 'Test University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-04',
+            'status' => 'Submitted',
+        ], $overrides));
+    }
+
     private function createApprovedRequest(): RequestRecord
     {
         $template = Template::create([
@@ -574,5 +1152,22 @@ class SecurityRegressionTest extends TestCase
                 'gender' => 'male',
             ],
         ]);
+    }
+
+    private function trackingTrustedBrowserProof(RequestRecord $request, int $rememberUntil): string
+    {
+        $appKey = (string) config('app.key', '');
+        if (str_starts_with($appKey, 'base64:')) {
+            $decoded = base64_decode(substr($appKey, 7), true);
+            if ($decoded !== false) {
+                $appKey = $decoded;
+            }
+        }
+
+        return hash_hmac('sha256', implode('|', [
+            trim((string) $request->verification_token),
+            strtolower(trim((string) $request->student_email)),
+            (string) $rememberUntil,
+        ]), $appKey);
     }
 }

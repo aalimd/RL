@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Settings;
 use App\Models\Template;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class WizardService
 {
@@ -118,9 +119,9 @@ class WizardService
     }
 
     /**
-     * Validate Step 1
+     * Build validation rules and messages for the request details step.
      */
-    public function validateStep1(Request $request, array $formConfig)
+    private function getStep1ValidationDefinition(array $formConfig): array
     {
         $fieldConfig = $formConfig['fields'] ?? [];
         $rules = [];
@@ -133,17 +134,25 @@ class WizardService
             'gender' => ['display' => 'Gender', 'rule' => 'in:male,female'],
             'student_email' => ['display' => 'Email', 'rule' => 'email|max:255'],
             'university' => ['display' => 'University', 'rule' => 'string|max:255'],
-            'verification_token' => ['display' => 'ID number', 'rule' => 'string|max:100'],
+            'verification_token' => ['display' => 'Student / National ID', 'rule' => 'string|max:100'],
             'training_period' => ['display' => 'Training period', 'rule' => 'date_format:Y-m'],
             'phone' => ['display' => 'Phone number', 'rule' => 'regex:/^([0-9\s\-\+\(\)]*)$/|min:10|max:20'],
             'major' => ['display' => 'Major', 'rule' => 'string|max:255'],
+            'purpose' => ['display' => 'Purpose of recommendation', 'rule' => 'string|max:100'],
+            'purpose_other' => ['display' => 'Purpose details', 'rule' => 'string|max:255'],
+            'deadline' => ['display' => 'Deadline date', 'rule' => 'date|after_or_equal:today'],
+            'notes' => ['display' => 'Additional notes', 'rule' => 'string|max:2000'],
         ];
 
         // Default required fields
-        $defaultRequired = ['student_name', 'last_name', 'student_email', 'gender', 'verification_token', 'training_period'];
+        $defaultRequired = ['student_name', 'last_name', 'student_email', 'gender', 'university', 'verification_token', 'training_period', 'purpose', 'deadline'];
         $lockedRequiredFields = ['student_email', 'verification_token'];
 
         foreach ($fieldMeta as $key => $meta) {
+            if ($key === 'purpose_other') {
+                continue;
+            }
+
             $isVisible = $fieldConfig[$key]['visible'] ?? true;
             $isRequired = $fieldConfig[$key]['required'] ?? in_array($key, $defaultRequired);
 
@@ -160,7 +169,48 @@ class WizardService
             }
         }
 
-        return $request->validate($rules, $messages);
+        $messages['data.deadline.after_or_equal'] = 'Deadline date must be today or later';
+        $messages['data.purpose_other.required'] = 'Please describe the purpose when you select Other';
+
+        return [$rules, $messages];
+    }
+
+    /**
+     * Validate Step 1
+     */
+    public function validateStep1(Request $request, array $formConfig)
+    {
+        return $this->validateStep1Payload($request->all(), $formConfig);
+    }
+
+    /**
+     * Validate persisted step 1 data before final submission.
+     */
+    public function validateStep1Data(array $formData, array $formConfig): array
+    {
+        return $this->validateStep1Payload(['data' => $formData], $formConfig);
+    }
+
+    /**
+     * Run request-details validation for either a live request or persisted wizard data.
+     */
+    private function validateStep1Payload(array $payload, array $formConfig): array
+    {
+        [$rules, $messages] = $this->getStep1ValidationDefinition($formConfig);
+
+        $validator = Validator::make($payload, $rules, $messages);
+
+        $fieldConfig = $formConfig['fields'] ?? [];
+        $purposeVisible = $fieldConfig['purpose']['visible'] ?? true;
+        $purposeOtherVisible = $fieldConfig['purpose_other']['visible'] ?? true;
+
+        if ($purposeVisible && $purposeOtherVisible) {
+            $validator->sometimes('data.purpose_other', 'required|string|max:255', function ($input) {
+                return (($input->data['purpose'] ?? null) === 'Other');
+            });
+        }
+
+        return $validator->validate();
     }
 
     /**
@@ -199,41 +249,8 @@ class WizardService
     /**
      * Validate Step 3
      */
-    public function validateStep3(Request $request, array $formConfig)
+    public function validateStep3(array $formData, array $formConfig): array
     {
-        $fieldConfig = $formConfig['fields'] ?? [];
-        $rules = [];
-        $messages = [];
-
-        // Fields relevant to Step 3
-        $step3Fields = ['purpose', 'deadline', 'notes'];
-
-        foreach ($step3Fields as $key) {
-            $isVisible = $fieldConfig[$key]['visible'] ?? true;
-            // Default required logic if not explicitly set in config
-            $isDefaultRequired = in_array($key, ['purpose', 'deadline']);
-            $isRequired = $fieldConfig[$key]['required'] ?? $isDefaultRequired;
-
-            if ($isVisible && $isRequired) {
-                // Determine rules based on field type
-                $rule = 'string';
-                if ($key === 'deadline') {
-                    $rule = 'date|after:today';
-                } elseif ($key === 'purpose') {
-                    $rule = 'string|max:100';
-                }
-
-                $rules["data.$key"] = 'required|' . $rule;
-                $messages["data.$key.required"] = ucfirst($key) . ' is required';
-            } elseif ($isVisible) {
-                $rule = 'string';
-                if ($key === 'deadline') {
-                    $rule = 'date|after:today';
-                }
-                $rules["data.$key"] = 'nullable|' . $rule;
-            }
-        }
-
-        return $request->validate($rules, $messages);
+        return $this->validateStep1Data($formData, $formConfig);
     }
 }

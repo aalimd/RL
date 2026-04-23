@@ -53,7 +53,8 @@ class RequestStatusService
             $request->admin_message = null;
             $request->rejection_reason = $resolvedRejectionReason;
         } else {
-            $request->admin_message = null;
+            // Preserve optional student-facing notes for statuses like Approved or Under Review.
+            $request->admin_message = $adminMessage;
             $request->rejection_reason = null;
         }
 

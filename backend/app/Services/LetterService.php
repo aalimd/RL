@@ -62,6 +62,14 @@ class LetterService
         'word-spacing',
     ];
 
+    /**
+     * Only one inline signature or QR block should survive across the composed letter.
+     */
+    private const SINGLETON_TEMPLATE_VARIABLES = [
+        '{{signature}}',
+        '{{qrCode}}',
+    ];
+
     private ?HTMLPurifier $purifier = null;
     private ?ArabicText $arabicText = null;
 
@@ -195,9 +203,15 @@ class LetterService
             return str_replace(array_keys($variables), array_values($variables), $text);
         };
 
-        $headerContent = $replaceVars($template->header_content);
-        $bodyContent = $replaceVars($template->body_content ?? $template->content);
-        $footerContent = $replaceVars($template->footer_content);
+        [$headerTemplate, $bodyTemplate, $footerTemplate] = $this->normalizeSingletonTemplateVariables([
+            $template->header_content,
+            $template->body_content ?? $template->content,
+            $template->footer_content,
+        ]);
+
+        $headerContent = $replaceVars($headerTemplate);
+        $bodyContent = $replaceVars($bodyTemplate);
+        $footerContent = $replaceVars($footerTemplate);
 
         // Update signature array for view (this is separate from the {{signature}} content variable)
         $signature = [
@@ -378,6 +392,32 @@ class LetterService
         }
 
         return implode('; ', $normalized);
+    }
+
+    private function normalizeSingletonTemplateVariables(array $sections): array
+    {
+        $seen = [];
+
+        foreach ($sections as $index => $section) {
+            $text = (string) ($section ?? '');
+
+            foreach (self::SINGLETON_TEMPLATE_VARIABLES as $token) {
+                $pattern = '/' . preg_quote($token, '/') . '/';
+
+                $text = preg_replace_callback($pattern, function () use (&$seen, $token) {
+                    if (isset($seen[$token])) {
+                        return '';
+                    }
+
+                    $seen[$token] = true;
+                    return $token;
+                }, $text) ?? $text;
+            }
+
+            $sections[$index] = $text;
+        }
+
+        return $sections;
     }
 
     /**

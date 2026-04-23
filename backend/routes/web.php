@@ -31,6 +31,8 @@ Route::get('/letter/{tracking_id}/pdf', [PageController::class, 'downloadPdf'])-
 Route::get('/verify/{token}', [App\Http\Controllers\VerificationController::class, 'verify'])->name('public.verify');
 Route::get('/tracking/verify', [PageController::class, 'show2FAVerify'])->name('public.tracking.verify');
 Route::post('/tracking/verify', [PageController::class, 'handle2FAVerify'])->middleware('throttle:5,1')->name('public.tracking.verify.post');
+Route::post('/tracking/verify/resend', [PageController::class, 'resendTrackingVerification'])->middleware('throttle:3,1')->name('public.tracking.verify.resend');
+Route::post('/tracking/verify/forget-browser', [PageController::class, 'forgetTrackingTrustedBrowser'])->middleware('throttle:5,1')->name('public.tracking.verify.forget-browser');
 
 // Admin Panel (protected by auth)
 Route::middleware(['auth', 'active', 'twofactor'])->prefix('admin')->name('admin.')->group(function () {

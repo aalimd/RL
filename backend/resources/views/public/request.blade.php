@@ -239,6 +239,20 @@
             color: #ef4444;
         }
 
+        .optional-badge {
+            display: inline-flex;
+            align-items: center;
+            margin-left: 0.45rem;
+            padding: 0.18rem 0.45rem;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            background: rgba(148, 163, 184, 0.14);
+        }
+
         .form-input,
         .form-select,
         .form-textarea {
@@ -294,8 +308,51 @@
         }
 
         .form-input.error,
-        .form-select.error {
+        .form-select.error,
+        .form-textarea.error {
             border-color: #ef4444;
+        }
+
+        .field-help,
+        .field-error {
+            display: block;
+            margin-top: 0.45rem;
+            font-size: 0.82rem;
+            line-height: 1.5;
+        }
+
+        .field-help {
+            color: var(--text-muted);
+        }
+
+        .field-error {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .section-note {
+            margin: -0.5rem 0 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.65;
+        }
+
+        .section-divider {
+            margin: 2rem 0 1rem;
+        }
+
+        .section-divider-title {
+            margin: 0 0 0.35rem 0;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        .section-divider-text {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
         }
 
         .form-grid {
@@ -475,6 +532,49 @@
         .summary-value {
             font-weight: 600;
             color: var(--text-primary);
+        }
+
+        .summary-value.multiline {
+            text-align: right;
+            white-space: pre-wrap;
+            max-width: 58%;
+        }
+
+        .review-callout {
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.1rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(var(--primary-rgb), 0.18);
+            background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1), rgba(var(--primary-rgb), 0.04));
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 0.93rem;
+        }
+
+        .summary-card {
+            margin-top: 1.25rem;
+            padding: 1.25rem;
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+        }
+
+        .summary-card:first-of-type {
+            margin-top: 0;
+        }
+
+        .summary-card-title {
+            margin: 0 0 0.85rem 0;
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .summary-card-copy {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            white-space: pre-wrap;
         }
 
         /* Navigation Buttons */
@@ -968,141 +1068,241 @@
                         @endif
 
                         <!-- Preserve data between steps -->
-                        @foreach($formData as $key => $value)
-                            @if(!is_array($value))
-                                <input type="hidden" name="data[{{ $key }}]" value="{{ $value }}">
-                            @endif
-                        @endforeach
+                        @if($step !== 3)
+                            @foreach($formData as $key => $value)
+                                @if(!is_array($value))
+                                    <input type="hidden" name="data[{{ $key }}]" value="{{ $value }}">
+                                @endif
+                            @endforeach
+                        @endif
 
                         @if($step == 1)
                             <!-- STEP 1: Personal Details -->
-                            <h2 class="form-section-title">Student Information</h2>
-
-                            @if($errors->any())
-                                <div class="error-box">
-                                    @foreach($errors->all() as $error)
-                                        <p style="margin: 0;">{{ $error }}</p>
-                                    @endforeach
-                                </div>
-                            @endif
+                            <h2 class="form-section-title">Student & Request Information</h2>
+                            <p class="section-note">
+                                Complete your student details and tell us what this recommendation is for now. Step 3 will be
+                                a final review only, so you will not need to enter new information there.
+                            </p>
 
                             @php
                                 $fieldConfig = $formConfig['fields'] ?? [];
                                 $isVisible = fn($key) => ($fieldConfig[$key]['visible'] ?? true);
-                                $isRequired = fn($key) => ($fieldConfig[$key]['required'] ?? in_array($key, ['student_name', 'last_name', 'student_email', 'gender', 'verification_token', 'training_period']));
+                                $isRequired = fn($key) => ($fieldConfig[$key]['required'] ?? in_array($key, ['student_name', 'last_name', 'student_email', 'gender', 'university', 'verification_token', 'training_period', 'purpose', 'deadline']));
+                                $requirementTag = fn($key) => $isRequired($key)
+                                    ? '<span class="required">*</span>'
+                                    : '<span class="optional-badge">Optional</span>';
+                                $selectedPurpose = old('data.purpose', $formData['purpose'] ?? '');
                             @endphp
 
                             <div class="form-grid">
                                 @if($isVisible('student_name'))
                                     <div class="form-group">
-                                        <label class="form-label">First Name @if($isRequired('student_name'))<span
-                                        class="required">*</span>@endif</label>
+                                        <label class="form-label">First Name {!! $requirementTag('student_name') !!}</label>
                                         <input type="text" name="data[student_name]"
                                             class="form-input @error('data.student_name') error @enderror"
                                             value="{{ old('data.student_name', $formData['student_name'] ?? '') }}"
                                             placeholder="Enter your first name" {{ $isRequired('student_name') ? 'required' : '' }}>
+                                        @error('data.student_name')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @enderror
                                     </div>
                                 @endif
 
                                 @if($isVisible('middle_name'))
                                     <div class="form-group">
-                                        <label class="form-label">Middle Name @if($isRequired('middle_name'))<span
-                                        class="required">*</span>@endif</label>
+                                        <label class="form-label">Middle Name {!! $requirementTag('middle_name') !!}</label>
                                         <input type="text" name="data[middle_name]"
                                             class="form-input @error('data.middle_name') error @enderror"
                                             value="{{ old('data.middle_name', $formData['middle_name'] ?? '') }}"
                                             placeholder="Enter your middle name" {{ $isRequired('middle_name') ? 'required' : '' }}>
+                                        @error('data.middle_name')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @else
+                                            <span class="field-help">Leave this blank if you do not use a middle name.</span>
+                                        @enderror
                                     </div>
                                 @endif
 
                                 @if($isVisible('last_name'))
                                     <div class="form-group">
-                                        <label class="form-label">Last Name @if($isRequired('last_name'))<span
-                                        class="required">*</span>@endif</label>
+                                        <label class="form-label">Last Name {!! $requirementTag('last_name') !!}</label>
                                         <input type="text" name="data[last_name]"
                                             class="form-input @error('data.last_name') error @enderror"
                                             value="{{ old('data.last_name', $formData['last_name'] ?? '') }}"
                                             placeholder="Enter your last name" {{ $isRequired('last_name') ? 'required' : '' }}>
+                                        @error('data.last_name')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @enderror
                                     </div>
                                 @endif
 
                                 @if($isVisible('gender'))
                                     <div class="form-group">
-                                        <label class="form-label">Gender @if($isRequired('gender'))<span
-                                        class="required">*</span>@endif</label>
+                                        <label class="form-label">Gender {!! $requirementTag('gender') !!}</label>
                                         <select name="data[gender]" class="form-select @error('data.gender') error @enderror" {{ $isRequired('gender') ? 'required' : '' }}>
                                             <option value="">Select Gender</option>
                                             <option value="male" {{ old('data.gender', $formData['gender'] ?? '') === 'male' ? 'selected' : '' }}>Male</option>
                                             <option value="female" {{ old('data.gender', $formData['gender'] ?? '') === 'female' ? 'selected' : '' }}>Female</option>
                                         </select>
+                                        @error('data.gender')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @enderror
                                     </div>
                                 @endif
 
                                 @if($isVisible('student_email'))
                                     <div class="form-group">
-                                        <label class="form-label">Email Address @if($isRequired('student_email'))<span
-                                        class="required">*</span>@endif</label>
+                                        <label class="form-label">Email Address {!! $requirementTag('student_email') !!}</label>
                                         <input type="email" name="data[student_email]"
                                             class="form-input @error('data.student_email') error @enderror"
                                             value="{{ old('data.student_email', $formData['student_email'] ?? '') }}"
                                             placeholder="example@email.com" {{ $isRequired('student_email') ? 'required' : '' }}>
+                                        @error('data.student_email')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @else
+                                            <span class="field-help">We will send submission confirmation and tracking verification codes to this email.</span>
+                                        @enderror
                                     </div>
                                 @endif
 
                                 @if($isVisible('university'))
                                     <div class="form-group">
-                                        <label class="form-label">University / Institution @if($isRequired('university'))<span
-                                        class="required">*</span>@endif</label>
+                                        <label class="form-label">University / Institution {!! $requirementTag('university') !!}</label>
                                         <input type="text" name="data[university]"
                                             class="form-input @error('data.university') error @enderror"
                                             value="{{ old('data.university', $formData['university'] ?? '') }}"
                                             placeholder="University or institution name" {{ $isRequired('university') ? 'required' : '' }}>
+                                        @error('data.university')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @enderror
                                     </div>
                                 @endif
 
                                 @if($isVisible('verification_token'))
                                     <div class="form-group">
-                                        <label class="form-label">Student ID / National ID @if($isRequired('verification_token'))<span
-                                        class="required">*</span>@endif</label>
+                                        <label class="form-label">Student / National ID {!! $requirementTag('verification_token') !!}</label>
                                         <input type="text" name="data[verification_token]"
                                             class="form-input @error('data.verification_token') error @enderror"
                                             value="{{ old('data.verification_token', $formData['verification_token'] ?? '') }}"
-                                            placeholder="ID number for verification" {{ $isRequired('verification_token') ? 'required' : '' }}>
+                                            placeholder="Use this same ID later for tracking" {{ $isRequired('verification_token') ? 'required' : '' }}>
+                                        @error('data.verification_token')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @else
+                                            <span class="field-help">Use the same Student / National ID later when you track this request.</span>
+                                        @enderror
                                     </div>
                                 @endif
 
                                 @if($isVisible('training_period'))
                                     <div class="form-group">
-                                        <label class="form-label">Training Period @if($isRequired('training_period'))<span
-                                        class="required">*</span>@endif</label>
+                                        <label class="form-label">Training Period {!! $requirementTag('training_period') !!}</label>
                                         <input type="month" name="data[training_period]"
                                             class="form-input @error('data.training_period') error @enderror"
                                             value="{{ old('data.training_period', $formData['training_period'] ?? '') }}" {{ $isRequired('training_period') ? 'required' : '' }}>
+                                        @error('data.training_period')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @enderror
                                     </div>
                                 @endif
 
                                 @if($isVisible('phone'))
                                     <div class="form-group">
-                                        <label class="form-label">Phone Number @if($isRequired('phone'))<span
-                                        class="required">*</span>@endif</label>
-                                        <input type="tel" name="data[phone]" class="form-input" id="phone"
+                                        <label class="form-label">Phone Number {!! $requirementTag('phone') !!}</label>
+                                        <input type="tel" name="data[phone]" class="form-input @error('data.phone') error @enderror" id="phone"
                                             value="{{ old('data.phone', $formData['phone'] ?? '') }}" placeholder="50 123 4567" {{ $isRequired('phone') ? 'required' : '' }}>
-                                        <small style="display: block; margin-top: 0.25rem; color: #6b7280;">
-                                            Please provide a Telegram-connected phone number to receive real-time status updates.
-                                        </small>
+                                        @error('data.phone')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @else
+                                            <span class="field-help">Optional. Email remains the main update channel. Add a phone number only if you want administration to have another contact method.</span>
+                                        @enderror
                                     </div>
                                 @endif
 
                                 @if($isVisible('major'))
                                     <div class="form-group">
-                                        <label class="form-label">Major / Field of Study @if($isRequired('major'))<span
-                                        class="required">*</span>@endif</label>
-                                        <input type="text" name="data[major]" class="form-input"
+                                        <label class="form-label">Major / Field of Study {!! $requirementTag('major') !!}</label>
+                                        <input type="text" name="data[major]" class="form-input @error('data.major') error @enderror"
                                             value="{{ old('data.major', $formData['major'] ?? '') }}" placeholder="Your academic major"
                                             {{ $isRequired('major') ? 'required' : '' }}>
+                                        @error('data.major')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @enderror
                                     </div>
                                 @endif
                             </div>
+
+                            <div class="section-divider">
+                                <h3 class="section-divider-title">Request Details</h3>
+                                <p class="section-divider-text">
+                                    These details help administration understand the purpose and urgency of your recommendation
+                                    before you reach the final review step.
+                                </p>
+                            </div>
+
+                            <div class="form-grid">
+                                @if($isVisible('purpose'))
+                                    <div class="form-group">
+                                        <label class="form-label">Purpose of Recommendation {!! $requirementTag('purpose') !!}</label>
+                                        <select name="data[purpose]" class="form-select @error('data.purpose') error @enderror" {{ $isRequired('purpose') ? 'required' : '' }}>
+                                            <option value="">Select Purpose</option>
+                                            <option value="Residency" {{ $selectedPurpose === 'Residency' ? 'selected' : '' }}>Residency</option>
+                                            <option value="Master's Application" {{ $selectedPurpose === "Master's Application" ? 'selected' : '' }}>Master's Application</option>
+                                            <option value="PhD Application" {{ $selectedPurpose === 'PhD Application' ? 'selected' : '' }}>PhD Application</option>
+                                            <option value="Job Application" {{ $selectedPurpose === 'Job Application' ? 'selected' : '' }}>Job Application</option>
+                                            <option value="Internship" {{ $selectedPurpose === 'Internship' ? 'selected' : '' }}>Internship</option>
+                                            <option value="Scholarship" {{ $selectedPurpose === 'Scholarship' ? 'selected' : '' }}>Scholarship</option>
+                                            <option value="Other" {{ $selectedPurpose === 'Other' ? 'selected' : '' }}>Other</option>
+                                        </select>
+                                        @error('data.purpose')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @else
+                                            <span class="field-help">Choose the main use for this recommendation so the reviewer understands the context.</span>
+                                        @enderror
+                                    </div>
+                                @endif
+
+                                @if($isVisible('deadline'))
+                                    <div class="form-group">
+                                        <label class="form-label">Deadline Date {!! $requirementTag('deadline') !!}</label>
+                                        <input type="date" name="data[deadline]" class="form-input @error('data.deadline') error @enderror"
+                                            value="{{ old('data.deadline', $formData['deadline'] ?? '') }}" min="{{ date('Y-m-d') }}" {{ $isRequired('deadline') ? 'required' : '' }}>
+                                        @error('data.deadline')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @else
+                                            <span class="field-help">Set the real deadline so we can prioritize your request appropriately.</span>
+                                        @enderror
+                                    </div>
+                                @endif
+                            </div>
+
+                            @if($isVisible('purpose'))
+                                <div class="form-group" id="purposeOtherGroup"
+                                    style="{{ $selectedPurpose === 'Other' ? '' : 'display: none;' }}">
+                                    <label class="form-label">Purpose Details <span class="required">*</span></label>
+                                    <input type="text" name="data[purpose_other]"
+                                        class="form-input @error('data.purpose_other') error @enderror"
+                                        value="{{ old('data.purpose_other', $formData['purpose_other'] ?? '') }}"
+                                        placeholder="Tell us what this recommendation is for">
+                                    @error('data.purpose_other')
+                                        <span class="field-error">{{ $message }}</span>
+                                    @else
+                                        <span class="field-help">Describe the specific program, opportunity, or use case when you choose Other.</span>
+                                    @enderror
+                                </div>
+                            @endif
+
+                            @if($isVisible('notes'))
+                                <div class="form-group">
+                                    <label class="form-label">Additional Notes {!! $requirementTag('notes') !!}</label>
+                                    <textarea name="data[notes]" class="form-textarea @error('data.notes') error @enderror" rows="3"
+                                        placeholder="Anything the reviewer should keep in mind, such as special focus areas or submission notes." {{ $isRequired('notes') ? 'required' : '' }}>{{ old('data.notes', $formData['notes'] ?? '') }}</textarea>
+                                    @error('data.notes')
+                                        <span class="field-error">{{ $message }}</span>
+                                    @else
+                                        <span class="field-help">Optional. Add context that will help the reviewer tailor the recommendation.</span>
+                                    @enderror
+                                </div>
+                            @endif
 
                             <div class="form-nav">
                                 <a href="{{ route('home') }}" class="btn-nav btn-back">
@@ -1118,18 +1318,24 @@
                         @elseif($step == 2)
                             <!-- STEP 2: Content Selection -->
                             <h2 class="form-section-title">Letter Content</h2>
+                            <p class="section-note">
+                                Choose how the letter should be drafted. After this step, you will only review and confirm
+                                your request before submission.
+                            </p>
 
                             @php
                                 $templateMode = $formConfig['templateMode'] ?? 'student_choice';
                                 $allowCustom = $formConfig['allowCustomContent'] ?? true;
                                 $showOptions = $templateMode === 'student_choice' && $allowCustom;
+                                $selectedContentOption = old('data.content_option', $formData['content_option'] ?? ($templateMode === 'custom_only' ? 'custom' : 'template'));
+                                $selectedTemplateId = old('data.template_id', $formData['template_id'] ?? ($templateMode === 'admin_fixed' && $templates->count() ? $templates->first()->id : ''));
                             @endphp
 
                             @if($showOptions)
                                 <div class="form-group">
                                     <label class="form-label">How would you like the letter to be drafted?</label>
                                     <div class="form-grid" style="margin-top: 0.75rem;">
-                                        <div class="content-option {{ ($formData['content_option'] ?? 'template') == 'template' ? 'selected' : '' }}"
+                                        <div class="content-option {{ $selectedContentOption == 'template' ? 'selected' : '' }}"
                                             onclick="selectContentOption('template')">
                                             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
                                                 <div class="radio-circle"></div>
@@ -1138,7 +1344,7 @@
                                             <p class="option-desc">Select from our verified templates</p>
                                         </div>
 
-                                        <div class="content-option {{ ($formData['content_option'] ?? '') == 'custom' ? 'selected' : '' }}"
+                                        <div class="content-option {{ $selectedContentOption == 'custom' ? 'selected' : '' }}"
                                             onclick="selectContentOption('custom')">
                                             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
                                                 <div class="radio-circle"></div>
@@ -1148,7 +1354,7 @@
                                         </div>
                                     </div>
                                     <input type="hidden" name="data[content_option]" id="contentOption"
-                                        value="{{ $formData['content_option'] ?? 'template' }}">
+                                        value="{{ $selectedContentOption }}">
                                 </div>
                             @else
                                 <!-- Force mode based on admin settings -->
@@ -1162,7 +1368,7 @@
                             <!-- Template Selection (shown for student_choice or admin_fixed modes) -->
                             @if($templateMode !== 'custom_only')
                                 <div id="templateSection"
-                                    style="{{ ($formData['content_option'] ?? 'template') == 'template' || !$showOptions ? '' : 'display: none;' }}">
+                                    style="{{ $selectedContentOption == 'template' || !$showOptions ? '' : 'display: none;' }}">
                                     <div class="form-group">
                                         <label class="form-label">
                                             @if($templateMode === 'admin_fixed')
@@ -1173,8 +1379,8 @@
                                         </label>
                                         <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.75rem;">
                                             @forelse($templates as $template)
-                                                <div class="template-option {{ ($formData['template_id'] ?? ($templateMode === 'admin_fixed' ? $template->id : '')) == $template->id ? 'selected' : '' }} {{ $templateMode === 'admin_fixed' ? 'admin-fixed' : '' }}"
-                                                    @if($templateMode !== 'admin_fixed') onclick="selectTemplate({{ $template->id }})"
+                                                <div class="template-option {{ (string) $selectedTemplateId === (string) $template->id ? 'selected' : '' }} {{ $templateMode === 'admin_fixed' ? 'admin-fixed' : '' }}"
+                                                    @if($templateMode !== 'admin_fixed') onclick="selectTemplate(event, {{ $template->id }})"
                                                     @endif>
                                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                                         <span class="template-name">{{ $template->name }}</span>
@@ -1187,7 +1393,16 @@
                                             @endforelse
                                         </div>
                                         <input type="hidden" name="data[template_id]" id="templateId"
-                                            value="{{ $formData['template_id'] ?? ($templateMode === 'admin_fixed' && $templates->count() ? $templates->first()->id : '') }}">
+                                            value="{{ $selectedTemplateId }}">
+                                        @error('template')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @else
+                                            <span class="field-help">
+                                                {{ $templateMode === 'admin_fixed'
+                                                    ? 'This template is assigned by administration for all requests.'
+                                                    : 'Choose the template that best matches the recommendation style you need.' }}
+                                            </span>
+                                        @enderror
                                     </div>
                                 </div>
                             @endif
@@ -1195,11 +1410,16 @@
                             <!-- Custom Content (shown only if allowed) -->
                             @if($allowCustom)
                                 <div id="customSection"
-                                    style="{{ ($formData['content_option'] ?? 'template') == 'custom' || $templateMode === 'custom_only' ? '' : 'display: none;' }}">
+                                    style="{{ $selectedContentOption == 'custom' || $templateMode === 'custom_only' ? '' : 'display: none;' }}">
                                     <div class="form-group">
                                         <label class="form-label">Custom Content <span class="required">*</span></label>
-                                        <textarea name="data[custom_content]" class="form-input" rows="6"
-                                            placeholder="Write the requirements or points you want included in your recommendation letter...">{{ $formData['custom_content'] ?? '' }}</textarea>
+                                        <textarea name="data[custom_content]" class="form-textarea @error('custom_content') error @enderror" rows="6"
+                                            placeholder="Write the requirements or points you want included in your recommendation letter...">{{ old('data.custom_content', $formData['custom_content'] ?? '') }}</textarea>
+                                        @error('custom_content')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @else
+                                            <span class="field-help">Describe the focus, strengths, or experiences you want highlighted in the letter.</span>
+                                        @enderror
                                     </div>
                                 </div>
                             @endif
@@ -1219,6 +1439,10 @@
                         @elseif($step == 3)
                             <!-- STEP 3: Review & Submit -->
                             <h2 class="form-section-title">Review & Submit</h2>
+                            <p class="section-note">
+                                Review everything below before you submit. If anything looks wrong, go back and update it
+                                before sending your request.
+                            </p>
                             @php
                                 $trainingPeriodDisplay = '-';
                                 $trainingPeriodRaw = $formData['training_period'] ?? null;
@@ -1229,13 +1453,29 @@
                                         $trainingPeriodDisplay = $trainingPeriodRaw;
                                     }
                                 }
+                                $purposeDisplay = $formData['purpose'] ?? '-';
+                                if (($formData['purpose'] ?? null) === 'Other' && !empty($formData['purpose_other'])) {
+                                    $purposeDisplay = 'Other: ' . $formData['purpose_other'];
+                                }
+                                $deadlineDisplay = !empty($formData['deadline'])
+                                    ? \Carbon\Carbon::parse($formData['deadline'])->format('M d, Y')
+                                    : '-';
+                                $selectedTemplate = $templates->firstWhere('id', (int) ($formData['template_id'] ?? 0));
+                                $contentOption = $formData['content_option'] ?? 'template';
+                                $contentSummary = $contentOption === 'template'
+                                    ? ($selectedTemplate ? $selectedTemplate->name : 'Professional Template')
+                                    : 'Custom Content';
                             @endphp
+
+                            <div class="review-callout">
+                                Step 3 is read-only. Use <strong>Back</strong> if you want to change your request details or
+                                letter content before submitting.
+                            </div>
 
                             <div class="summary-box">
                                 <div class="summary-row">
                                     <span class="summary-label">Full Name</span>
-                                    <span
-                                        class="summary-value">{{ ($formData['student_name'] ?? '') . ' ' . ($formData['middle_name'] ?? '') . ' ' . ($formData['last_name'] ?? '') }}</span>
+                                    <span class="summary-value">{{ trim(($formData['student_name'] ?? '') . ' ' . ($formData['middle_name'] ?? '') . ' ' . ($formData['last_name'] ?? '')) ?: '-' }}</span>
                                 </div>
                                 <div class="summary-row">
                                     <span class="summary-label">Email</span>
@@ -1252,61 +1492,50 @@
                                     <span class="summary-value">{{ $formData['university'] ?? '-' }}</span>
                                 </div>
                                 <div class="summary-row">
-                                    <span class="summary-label">ID Number</span>
+                                    <span class="summary-label">Student / National ID</span>
                                     <span class="summary-value">{{ $formData['verification_token'] ?? '-' }}</span>
                                 </div>
                                 <div class="summary-row">
                                     <span class="summary-label">Training Period</span>
                                     <span class="summary-value">{{ $trainingPeriodDisplay }}</span>
                                 </div>
+                                @if(!empty($formData['major']))
+                                    <div class="summary-row">
+                                        <span class="summary-label">Major / Field of Study</span>
+                                        <span class="summary-value">{{ $formData['major'] }}</span>
+                                    </div>
+                                @endif
+                                @if(!empty($formData['phone']))
+                                    <div class="summary-row">
+                                        <span class="summary-label">Phone Number</span>
+                                        <span class="summary-value">{{ $formData['phone'] }}</span>
+                                    </div>
+                                @endif
                                 <div class="summary-row">
-                                    <span class="summary-label">Content Type</span>
-                                    <span class="summary-value" style="color: #667eea;">
-                                        {{ ($formData['content_option'] ?? 'template') == 'template' ? 'Professional Template' : 'Custom Content' }}
-                                    </span>
+                                    <span class="summary-label">Purpose</span>
+                                    <span class="summary-value">{{ $purposeDisplay }}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span class="summary-label">Deadline</span>
+                                    <span class="summary-value">{{ $deadlineDisplay }}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span class="summary-label">Letter Content</span>
+                                    <span class="summary-value" style="color: #667eea;">{{ $contentSummary }}</span>
                                 </div>
                             </div>
 
-                            @php
-                                $fieldConfig = $formConfig['fields'] ?? [];
-                                $isVisible = fn($key) => ($fieldConfig[$key]['visible'] ?? true);
-                                $isRequired = fn($key) => ($fieldConfig[$key]['required'] ?? in_array($key, ['purpose', 'deadline']));
-                            @endphp
+                            @if(!empty($formData['notes']))
+                                <div class="summary-card">
+                                    <h3 class="summary-card-title">Additional Notes</h3>
+                                    <p class="summary-card-copy">{{ $formData['notes'] }}</p>
+                                </div>
+                            @endif
 
-                            <div class="form-grid" style="margin-top: 1.5rem;">
-                                @if($isVisible('purpose'))
-                                    <div class="form-group">
-                                        <label class="form-label">Purpose of Recommendation @if($isRequired('purpose'))<span
-                                        class="required">*</span>@endif</label>
-                                        <select name="data[purpose]" class="form-select" {{ $isRequired('purpose') ? 'required' : '' }}>
-                                            <option value="">Select Purpose</option>
-                                            <option value="Master's Application" {{ ($formData['purpose'] ?? '') == "Master's Application" ? 'selected' : '' }}>Master's Application</option>
-                                            <option value="PhD Application" {{ ($formData['purpose'] ?? '') == "PhD Application" ? 'selected' : '' }}>PhD Application</option>
-                                            <option value="Job Application" {{ ($formData['purpose'] ?? '') == "Job Application" ? 'selected' : '' }}>Job Application</option>
-                                            <option value="Internship" {{ ($formData['purpose'] ?? '') == "Internship" ? 'selected' : '' }}>Internship</option>
-                                            <option value="Scholarship" {{ ($formData['purpose'] ?? '') == "Scholarship" ? 'selected' : '' }}>Scholarship</option>
-                                            <option value="Other" {{ ($formData['purpose'] ?? '') == "Other" ? 'selected' : '' }}>Other
-                                            </option>
-                                        </select>
-                                    </div>
-                                @endif
-
-                                @if($isVisible('deadline'))
-                                    <div class="form-group">
-                                        <label class="form-label">Deadline Date @if($isRequired('deadline'))<span
-                                        class="required">*</span>@endif</label>
-                                        <input type="date" name="data[deadline]" class="form-input"
-                                            value="{{ $formData['deadline'] ?? '' }}" min="{{ date('Y-m-d') }}" {{ $isRequired('deadline') ? 'required' : '' }}>
-                                    </div>
-                                @endif
-                            </div>
-
-                            @if($isVisible('notes'))
-                                <div class="form-group">
-                                    <label class="form-label">Additional Notes @if($isRequired('notes'))<span
-                                    class="required">*</span>@endif</label>
-                                    <textarea name="data[notes]" class="form-input" rows="3"
-                                        placeholder="Any additional notes or instructions..." {{ $isRequired('notes') ? 'required' : '' }}>{{ $formData['notes'] ?? '' }}</textarea>
+                            @if($contentOption === 'custom' && !empty($formData['custom_content']))
+                                <div class="summary-card">
+                                    <h3 class="summary-card-title">Custom Content</h3>
+                                    <p class="summary-card-copy">{{ $formData['custom_content'] }}</p>
                                 </div>
                             @endif
 
@@ -1364,6 +1593,13 @@
                     });
                 }
             }
+
+            updatePurposeOtherVisibility();
+
+            const purposeSelect = document.querySelector('select[name="data[purpose]"]');
+            if (purposeSelect) {
+                purposeSelect.addEventListener('change', updatePurposeOtherVisibility);
+            }
         });
 
         function selectContentOption(option) {
@@ -1386,10 +1622,28 @@
             lucide.createIcons();
         }
 
-        function selectTemplate(id) {
+        function selectTemplate(event, id) {
             document.getElementById('templateId').value = id;
             document.querySelectorAll('.template-option').forEach(el => el.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
+        }
+
+        function updatePurposeOtherVisibility() {
+            const purposeSelect = document.querySelector('select[name="data[purpose]"]');
+            const purposeOtherGroup = document.getElementById('purposeOtherGroup');
+            const purposeOtherInput = document.querySelector('input[name="data[purpose_other]"]');
+
+            if (!purposeSelect || !purposeOtherGroup || !purposeOtherInput) {
+                return;
+            }
+
+            const shouldShow = purposeSelect.value === 'Other';
+            purposeOtherGroup.style.display = shouldShow ? '' : 'none';
+            purposeOtherInput.required = shouldShow;
+
+            if (!shouldShow) {
+                purposeOtherInput.value = '';
+            }
         }
 
         // Copy Tracking ID

@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\TrackingVerificationCode;
+use App\Models\Request as RequestModel;
 use App\Models\Settings;
 use App\Models\User;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use App\Mail\RequestSubmittedToStudent;
@@ -19,6 +23,11 @@ use App\Services\WizardService;
 
 class PageController extends Controller
 {
+    private const TRACKING_ID_PATTERN = '/^REC-\d{4}-[A-Z0-9]{8}$/';
+    private const TRUSTED_TRACKING_COOKIE = 'trusted_tracking_browser';
+    private const TRUSTED_TRACKING_DAYS = 30;
+    private const TRACKING_VERIFIED_MINUTES = 30;
+
     protected $letterService;
     protected $wizardService;
     protected $telegramService;
@@ -137,6 +146,7 @@ class PageController extends Controller
     {
         session()->forget([
             'wizard_data',
+            'wizard_step',
             'wizard_mode',
             'wizard_tracking_id',
             'wizard_edit_expires_at',
@@ -213,11 +223,184 @@ class PageController extends Controller
     }
 
     /**
+     * Normalize tracking IDs so users can paste lowercase or extra whitespace safely.
+     */
+    private function normalizeTrackingId(?string $trackingId): string
+    {
+        return strtoupper(trim((string) $trackingId));
+    }
+
+    /**
+     * Sign the trusted-browser cookie against the student's verification identity.
+     */
+    private function buildTrackingTrustProof(RequestModel $requestModel, int $rememberUntil): string
+    {
+        $appKey = (string) config('app.key', '');
+        if (str_starts_with($appKey, 'base64:')) {
+            $decoded = base64_decode(substr($appKey, 7), true);
+            if ($decoded !== false) {
+                $appKey = $decoded;
+            }
+        }
+
+        return hash_hmac('sha256', implode('|', [
+            trim((string) $requestModel->verification_token),
+            strtolower(trim((string) $requestModel->student_email)),
+            (string) $rememberUntil,
+        ]), $appKey);
+    }
+
+    /**
+     * Read and validate the trusted-browser cookie for the current student identity.
+     */
+    private function trustedTrackingBrowserUntil(RequestModel $requestModel, Request $request): ?Carbon
+    {
+        $rawPayload = $request->cookie(self::TRUSTED_TRACKING_COOKIE);
+        if (!is_string($rawPayload) || trim($rawPayload) === '') {
+            return null;
+        }
+
+        $payload = json_decode($rawPayload, true);
+        if (!is_array($payload)) {
+            return null;
+        }
+
+        $rememberUntil = (int) ($payload['remember_until'] ?? 0);
+        $proof = (string) ($payload['proof'] ?? '');
+
+        if ($rememberUntil < now()->timestamp || $proof === '') {
+            return null;
+        }
+
+        $expectedProof = $this->buildTrackingTrustProof($requestModel, $rememberUntil);
+        if (!hash_equals($expectedProof, $proof)) {
+            return null;
+        }
+
+        return Carbon::createFromTimestamp($rememberUntil);
+    }
+
+    /**
+     * Queue a trusted-browser cookie after a successful OTP verification.
+     */
+    private function rememberTrackingBrowser(RequestModel $requestModel): Carbon
+    {
+        $rememberUntil = now()->addDays(self::TRUSTED_TRACKING_DAYS);
+
+        Cookie::queue(cookie(
+            self::TRUSTED_TRACKING_COOKIE,
+            json_encode([
+                'remember_until' => $rememberUntil->timestamp,
+                'proof' => $this->buildTrackingTrustProof($requestModel, $rememberUntil->timestamp),
+            ], JSON_UNESCAPED_SLASHES),
+            self::TRUSTED_TRACKING_DAYS * 24 * 60,
+            '/',
+            null,
+            null,
+            true,
+            false,
+            'lax'
+        ));
+
+        return $rememberUntil;
+    }
+
+    /**
+     * Stop trusting the current browser for student tracking.
+     */
+    private function forgetTrustedTrackingBrowser(): void
+    {
+        Cookie::queue(Cookie::forget(self::TRUSTED_TRACKING_COOKIE, '/'));
+    }
+
+    /**
+     * Create a verified tracking session used by the tracker and approved-letter pages.
+     */
+    private function issueVerifiedTrackingSession(RequestModel $requestModel): void
+    {
+        session([
+            'tracking_verified_request_id' => $requestModel->id,
+            'tracking_verified_tracking_id' => $requestModel->tracking_id,
+            'tracking_verified_until' => now()->addMinutes(self::TRACKING_VERIFIED_MINUTES)->timestamp,
+        ]);
+    }
+
+    /**
+     * Clear public tracking verification session data.
+     */
+    private function clearTrackingVerificationSession(bool $keepRequestContext = false): void
+    {
+        $keys = ['2fa_otp', '2fa_expires'];
+
+        if (!$keepRequestContext) {
+            $keys = array_merge($keys, [
+                '2fa_request_id',
+                '2fa_tracking_id',
+                '2fa_delivery_method',
+                '2fa_delivery_hint',
+            ]);
+        }
+
+        session()->forget($keys);
+    }
+
+    /**
+     * Send a fresh public tracking OTP and store the verification session.
+     */
+    private function issueTrackingVerificationCode(RequestModel $requestModel): void
+    {
+        $otp = (string) random_int(100000, 999999);
+        $expiresAt = now()->addMinutes(5);
+
+        Mail::to($requestModel->student_email)->send(new TrackingVerificationCode($requestModel, $otp));
+
+        session([
+            '2fa_otp' => $otp,
+            '2fa_expires' => $expiresAt,
+            '2fa_request_id' => $requestModel->id,
+            '2fa_tracking_id' => $requestModel->tracking_id,
+            '2fa_delivery_method' => 'email',
+            '2fa_delivery_hint' => $this->maskEmail((string) $requestModel->student_email),
+        ]);
+
+        if (!$requestModel->telegram_chat_id) {
+            return;
+        }
+
+        try {
+            $this->telegramService->sendMessageToChat(
+                $requestModel->telegram_chat_id,
+                "🔐 <b>Verification Code</b>\n\nYour code to access request details is: <code>{$otp}</code>\n\nDo not share this code with anyone."
+            );
+        } catch (\Exception $e) {
+            \Log::warning('Tracking OTP Telegram send failed: ' . $e->getMessage(), [
+                'tracking_id' => $requestModel->tracking_id,
+                'request_id' => $requestModel->id,
+            ]);
+        }
+    }
+
+    /**
      * Build wizard form data from a stored request.
      */
     private function buildWizardDataFromRequest(\App\Models\Request $requestModel): array
     {
         $storedFormData = is_array($requestModel->form_data) ? $requestModel->form_data : [];
+        $knownPurposes = [
+            "Master's Application",
+            'PhD Application',
+            'Job Application',
+            'Internship',
+            'Scholarship',
+            'Residency',
+            'Other',
+        ];
+        $purpose = $requestModel->purpose;
+
+        if (!empty($purpose) && !in_array($purpose, $knownPurposes, true)) {
+            $storedFormData['purpose_other'] = $storedFormData['purpose_other'] ?? $purpose;
+            $purpose = 'Other';
+        }
 
         return array_merge($storedFormData, [
             'student_name' => $requestModel->student_name,
@@ -228,13 +411,27 @@ class PageController extends Controller
             'university' => $requestModel->university,
             'verification_token' => $requestModel->verification_token,
             'training_period' => $requestModel->training_period,
-            'purpose' => $requestModel->purpose,
+            'purpose' => $purpose,
             'deadline' => ($requestModel->deadline instanceof \DateTimeInterface) ? $requestModel->deadline->format('Y-m-d') : null,
             'content_option' => $requestModel->content_option ?? (!empty($requestModel->custom_content) ? 'custom' : 'template'),
             'custom_content' => $requestModel->custom_content,
             'template_id' => $requestModel->template_id,
             'admin_message' => $requestModel->admin_message,
         ]);
+    }
+
+    /**
+     * Normalize request-purpose data for wizard navigation and persistence.
+     */
+    private function normalizeWizardPurpose(array $formData): array
+    {
+        $purpose = trim((string) ($formData['purpose'] ?? ''));
+        $purposeOther = trim((string) ($formData['purpose_other'] ?? ''));
+
+        $formData['purpose'] = $purpose === '' ? null : $purpose;
+        $formData['purpose_other'] = $purpose === 'Other' && $purposeOther !== '' ? $purposeOther : null;
+
+        return $formData;
     }
 
     /**
@@ -308,7 +505,7 @@ class PageController extends Controller
         $templates = $this->wizardService->getTemplates($formConfig);
 
         // Get current step (default: 1)
-        $step = (int) $request->query('step', 1);
+        $step = (int) $request->query('step', session('wizard_step', 1));
         if ($step < 1 || $step > 3)
             $step = 1;
 
@@ -332,6 +529,14 @@ class PageController extends Controller
 
         // Get existing form data from session
         $formData = session('wizard_data', []);
+        if (empty($formData) && !$request->has('step')) {
+            $step = 1;
+        }
+        if ($step > 1 && empty($formData)) {
+            $step = 1;
+        }
+
+        session(['wizard_step' => $step]);
 
         return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig'));
     }
@@ -373,11 +578,15 @@ class PageController extends Controller
         $formData = session('wizard_data', []);
         $newData = $request->input('data', []);
         $formData = array_merge($formData, $newData);
+        $formData = $this->normalizeWizardPurpose($formData);
 
         // Handle back action
         if ($action === 'back') {
             $step = max(1, $currentStep - 1);
-            $sessionPayload = ['wizard_data' => $formData];
+            $sessionPayload = [
+                'wizard_data' => $formData,
+                'wizard_step' => $step,
+            ];
             if ($isEditMode) {
                 $sessionPayload['wizard_edit_expires_at'] = now()->addMinutes(30)->timestamp;
             }
@@ -400,7 +609,7 @@ class PageController extends Controller
 
         // Handle submit action
         if ($action === 'submit' && $currentStep == 3) {
-            $this->wizardService->validateStep3($request, $formConfig);
+            $this->wizardService->validateStep3($formData, $formConfig);
             $formData = array_merge($formData, $this->wizardService->resolveContentData($formData, $formConfig));
 
             // Re-check step 2 constraints in case user jumps directly to submit.
@@ -414,7 +623,7 @@ class PageController extends Controller
                 $requiredIdentityErrors['student_email'] = 'Email is required.';
             }
             if (empty(trim((string) ($formData['verification_token'] ?? '')))) {
-                $requiredIdentityErrors['verification_token'] = 'ID number is required.';
+                $requiredIdentityErrors['verification_token'] = 'Student / National ID is required.';
             }
             if (!empty($requiredIdentityErrors)) {
                 return back()->withErrors($requiredIdentityErrors)->withInput();
@@ -466,7 +675,7 @@ class PageController extends Controller
                             'student_email' => $formData['student_email'] ?? $requestModel->student_email,
                             'phone' => $formData['phone'] ?? null,
                             'verification_token' => $formData['verification_token'] ?? $requestModel->verification_token,
-                            'university' => $formData['university'] ?? null,
+                            'university' => $formData['university'] ?? $requestModel->university ?? '',
                             'purpose' => $formData['purpose'] ?? null,
                             'deadline' => $deadline,
                             'training_period' => $trainingPeriod,
@@ -562,7 +771,7 @@ class PageController extends Controller
                         'phone' => $formData['phone'] ?? null,
                         'verification_token' => $formData['verification_token'] ?? \Str::random(60),
                         'verify_token' => \Str::random(32), // For QR code verification
-                        'university' => $formData['university'] ?? null,
+                        'university' => $formData['university'] ?? '',
                         'purpose' => $formData['purpose'] ?? null,
                         'deadline' => $formData['deadline'] ?? null,
                         'training_period' => $formData['training_period'] ?? null,
@@ -605,7 +814,7 @@ class PageController extends Controller
             }
 
             // Clear wizard session
-            session()->forget('wizard_data');
+            session()->forget(['wizard_data', 'wizard_step']);
 
             return redirect()->route('public.request')->with([
                 'success' => true,
@@ -618,7 +827,10 @@ class PageController extends Controller
 
         // Proceed to next step
         $step = min(3, $currentStep + 1);
-        $sessionPayload = ['wizard_data' => $formData];
+        $sessionPayload = [
+            'wizard_data' => $formData,
+            'wizard_step' => $step,
+        ];
         if ($isEditMode) {
             $sessionPayload['wizard_edit_expires_at'] = now()->addMinutes(30)->timestamp;
         }
@@ -681,7 +893,7 @@ class PageController extends Controller
         return view('public.tracking', [
             'settings' => $settings,
             'request' => null,  // Never show data without verification
-            'id' => $id  // Pre-fill tracking ID if provided
+            'id' => $id ? $this->normalizeTrackingId($id) : null,  // Pre-fill tracking ID if provided
         ]);
     }
 
@@ -690,9 +902,21 @@ class PageController extends Controller
      */
     public function doTracking(Request $request)
     {
+        $trackingId = $this->normalizeTrackingId($request->input('trackingId'));
+        $verificationToken = trim((string) $request->input('verificationToken'));
+
+        $request->merge([
+            'trackingId' => $trackingId,
+            'verificationToken' => $verificationToken,
+        ]);
+
         $request->validate([
-            'trackingId' => 'required|string',
-            'verificationToken' => 'required|string',
+            'trackingId' => ['required', 'string', 'regex:' . self::TRACKING_ID_PATTERN],
+            'verificationToken' => 'required|string|max:100',
+        ], [
+            'trackingId.required' => 'Tracking ID is required.',
+            'trackingId.regex' => 'Tracking ID must be in the format REC-2026-AB12CD34.',
+            'verificationToken.required' => 'Student / National ID is required.',
         ]);
 
         $this->clearEditWizardSession();
@@ -700,64 +924,62 @@ class PageController extends Controller
             'tracking_verified_request_id',
             'tracking_verified_tracking_id',
             'tracking_verified_until',
-            '2fa_otp',
-            '2fa_expires',
-            '2fa_request_id',
-            '2fa_tracking_id',
-            '2fa_delivery_method',
-            '2fa_delivery_hint',
         ]);
+        $this->clearTrackingVerificationSession();
 
-        $result = \App\Models\Request::where('tracking_id', $request->trackingId)
-            ->where('verification_token', $request->verificationToken)
+        $result = \App\Models\Request::where('tracking_id', $trackingId)
+            ->where('verification_token', $verificationToken)
             ->first();
 
         if (!$result) {
-            return back()->with('error', 'Tracking details not found. Please check your inputs.');
+            return back()
+                ->withInput([
+                    'trackingId' => $trackingId,
+                    'verificationToken' => $verificationToken,
+                ])
+                ->with('error', 'We could not find a request matching this Tracking ID and Student / National ID. Please check both values and try again.');
         }
 
-        // Always Enforce 2FA/OTP for Security
-        // Generate 6-digit OTP
-        $otp = random_int(100000, 999999);
+        if ($result->status === 'Archived') {
+            return back()
+                ->withInput([
+                    'trackingId' => $trackingId,
+                    'verificationToken' => $verificationToken,
+                ])
+                ->with('error', 'This request is archived and is no longer available in the student tracker. Please contact administration if you still need help.');
+        }
 
-        // Store in session with expiry (5 mins)
-        session([
-            '2fa_otp' => $otp,
-            '2fa_expires' => now()->addMinutes(5),
-            '2fa_request_id' => $result->id,
-            '2fa_tracking_id' => $result->tracking_id, // For display/context
-            '2fa_delivery_method' => 'email',
-            '2fa_delivery_hint' => $this->maskEmail((string) $result->student_email),
-        ]);
+        $trustedDeviceUntil = $this->trustedTrackingBrowserUntil($result, $request);
+        if ($trustedDeviceUntil instanceof Carbon) {
+            $this->issueVerifiedTrackingSession($result);
 
-        // Email is the primary OTP channel for student access.
+            return view('public.tracking', [
+                'settings' => $this->getPublicSettings(),
+                'request' => $result,
+                'id' => $result->tracking_id,
+                'trustedDeviceActive' => true,
+                'trustedDeviceUntil' => $trustedDeviceUntil,
+            ]);
+        }
+
         try {
-            Mail::to($result->student_email)->send(new \App\Mail\TrackingVerificationCode($result, $otp));
+            $this->issueTrackingVerificationCode($result);
         } catch (\Exception $e) {
             \Log::error('Tracking OTP email failed: ' . $e->getMessage(), [
                 'tracking_id' => $result->tracking_id,
                 'request_id' => $result->id,
             ]);
-            return back()->with('error', 'Failed to send verification code to your email. Please try again or contact support.');
-        }
-
-        // Telegram is optional and non-blocking if linked.
-        if ($result->telegram_chat_id) {
-            try {
-                $this->telegramService->sendMessageToChat(
-                    $result->telegram_chat_id,
-                    "🔐 <b>Verification Code</b>\n\nYour code to access request details is: <code>$otp</code>\n\nDo not share this code with anyone."
-                );
-            } catch (\Exception $e) {
-                \Log::warning('Tracking OTP Telegram send failed: ' . $e->getMessage(), [
-                    'tracking_id' => $result->tracking_id,
-                    'request_id' => $result->id,
-                ]);
-            }
+            return back()
+                ->withInput([
+                    'trackingId' => $trackingId,
+                    'verificationToken' => $verificationToken,
+                ])
+                ->with('error', 'We found your request, but we could not send the 6-digit verification code to your email address. Please try again or contact support.');
         }
 
         // Redirect to Verify Page
-        return redirect()->route('public.tracking.verify');
+        return redirect()->route('public.tracking.verify')
+            ->with('success', 'Request found. We sent a 6-digit verification code to ' . $this->maskEmail((string) $result->student_email) . '.');
     }
 
     /**
@@ -765,15 +987,27 @@ class PageController extends Controller
      */
     public function show2FAVerify()
     {
-        if (!session('2fa_otp')) {
+        if (!session('2fa_request_id')) {
             return redirect()->route('public.tracking');
         }
 
         $settings = $this->getPublicSettings();
         $deliveryMethod = session('2fa_delivery_method', 'email');
         $deliveryHint = session('2fa_delivery_hint');
+        $trackingId = session('2fa_tracking_id');
+        $expiresAt = session('2fa_expires');
 
-        return view('public.2fa_verify', compact('settings', 'deliveryMethod', 'deliveryHint'));
+        try {
+            $expiresAt = $expiresAt ? \Illuminate\Support\Carbon::parse($expiresAt) : null;
+        } catch (\Throwable $e) {
+            $expiresAt = null;
+        }
+
+        $hasActiveCode = session()->has('2fa_otp')
+            && $expiresAt instanceof \Illuminate\Support\Carbon
+            && now()->lessThan($expiresAt);
+
+        return view('public.2fa_verify', compact('settings', 'deliveryMethod', 'deliveryHint', 'trackingId', 'expiresAt', 'hasActiveCode'));
     }
 
     /**
@@ -781,7 +1015,10 @@ class PageController extends Controller
      */
     public function handle2FAVerify(Request $request)
     {
-        $request->validate(['otp' => 'required|numeric']);
+        $request->validate([
+            'otp' => 'required|numeric',
+            'remember_browser' => 'nullable|boolean',
+        ]);
 
         $sessionOtp = session('2fa_otp');
         $expires = session('2fa_expires');
@@ -797,12 +1034,18 @@ class PageController extends Controller
         }
 
         if (!$sessionOtp || !$requestId || $isExpired) {
-            session()->forget(['2fa_otp', '2fa_expires', '2fa_request_id', '2fa_tracking_id', '2fa_delivery_method', '2fa_delivery_hint']);
-            return back()->with('error', 'Session expired. Please try tracking again.');
+            if ($requestId) {
+                $this->clearTrackingVerificationSession(true);
+                return back()->with('error', 'This verification code has expired. Request a new code below.');
+            }
+
+            $this->clearTrackingVerificationSession();
+            return redirect()->route('public.tracking')
+                ->with('error', 'Your verification session expired. Please track your request again.');
         }
 
         if ($request->otp != $sessionOtp) {
-            return back()->with('error', 'Invalid verification code.');
+            return back()->with('error', 'Invalid verification code. Please check the 6-digit code and try again.');
         }
 
         // OTP Valid - Clear session 2FA data but keep request context? 
@@ -810,27 +1053,91 @@ class PageController extends Controller
 
         $result = \App\Models\Request::find($requestId);
         if (!$result) {
-            session()->forget(['2fa_otp', '2fa_expires', '2fa_request_id', '2fa_tracking_id', '2fa_delivery_method', '2fa_delivery_hint']);
+            $this->clearTrackingVerificationSession();
             return redirect()->route('public.tracking')
                 ->with('error', 'Request not found. Please track again.');
         }
 
-        session([
-            'tracking_verified_request_id' => $result->id,
-            'tracking_verified_tracking_id' => $result->tracking_id,
-            'tracking_verified_until' => now()->addMinutes(30)->timestamp,
-        ]);
+        $this->issueVerifiedTrackingSession($result);
+
+        $trustedDeviceActive = false;
+        $trustedDeviceUntil = null;
+        if ($request->boolean('remember_browser')) {
+            $trustedDeviceActive = true;
+            $trustedDeviceUntil = $this->rememberTrackingBrowser($result);
+        }
 
         // Clear OTP session to prevent replay (optional, or keep for refresh?)
         // Better to clear
-        session()->forget(['2fa_otp', '2fa_expires', '2fa_request_id', '2fa_tracking_id', '2fa_delivery_method', '2fa_delivery_hint']);
+        $this->clearTrackingVerificationSession();
 
         return view('public.tracking', [
             'settings' => $this->getPublicSettings(),
             'request' => $result,
             'id' => $result->tracking_id,
-            'telegramBotUsername' => $this->telegramService->getBotUsername()
+            'trustedDeviceActive' => $trustedDeviceActive,
+            'trustedDeviceUntil' => $trustedDeviceUntil,
         ]);
+    }
+
+    /**
+     * Resend the public tracking verification code inside an active tracking session.
+     */
+    public function resendTrackingVerification(Request $request)
+    {
+        $requestId = session('2fa_request_id');
+        $trackingId = session('2fa_tracking_id');
+
+        if (!$requestId || !$trackingId) {
+            $this->clearTrackingVerificationSession();
+
+            return redirect()->route('public.tracking')
+                ->with('error', 'Your verification session expired. Please track your request again.');
+        }
+
+        $result = RequestModel::find($requestId);
+
+        if (!$result || $result->tracking_id !== $trackingId) {
+            $this->clearTrackingVerificationSession();
+
+            return redirect()->route('public.tracking')
+                ->with('error', 'We could not restore your verification session. Please track your request again.');
+        }
+
+        if ($result->status === 'Archived') {
+            $this->clearTrackingVerificationSession();
+
+            return redirect()->route('public.tracking')
+                ->with('error', 'This request is archived and is no longer available in the student tracker. Please contact administration if you still need help.');
+        }
+
+        try {
+            $this->issueTrackingVerificationCode($result);
+        } catch (\Exception $e) {
+            \Log::error('Tracking OTP resend email failed: ' . $e->getMessage(), [
+                'tracking_id' => $result->tracking_id,
+                'request_id' => $result->id,
+            ]);
+
+            return back()->with('error', 'We could not send a new verification code right now. Please try again in a moment or contact support.');
+        }
+
+        return redirect()->route('public.tracking.verify')
+            ->with('success', 'We sent a new 6-digit verification code to ' . $this->maskEmail((string) $result->student_email) . '.');
+    }
+
+    /**
+     * Forget a previously trusted tracking browser.
+     */
+    public function forgetTrackingTrustedBrowser(Request $request)
+    {
+        $trackingId = $this->normalizeTrackingId($request->input('tracking_id'));
+
+        $this->forgetTrustedTrackingBrowser();
+        $this->clearTrackingVerificationSession();
+
+        return redirect()->route('public.tracking', ['id' => $trackingId ?: null])
+            ->with('success', 'This browser will require a verification code the next time you track your request.');
     }
     /**
      * View approved letter public page
