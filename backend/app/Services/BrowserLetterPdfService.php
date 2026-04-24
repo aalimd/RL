@@ -46,6 +46,8 @@ class BrowserLetterPdfService
      */
     public function buildZipArchive(iterable $requests): array
     {
+        $this->extendExecutionTime();
+
         $exported = 0;
         $failed = [];
         $zipPath = $this->makeTempPath('admin-letter-export-', '.zip');
@@ -98,12 +100,24 @@ class BrowserLetterPdfService
         $driver = $this->preferredDriver();
         $browserlessBaseUrl = $this->browserlessBaseUrl();
         $browserlessToken = trim((string) Settings::getValue('browserlessToken', env('BROWSERLESS_TOKEN', '')));
+        $localBrowserAvailable = $this->localBrowserAvailable();
+        $browserlessConfigured = $browserlessBaseUrl !== '' && $browserlessToken !== '';
+
+        $statusMessage = match (true) {
+            $driver === self::DRIVER_BROWSERLESS && $browserlessConfigured => 'Browserless is ready for shared hosting PDF export.',
+            $driver === self::DRIVER_BROWSERLESS => 'Browserless is selected but the token or base URL is missing.',
+            $driver === self::DRIVER_LOCAL_BROWSER && $localBrowserAvailable => 'Local Chrome or Chromium is available.',
+            $driver === self::DRIVER_LOCAL_BROWSER && $browserlessConfigured => 'Local browser is selected, but Browserless can be used as fallback.',
+            default => 'No PDF renderer is ready. Configure Browserless for shared hosting.',
+        };
 
         return [
             'driver' => $driver,
-            'browserless_configured' => $browserlessBaseUrl !== '' && $browserlessToken !== '',
+            'browserless_configured' => $browserlessConfigured,
             'browserless_base_url' => $browserlessBaseUrl,
             'browserless_token_configured' => $browserlessToken !== '',
+            'local_browser_available' => $localBrowserAvailable,
+            'status_message' => $statusMessage,
         ];
     }
 
@@ -169,6 +183,8 @@ class BrowserLetterPdfService
      */
     private function renderPdfViaLocalBrowser(string $html, string $trackingId): string
     {
+        $this->extendExecutionTime();
+
         $browserBinary = $this->resolveBrowserBinary();
         $htmlPath = $this->makeTempPath('letter-export-', '.html');
         $pdfPath = $this->makeTempPath('letter-export-', '.pdf');
@@ -241,6 +257,8 @@ class BrowserLetterPdfService
      */
     private function renderPdfViaBrowserless(string $html, string $trackingId): string
     {
+        $this->extendExecutionTime();
+
         $config = $this->browserlessConfig(true);
 
         $response = Http::timeout(120)
@@ -267,6 +285,12 @@ class BrowserLetterPdfService
         $binary = $response->body();
         if (!is_string($binary) || $binary === '') {
             throw new RuntimeException('Browserless did not return a PDF file for ' . $trackingId . '.');
+        }
+
+        if (!str_starts_with(ltrim($binary), '%PDF')) {
+            throw new RuntimeException(
+                'Browserless returned a response, but it was not a valid PDF for ' . $trackingId . '. Please test Browserless in admin settings and verify the endpoint/token.'
+            );
         }
 
         return $binary;
@@ -316,6 +340,15 @@ class BrowserLetterPdfService
      */
     private function resolveBrowserBinary(): string
     {
+        $commandCandidates = [];
+        if (function_exists('shell_exec')) {
+            $commandCandidates = [
+                trim((string) @shell_exec('command -v google-chrome 2>/dev/null')),
+                trim((string) @shell_exec('command -v chromium 2>/dev/null')),
+                trim((string) @shell_exec('command -v chromium-browser 2>/dev/null')),
+            ];
+        }
+
         $candidates = array_filter([
             env('LETTER_EXPORT_BROWSER_BINARY'),
             '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
@@ -323,9 +356,7 @@ class BrowserLetterPdfService
             '/usr/bin/google-chrome',
             '/usr/bin/chromium',
             '/usr/bin/chromium-browser',
-            trim((string) @shell_exec('command -v google-chrome 2>/dev/null')),
-            trim((string) @shell_exec('command -v chromium 2>/dev/null')),
-            trim((string) @shell_exec('command -v chromium-browser 2>/dev/null')),
+            ...$commandCandidates,
         ]);
 
         foreach ($candidates as $candidate) {
@@ -334,16 +365,26 @@ class BrowserLetterPdfService
             }
         }
 
-        throw new RuntimeException('No supported Chrome or Chromium browser binary is available for PDF export.');
+        throw new RuntimeException(
+            'No supported Chrome or Chromium browser binary is available for PDF export. On shared hosting, set PDF Export Driver to Browserless in Admin Settings and save a Browserless token.'
+        );
     }
 
     private function preferredDriver(): string
     {
-        $driver = trim((string) Settings::getValue('pdfExportDriver', env('LETTER_EXPORT_DRIVER', self::DRIVER_LOCAL_BROWSER)));
+        $savedDriver = Settings::getValue('pdfExportDriver');
+        $envDriver = env('LETTER_EXPORT_DRIVER');
+        $driver = trim((string) ($savedDriver ?: $envDriver ?: ''));
 
-        return in_array($driver, [self::DRIVER_LOCAL_BROWSER, self::DRIVER_BROWSERLESS], true)
-            ? $driver
-            : self::DRIVER_LOCAL_BROWSER;
+        if (in_array($driver, [self::DRIVER_LOCAL_BROWSER, self::DRIVER_BROWSERLESS], true)) {
+            return $driver;
+        }
+
+        if ($this->isProductionEnvironment() && $this->isBrowserlessConfigured()) {
+            return self::DRIVER_BROWSERLESS;
+        }
+
+        return self::DRIVER_LOCAL_BROWSER;
     }
 
     private function browserlessBaseUrl(): string
@@ -359,6 +400,11 @@ class BrowserLetterPdfService
         return $baseUrl !== '' && $token !== '';
     }
 
+    private function isProductionEnvironment(): bool
+    {
+        return config('app.env') === 'production' || app()->environment('production');
+    }
+
     /**
      * @return array{base_url:string,token:string,endpoint:string}
      */
@@ -368,7 +414,7 @@ class BrowserLetterPdfService
         $token = trim((string) Settings::getValue('browserlessToken', env('BROWSERLESS_TOKEN', '')));
 
         if ($require && ($baseUrl === '' || $token === '')) {
-            throw new RuntimeException('Browserless is not fully configured. Save the Browserless base URL and token in admin settings first.');
+            throw new RuntimeException('Browserless is not fully configured. In Admin Settings > PDF Export Renderer, choose Browserless, save the Browserless base URL and token, then click Test Browserless.');
         }
 
         return [
@@ -397,6 +443,24 @@ class BrowserLetterPdfService
     private function isMissingLocalBrowserError(\Throwable $e): bool
     {
         return str_contains($e->getMessage(), 'No supported Chrome or Chromium browser binary is available for PDF export.');
+    }
+
+    private function localBrowserAvailable(): bool
+    {
+        try {
+            $this->resolveBrowserBinary();
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function extendExecutionTime(): void
+    {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(300);
+        }
     }
 
     private function shouldDisableSandbox(): bool

@@ -420,10 +420,10 @@
                     <div class="form-group">
                         <label class="form-label">PDF Export Driver</label>
                         <select name="pdfExportDriver" class="form-select">
-                            <option value="local_browser" {{ ($settings['pdfExportDriver'] ?? 'local_browser') === 'local_browser' ? 'selected' : '' }}>
+                            <option value="local_browser" {{ ($pdfRendererSummary['driver'] ?? 'local_browser') === 'local_browser' ? 'selected' : '' }}>
                                 Local Chrome / Chromium
                             </option>
-                            <option value="browserless" {{ ($settings['pdfExportDriver'] ?? 'local_browser') === 'browserless' ? 'selected' : '' }}>
+                            <option value="browserless" {{ ($pdfRendererSummary['driver'] ?? 'local_browser') === 'browserless' ? 'selected' : '' }}>
                                 Browserless (recommended for Hostinger shared hosting)
                             </option>
                         </select>
@@ -457,11 +457,7 @@
                             <div>
                                 <div style="font-weight: 600; color: var(--text-main);">Current renderer status</div>
                                 <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.25rem;">
-                                    @if(($pdfRendererSummary['driver'] ?? 'local_browser') === 'browserless')
-                                        Browserless is selected for official admin PDF export.
-                                    @else
-                                        Local browser rendering is selected.
-                                    @endif
+                                    {{ $pdfRendererSummary['status_message'] ?? 'Renderer status is not available yet.' }}
                                 </div>
                             </div>
                         </div>
@@ -471,6 +467,12 @@
                                 <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Driver</div>
                                 <div style="font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">
                                     {{ ($pdfRendererSummary['driver'] ?? 'local_browser') === 'browserless' ? 'Browserless' : 'Local browser' }}
+                                </div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted);">Local Chrome</div>
+                                <div style="font-weight: 600; color: var(--text-main); margin-top: 0.2rem;">
+                                    {{ !empty($pdfRendererSummary['local_browser_available']) ? 'Available' : 'Not available' }}
                                 </div>
                             </div>
                             <div>

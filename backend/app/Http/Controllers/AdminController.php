@@ -1672,7 +1672,7 @@ class AdminController extends Controller
                 'tracking_id' => $request->tracking_id,
             ]);
 
-            return back()->with('error', 'We could not generate that PDF right now. Please try again in a moment.');
+            return back()->with('error', $this->pdfExportFailureMessage($e));
         }
 
         AuditLog::create([
@@ -1694,6 +1694,10 @@ class AdminController extends Controller
 
     public function exportRequestLettersPdf(Request $request)
     {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(600);
+        }
+
         $validated = $request->validate([
             'selection_scope' => 'required|in:selected,filtered',
             'ids' => 'nullable|json',
@@ -1725,7 +1729,7 @@ class AdminController extends Controller
                 'approved_count' => $approvedCount,
             ]);
 
-            return back()->with('error', 'We could not export those letters right now. Please try again in a moment.');
+            return back()->with('error', $this->pdfExportFailureMessage($e));
         }
 
         $skippedCount = max(0, $matchedCount - $approvedCount);
@@ -1764,6 +1768,22 @@ class AdminController extends Controller
         }
 
         return $downloadResponse;
+    }
+
+    private function pdfExportFailureMessage(\Throwable $e): string
+    {
+        $message = trim($e->getMessage());
+
+        if (
+            str_contains($message, 'No supported Chrome or Chromium browser binary') ||
+            str_contains($message, 'Browserless is not fully configured') ||
+            str_contains($message, 'Browserless PDF export failed') ||
+            str_contains($message, 'Browserless returned a response, but it was not a valid PDF')
+        ) {
+            return $message;
+        }
+
+        return 'We could not export those letters right now. Please check PDF Export Renderer settings and try again.';
     }
 
     public function syncRequestLetterToGoogleDrive($id)

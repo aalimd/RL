@@ -1247,6 +1247,70 @@ class SecurityRegressionTest extends TestCase
         });
     }
 
+    public function test_browser_letter_pdf_service_auto_uses_browserless_in_production_when_token_exists(): void
+    {
+        Http::fake([
+            'https://production-sfo.browserless.io/pdf?token=browserless-secret-token' => Http::response('%PDF-BROWSERLESS-AUTO', 200, [
+                'Content-Type' => 'application/pdf',
+            ]),
+        ]);
+
+        config(['app.env' => 'production']);
+        Settings::where('key', 'pdfExportDriver')->delete();
+        Settings::updateOrCreate(['key' => 'browserlessBaseUrl'], ['value' => 'https://production-sfo.browserless.io']);
+        Settings::updateOrCreate(['key' => 'browserlessToken'], ['value' => 'browserless-secret-token']);
+
+        $request = $this->createApprovedRequest();
+
+        $pdf = app(BrowserLetterPdfService::class)->renderRequestPdf($request);
+
+        $this->assertSame('%PDF-BROWSERLESS-AUTO', $pdf['binary']);
+    }
+
+    public function test_browser_letter_pdf_service_rejects_non_pdf_browserless_response(): void
+    {
+        Http::fake([
+            'https://production-sfo.browserless.io/pdf?token=browserless-secret-token' => Http::response('{"ok":true}', 200, [
+                'Content-Type' => 'application/json',
+            ]),
+        ]);
+
+        Settings::updateOrCreate(['key' => 'pdfExportDriver'], ['value' => 'browserless']);
+        Settings::updateOrCreate(['key' => 'browserlessBaseUrl'], ['value' => 'https://production-sfo.browserless.io']);
+        Settings::updateOrCreate(['key' => 'browserlessToken'], ['value' => 'browserless-secret-token']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('it was not a valid PDF');
+
+        app(BrowserLetterPdfService::class)->renderRequestPdf($this->createApprovedRequest());
+    }
+
+    public function test_admin_pdf_export_surfaces_browserless_configuration_error(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $request = $this->createApprovedRequest();
+
+        Settings::updateOrCreate(['key' => 'pdfExportDriver'], ['value' => 'browserless']);
+        Settings::where('key', 'browserlessToken')->delete();
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->from('/admin/requests')
+            ->post(route('admin.requests.letters.export-pdf'), [
+                'selection_scope' => 'selected',
+                'ids' => json_encode([$request->id], JSON_THROW_ON_ERROR),
+            ])
+            ->assertRedirect('/admin/requests')
+            ->assertSessionHas('error', function ($message) {
+                return is_string($message)
+                    && str_contains($message, 'Browserless is not fully configured')
+                    && str_contains($message, 'PDF Export Renderer');
+            });
+    }
+
     public function test_admin_can_test_browserless_connection(): void
     {
         Http::fake([
