@@ -16,7 +16,9 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    // Hostinger/shared hosting deployments use MySQL. Tests and local installs
+    // can still override this with DB_CONNECTION=sqlite when needed.
+    'default' => env('DB_CONNECTION', 'mysql'),
 
     /*
     |--------------------------------------------------------------------------

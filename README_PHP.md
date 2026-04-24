@@ -61,8 +61,9 @@
 4. **تثبيت المكتبات (Composer):**
    - في لوحة Hostinger، اذهب لـ **Advanced** -> **SSH Access** (إذا كانت باقتك تدعم ذلك).
    - اتصل بالترمينال واذهب للمجلد: `cd laravel_core`
-   - اكتب: `composer install`
-   - *بديل:* إذا لم يتوفر SSH، قم بعمل `composer install` على جهازك (باستخدام XAMPP) ثم ارفع مجلد `vendor` كاملاً (سيستغرق وقتاً طويلاً في الرفع).
+   - اكتب: `composer install --no-dev --optimize-autoloader`
+   - مهم: هذا الإصدار مهيأ ليعمل على PHP `8.2.30+`. إذا ظهر خطأ أن Composer يحتاج PHP `8.3` فهذا يعني أن مجلد `vendor` قديم ويجب إعادة تثبيته من ملف `composer.lock` الحالي.
+   - *بديل:* إذا لم يتوفر SSH، قم بعمل `composer install --no-dev --optimize-autoloader` على جهازك ثم ارفع مجلد `vendor` كاملاً (سيستغرق وقتاً طويلاً في الرفع).
 
 ### الخطوة 3: ربط قاعدة البيانات
 1. داخل `laravel_core`، أعد تسمية `.env.example` إلى `.env`.
@@ -72,7 +73,19 @@
    DB_DATABASE=u123_recom99
    DB_USERNAME=u123_admin
    DB_PASSWORD=your_password
+   CACHE_STORE=file
+   CACHE_DRIVER=file
+   SESSION_DRIVER=file
+   LETTER_EXPORT_DRIVER=browserless
+   BROWSERLESS_BASE_URL=https://production-sfo.browserless.io
+   BROWSERLESS_TOKEN=your_browserless_token
    ```
+   - على استضافة Hostinger المشتركة لا يوجد Chrome/Chromium على السيرفر، لذلك يجب استخدام Browserless لتصدير خطابات PDF من لوحة الإدارة.
+   - إذا ظهر خطأ `database.sqlite does not exist` فهذا يعني أن Laravel يقرأ إعدادات قديمة أو ناقصة. احذف ملفات الكاش يدوياً:
+     ```bash
+     rm -f bootstrap/cache/*.php
+     php artisan optimize:clear
+     ```
 3. **تشغيل المايجريشن (بناء الجداول):**
    - عبر SSH: `php artisan migrate`
    - *بديل:* إذا لم يتوفر SSH، يمكنك استيراد ملف SQL يدوياً عبر phpMyAdmin (يمكنني تزويدك به إذا أردت).

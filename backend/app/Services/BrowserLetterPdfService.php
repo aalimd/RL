@@ -99,7 +99,7 @@ class BrowserLetterPdfService
     {
         $driver = $this->preferredDriver();
         $browserlessBaseUrl = $this->browserlessBaseUrl();
-        $browserlessToken = trim((string) Settings::getValue('browserlessToken', env('BROWSERLESS_TOKEN', '')));
+        $browserlessToken = $this->browserlessToken();
         $localBrowserAvailable = $this->localBrowserAvailable();
         $browserlessConfigured = $browserlessBaseUrl !== '' && $browserlessToken !== '';
 
@@ -372,15 +372,25 @@ class BrowserLetterPdfService
 
     private function preferredDriver(): string
     {
-        $savedDriver = Settings::getValue('pdfExportDriver');
-        $envDriver = env('LETTER_EXPORT_DRIVER');
-        $driver = trim((string) ($savedDriver ?: $envDriver ?: ''));
-
-        if (in_array($driver, [self::DRIVER_LOCAL_BROWSER, self::DRIVER_BROWSERLESS], true)) {
-            return $driver;
+        $envDriver = trim((string) config('services.browserless.driver', env('LETTER_EXPORT_DRIVER', '')));
+        if (in_array($envDriver, [self::DRIVER_LOCAL_BROWSER, self::DRIVER_BROWSERLESS], true)) {
+            return $envDriver;
         }
 
-        if ($this->isProductionEnvironment() && $this->isBrowserlessConfigured()) {
+        $savedDriver = trim((string) Settings::getValue('pdfExportDriver', ''));
+        if (in_array($savedDriver, [self::DRIVER_LOCAL_BROWSER, self::DRIVER_BROWSERLESS], true)) {
+            if (
+                $savedDriver === self::DRIVER_LOCAL_BROWSER
+                && $this->isProductionEnvironment()
+                && !$this->localBrowserAvailable()
+            ) {
+                return self::DRIVER_BROWSERLESS;
+            }
+
+            return $savedDriver;
+        }
+
+        if ($this->isProductionEnvironment() && (!$this->localBrowserAvailable() || $this->isBrowserlessConfigured())) {
             return self::DRIVER_BROWSERLESS;
         }
 
@@ -389,13 +399,49 @@ class BrowserLetterPdfService
 
     private function browserlessBaseUrl(): string
     {
-        return rtrim(trim((string) Settings::getValue('browserlessBaseUrl', env('BROWSERLESS_BASE_URL', self::DEFAULT_BROWSERLESS_BASE_URL))), '/');
+        $savedBaseUrl = trim((string) Settings::getValue('browserlessBaseUrl', ''));
+        $baseUrl = $savedBaseUrl !== ''
+            ? $savedBaseUrl
+            : trim((string) config('services.browserless.base_url', env('BROWSERLESS_BASE_URL', self::DEFAULT_BROWSERLESS_BASE_URL)));
+
+        if ($baseUrl === '') {
+            $baseUrl = self::DEFAULT_BROWSERLESS_BASE_URL;
+        }
+
+        return rtrim($baseUrl, '/');
+    }
+
+    private function browserlessToken(): string
+    {
+        $savedToken = trim((string) Settings::getValue('browserlessToken', ''));
+
+        if ($this->isUsableBrowserlessToken($savedToken)) {
+            return $savedToken;
+        }
+
+        $envToken = trim((string) config('services.browserless.token', env('BROWSERLESS_TOKEN', '')));
+
+        return $this->isUsableBrowserlessToken($envToken) ? $envToken : '';
+    }
+
+    private function isUsableBrowserlessToken(string $token): bool
+    {
+        $token = trim($token);
+
+        return $token !== ''
+            && !in_array(strtolower($token), [
+                'your_browserless_token',
+                'your-browserless-token',
+                'browserless_token',
+                'changeme',
+                'change_me',
+            ], true);
     }
 
     private function isBrowserlessConfigured(): bool
     {
         $baseUrl = $this->browserlessBaseUrl();
-        $token = trim((string) Settings::getValue('browserlessToken', env('BROWSERLESS_TOKEN', '')));
+        $token = $this->browserlessToken();
 
         return $baseUrl !== '' && $token !== '';
     }
@@ -411,7 +457,7 @@ class BrowserLetterPdfService
     private function browserlessConfig(bool $require = false): array
     {
         $baseUrl = $this->browserlessBaseUrl();
-        $token = trim((string) Settings::getValue('browserlessToken', env('BROWSERLESS_TOKEN', '')));
+        $token = $this->browserlessToken();
 
         if ($require && ($baseUrl === '' || $token === '')) {
             throw new RuntimeException('Browserless is not fully configured. In Admin Settings > PDF Export Renderer, choose Browserless, save the Browserless base URL and token, then click Test Browserless.');

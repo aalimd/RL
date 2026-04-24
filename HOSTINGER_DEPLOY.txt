@@ -1,9 +1,9 @@
 DEPLOYMENT GUIDE FOR HOSTINGER (v4 - Automation Ready)
 ======================================================
-Updated: Jan 29, 2026
+Updated: Apr 24, 2026
 
 1. PREPARATION
-   - Ensure the website itself runs PHP 8.3 or higher in hPanel.
+   - Ensure the website itself runs PHP 8.2.30 or higher in hPanel.
    - Do not rely only on `php -v` over SSH; Hostinger can apply a different PHP version per website/folder.
    - Database: MySQL or MariaDB.
 
@@ -35,6 +35,9 @@ Updated: Jan 29, 2026
      QUEUE_CONNECTION=sync
      LOG_CHANNEL=single
      MAIL_FAILOVER_MAILERS=zeptomail,smtp
+     LETTER_EXPORT_DRIVER=browserless
+     BROWSERLESS_BASE_URL=https://production-sfo.browserless.io
+     BROWSERLESS_TOKEN=your_browserless_token
    - Run `php artisan key:generate` (via SSH) or manually set APP_KEY if you can't access SSH.
 
 5. IMPORTANT PERMISSIONS (Fix 500 Errors)
@@ -53,11 +56,29 @@ Updated: Jan 29, 2026
    - If emails are slow, configure a Cron Job for `php artisan schedule:run`.
    - After each deploy, run `php artisan optimize:clear`.
 
+8. PDF EXPORT ON SHARED HOSTING
+   - Hostinger shared hosting does not provide a Chrome/Chromium binary for server-side PDF export.
+   - Use Browserless for all admin letter PDF exports:
+     1. Set `LETTER_EXPORT_DRIVER=browserless` in `backend/.env`.
+     2. Set `BROWSERLESS_BASE_URL` to your Browserless region URL.
+     3. Set `BROWSERLESS_TOKEN` to your Browserless API token.
+     4. Or configure the same values from Admin > General > PDF Export Renderer.
+     5. Click "Test Browserless" before exporting letters.
+   - If Composer is run locally before upload, run it with this repo's lock file so `vendor/composer/platform_check.php` requires PHP 8.2, not PHP 8.3.
+
 TROUBLESHOOTING
 - "500 Internal Server Error": Almost always folder permissions (Step 5).
-- "500 Internal Server Error" right after deploy: also verify the WEBSITE PHP version in hPanel is 8.3+.
+- "500 Internal Server Error" right after deploy: also verify the WEBSITE PHP version in hPanel is 8.2.30+.
 - "Class not found": Run `composer install --optimize-autoloader --no-dev` if you have SSH.
-- "Cache table error" (e.g. SQL on `cache` table): set `CACHE_STORE=file` in `backend/.env`.
+- "Composer detected issues ... require PHP >= 8.3": remove the old `vendor` folder and reinstall from the updated `composer.lock`, or upload the regenerated `vendor` folder from this codebase.
+- "No supported Chrome or Chromium browser binary is available for PDF export": configure Browserless in `.env` or Admin > General > PDF Export Renderer, then clear config/cache.
+- "Database file ... database.sqlite does not exist" while clearing cache:
+  1. Edit the `.env` file in the same folder as `artisan`.
+  2. Set `DB_CONNECTION=mysql`, fill Hostinger MySQL credentials, and set `CACHE_STORE=file`.
+  3. Manually delete stale cached config files: `rm -f bootstrap/cache/*.php`.
+  4. Create/writable framework folders: `mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache`.
+  5. Run `php artisan optimize:clear` again.
+- "Cache table error" (e.g. SQL on `cache` table): set `CACHE_STORE=file` in the production `.env`, then delete `bootstrap/cache/*.php`.
 - "Emails appear successful but are not delivered": make sure `MAIL_FAILOVER_MAILERS` does not end with `log` in production.
 - "No laravel.log file": if `LOG_CHANNEL=errorlog`, check hosting PHP/Apache error logs.
 - "Uploaded logo/background not visible": confirm the file exists in `backend/storage/app/public`; if `storage:link` is unavailable, the app will serve it through `/media/...`.

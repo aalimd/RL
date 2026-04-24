@@ -1267,6 +1267,45 @@ class SecurityRegressionTest extends TestCase
         $this->assertSame('%PDF-BROWSERLESS-AUTO', $pdf['binary']);
     }
 
+    public function test_browser_letter_pdf_service_uses_env_browserless_token_when_saved_token_is_blank(): void
+    {
+        Http::fake([
+            'https://production-sfo.browserless.io/pdf?token=browserless-env-token' => Http::response('%PDF-BROWSERLESS-ENV', 200, [
+                'Content-Type' => 'application/pdf',
+            ]),
+        ]);
+
+        config([
+            'services.browserless.driver' => 'browserless',
+            'services.browserless.base_url' => 'https://production-sfo.browserless.io',
+            'services.browserless.token' => 'browserless-env-token',
+        ]);
+
+        Settings::updateOrCreate(['key' => 'pdfExportDriver'], ['value' => 'local_browser']);
+        Settings::updateOrCreate(['key' => 'browserlessBaseUrl'], ['value' => '']);
+        Settings::updateOrCreate(['key' => 'browserlessToken'], ['value' => '']);
+
+        $pdf = app(BrowserLetterPdfService::class)->renderRequestPdf($this->createApprovedRequest());
+
+        $this->assertSame('%PDF-BROWSERLESS-ENV', $pdf['binary']);
+    }
+
+    public function test_browser_letter_pdf_service_treats_placeholder_browserless_token_as_missing(): void
+    {
+        config([
+            'services.browserless.driver' => 'browserless',
+            'services.browserless.base_url' => 'https://production-sfo.browserless.io',
+            'services.browserless.token' => 'your_browserless_token',
+        ]);
+
+        Settings::where('key', 'browserlessToken')->delete();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Browserless is not fully configured');
+
+        app(BrowserLetterPdfService::class)->renderRequestPdf($this->createApprovedRequest());
+    }
+
     public function test_browser_letter_pdf_service_rejects_non_pdf_browserless_response(): void
     {
         Http::fake([

@@ -428,7 +428,7 @@
                             </option>
                         </select>
                         <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">
-                            On shared hosting, choose <strong>Browserless</strong>. Local Chrome export needs a real browser binary on the server.
+                            On shared hosting, choose <strong>Browserless</strong>. Local Chrome export needs a real browser binary on the server. Production `.env` values can also force Browserless if the admin panel is not reachable yet.
                         </p>
                     </div>
 

@@ -28,6 +28,12 @@ return [
         'key' => env('RESEND_KEY'),
     ],
 
+    'browserless' => [
+        'driver' => env('LETTER_EXPORT_DRIVER'),
+        'base_url' => env('BROWSERLESS_BASE_URL', 'https://production-sfo.browserless.io'),
+        'token' => env('BROWSERLESS_TOKEN'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
