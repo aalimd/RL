@@ -656,13 +656,13 @@
         }
 
         /* ========================================
-                               RAMADAN MODAL STYLES
+                               WELCOME NOTICE MODAL STYLES
                                ======================================== */
-        .ramadan-modal-overlay {
+        .welcome-modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(8px);
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(10px);
             z-index: 9999;
             display: flex;
             align-items: center;
@@ -672,108 +672,159 @@
             transition: all 0.4s ease;
         }
 
-        .ramadan-modal-overlay.active {
+        .welcome-modal-overlay.active {
             opacity: 1;
             visibility: visible;
         }
 
-        .ramadan-card {
-            background: #0f172a;
-            /* Dark Slate 900 */
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            /* Amber border */
+        .welcome-card {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid rgba(148, 163, 184, 0.24);
             border-radius: 24px;
-            padding: 3rem 2rem;
-            max-width: 450px;
+            padding: 2.75rem 2rem 2rem;
+            max-width: 500px;
             width: 90%;
             text-align: center;
             position: relative;
             transform: scale(0.9) translateY(20px);
             transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 30px rgba(245, 158, 11, 0.15);
+            box-shadow: 0 28px 70px rgba(15, 23, 42, 0.26);
             overflow: hidden;
         }
 
-        .ramadan-modal-overlay.active .ramadan-card {
+        .welcome-modal-overlay.active .welcome-card {
             transform: scale(1) translateY(0);
         }
 
-        /* Golden Glow Effect */
-        .ramadan-card::before {
+        .welcome-card::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at center, rgba(245, 158, 11, 0.08) 0%, transparent 70%);
+            top: -120px;
+            right: -80px;
+            width: 240px;
+            height: 240px;
+            background: radial-gradient(circle at center, rgba(14, 165, 233, 0.16) 0%, transparent 68%);
             pointer-events: none;
         }
 
-        .ramadan-icon-wrapper {
+        .welcome-card::after {
+            content: '';
+            position: absolute;
+            bottom: -130px;
+            left: -90px;
+            width: 260px;
+            height: 260px;
+            background: radial-gradient(circle at center, rgba(16, 185, 129, 0.14) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .welcome-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .welcome-icon-wrapper {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(180, 83, 9, 0.1));
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(16, 185, 129, 0.12));
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 1.5rem;
-            border: 1px solid rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(14, 165, 233, 0.18);
             position: relative;
+            box-shadow: 0 14px 35px rgba(14, 165, 233, 0.16);
         }
 
-        .ramadan-moon-icon {
-            color: #f59e0b;
-            /* Amber 500 */
-            width: 40px;
-            height: 40px;
-            filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4));
+        .welcome-main-icon {
+            color: #0284c7;
+            width: 38px;
+            height: 38px;
+            filter: drop-shadow(0 8px 18px rgba(14, 165, 233, 0.28));
         }
 
-        .ramadan-star {
+        .welcome-accent-icon {
             position: absolute;
-            color: #fcd34d;
-            /* Amber 300 */
-            animation: twinkle 3s infinite ease-in-out;
+            color: #10b981;
+            animation: softPulse 3s infinite ease-in-out;
         }
 
-        @keyframes twinkle {
+        @keyframes softPulse {
 
             0%,
             100% {
-                opacity: 0.5;
+                opacity: 0.55;
                 transform: scale(1);
             }
 
             50% {
                 opacity: 1;
-                transform: scale(1.2);
+                transform: scale(1.15);
             }
         }
 
-        .ramadan-title {
-            font-family: 'Times New Roman', serif;
-            /* Or a nicer serif font if available */
-            font-size: 2rem;
-            font-weight: 700;
-            color: #f3f4f6;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(to right, #fcd34d, #f59e0b, #fff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            letter-spacing: 0.05em;
+        .welcome-kicker {
+            color: #0284c7;
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.6rem;
+            text-transform: uppercase;
         }
 
-        .ramadan-text {
-            color: #94a3b8;
+        .welcome-title {
+            color: #0f172a;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0;
+        }
+
+        .welcome-text {
+            color: #475569;
             line-height: 1.6;
-            margin-bottom: 2rem;
+            margin-bottom: 1.25rem;
             font-size: 1rem;
         }
 
-        .ramadan-btn {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
+        .welcome-note {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            background: rgba(14, 165, 233, 0.08);
+            border: 1px solid rgba(14, 165, 233, 0.18);
+            border-radius: 18px;
+            color: #0f172a;
+            margin: 0 0 1.5rem;
+            padding: 1rem;
+            position: relative;
+            text-align: left;
+        }
+
+        .welcome-note i {
+            color: #0284c7;
+            flex: 0 0 auto;
+            height: 22px;
+            margin-top: 0.1rem;
+            width: 22px;
+        }
+
+        .welcome-note strong {
+            display: block;
+            font-size: 0.95rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .welcome-note span {
+            color: #475569;
+            display: block;
+            font-size: 0.92rem;
+            line-height: 1.55;
+        }
+
+        .welcome-btn {
+            background: linear-gradient(135deg, #0284c7, #10b981);
             color: white;
             border: none;
             padding: 1rem 2rem;
@@ -783,13 +834,13 @@
             cursor: pointer;
             width: 100%;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+            box-shadow: 0 12px 26px rgba(14, 165, 233, 0.24);
         }
 
-        .ramadan-btn:hover {
+        .welcome-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
-            filter: brightness(1.1);
+            box-shadow: 0 16px 32px rgba(14, 165, 233, 0.28);
+            filter: brightness(1.03);
         }
     </style>
 @endsection
@@ -1026,31 +1077,38 @@
         <i data-lucide="arrow-up" style="width: 20px; height: 20px;"></i>
     </button>
 
-    <!-- RAMADAN MODAL -->
-    <div class="ramadan-modal-overlay" id="ramadanModal">
-        <div class="ramadan-card">
-            <div class="ramadan-icon-wrapper">
-                <i data-lucide="moon" class="ramadan-moon-icon"></i>
-                <i data-lucide="star" class="ramadan-star"
-                    style="width: 12px; top: 15px; right: 20px; animation-delay: 0s;"></i>
-                <i data-lucide="star" class="ramadan-star"
-                    style="width: 10px; bottom: 20px; left: 15px; animation-delay: 1s;"></i>
+    <!-- WELCOME NOTICE MODAL -->
+    <div class="welcome-modal-overlay" id="welcomeModal">
+        <div class="welcome-card">
+            <div class="welcome-icon-wrapper">
+                <i data-lucide="mail-check" class="welcome-main-icon"></i>
+                <i data-lucide="sparkles" class="welcome-accent-icon"
+                    style="width: 14px; top: 14px; right: 18px; animation-delay: 0s;"></i>
+                <i data-lucide="shield-check" class="welcome-accent-icon"
+                    style="width: 15px; bottom: 18px; left: 14px; animation-delay: 1s;"></i>
             </div>
 
-            <h2 class="ramadan-title">Ramadan Kareem</h2>
+            <p class="welcome-kicker">Official Recommendation Portal</p>
+            <h2 class="welcome-title">Welcome to {{ $siteName }}</h2>
 
-            <p class="ramadan-text">
-                Wishing you a blessed month filled with peace, prosperity, and spiritual growth. May your days be
-                illuminated with light and grace.
+            <p class="welcome-text">
+                We are pleased to have you here. Use this portal to submit your recommendation letter request and follow
+                every update through a clear, secure, and streamlined experience.
             </p>
 
-            <p
-                style="color: #fcd34d; font-family: 'Dancing Script', cursive; font-size: 1.25rem; margin-top: -1rem; margin-bottom: 1.5rem; opacity: 0.9;">
-                Dr. AbdulRahman Alzahrani
-            </p>
+            <div class="welcome-note">
+                <i data-lucide="inbox"></i>
+                <div>
+                    <strong>Please check your inbox carefully</strong>
+                    <span>
+                        Confirmation emails, verification codes, and status updates may occasionally arrive in your
+                        spam or junk folder.
+                    </span>
+                </div>
+            </div>
 
-            <button class="ramadan-btn" onclick="closeRamadanModal()">
-                Ramadan Mubarak
+            <button class="welcome-btn" onclick="closeWelcomeModal()">
+                Got it, thank you
             </button>
         </div>
     </div>
@@ -1061,8 +1119,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             lucide.createIcons();
 
-            // Check Ramadan Modal
-            checkRamadanModal();
+            checkWelcomeModal();
 
             const scrollToTopBtn = document.getElementById('scrollToTop');
 
@@ -1083,29 +1140,19 @@
             });
         });
 
-        // Ramadan Modal Logic
-        function checkRamadanModal() {
-            const seen = localStorage.getItem('ramadan_modal_seen_v1'); // v1 allows us to reset it next year by changing key
-            const now = new Date();
-
-            // Logic: Show if never seen OR if seen more than 24 hours ago (optional, currently just once forever/session)
-            // For now, let's make it show once per browser session (removed from storage on close? No, persistent)
-            // Let's stick to "Show once" logic as per plan.
-
+        function checkWelcomeModal() {
+            const seen = localStorage.getItem('welcome_notice_seen_v1');
             if (!seen) {
-                // Delay slightly for effect
                 setTimeout(() => {
-                    document.getElementById('ramadanModal').classList.add('active');
+                    document.getElementById('welcomeModal').classList.add('active');
                 }, 1000);
             }
         }
 
-        function closeRamadanModal() {
-            const modal = document.getElementById('ramadanModal');
+        function closeWelcomeModal() {
+            const modal = document.getElementById('welcomeModal');
             modal.classList.remove('active');
-
-            // Set flag in localStorage
-            localStorage.setItem('ramadan_modal_seen_v1', 'true');
+            localStorage.setItem('welcome_notice_seen_v1', 'true');
         }
 
         // Mobile menu toggle
