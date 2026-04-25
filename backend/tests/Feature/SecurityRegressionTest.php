@@ -101,12 +101,15 @@ class SecurityRegressionTest extends TestCase
         ])->get(route('public.letter', ['tracking_id' => $request->tracking_id]))
             ->assertOk()
             ->assertSee($request->student_name)
-            ->assertSee('Print / Save');
+            ->assertSee('Review your letter before download')
+            ->assertSee('Download PDF')
+            ->assertSee(route('public.letter.pdf', ['tracking_id' => $request->tracking_id]), false);
     }
 
     public function test_public_letter_pdf_is_served_inline_for_verified_tracking_session(): void
     {
         $request = $this->createApprovedRequest();
+        $this->bindFakeBrowserLetterPdfService();
 
         $this->withSession([
             'tracking_verified_request_id' => $request->id,
@@ -445,6 +448,7 @@ class SecurityRegressionTest extends TestCase
 
             if ($case['status'] === 'Approved') {
                 $response->assertSee(route('public.letter', ['tracking_id' => $request->tracking_id]), false);
+                $response->assertSee('Review Official Letter');
             }
         }
     }
@@ -760,22 +764,16 @@ class SecurityRegressionTest extends TestCase
     public function test_public_letter_pdf_refuses_to_serve_multi_page_official_output(): void
     {
         $request = $this->createApprovedRequest();
-        $template = Template::findOrFail($request->template_id);
-
-        $template->update([
-            'body_content' => str_repeat(
-                '<p>Dr. {{studentName}} completed extensive documented duties, reflective summaries, case logs, competency narratives, multidisciplinary evaluations, and longitudinal commentary across the full emergency medicine rotation.</p>',
-                60
-            ),
-            'footer_content' => str_repeat('<p style="font-size:7pt;">Emergency Medicine Department, King Abdulaziz Medical City, Jeddah</p>', 8),
-        ]);
+        $fakePdfService = $this->bindFakeBrowserLetterPdfService();
+        $fakePdfService->renderException = new \RuntimeException('Official letter ' . $request->tracking_id . ' exceeded one A4 page after browser rendering.');
 
         $this->withSession([
             'tracking_verified_request_id' => $request->id,
             'tracking_verified_tracking_id' => $request->tracking_id,
             'tracking_verified_until' => now()->addMinutes(30)->timestamp,
         ])->get(route('public.letter.pdf', ['tracking_id' => $request->tracking_id]))
-            ->assertStatus(409);
+            ->assertStatus(409)
+            ->assertSee('needs administrator review');
     }
 
     public function test_letter_service_keeps_only_one_inline_signature_and_qr_placeholder_across_template_sections(): void
@@ -1324,6 +1322,26 @@ class SecurityRegressionTest extends TestCase
         app(BrowserLetterPdfService::class)->renderRequestPdf($this->createApprovedRequest());
     }
 
+    public function test_browser_letter_pdf_service_rejects_multi_page_browserless_pdf(): void
+    {
+        $multiPagePdf = "%PDF-1.4\n1 0 obj<</Type /Pages /Count 2>>endobj\n2 0 obj<</Type /Page>>endobj\n3 0 obj<</Type /Page>>endobj";
+
+        Http::fake([
+            'https://production-sfo.browserless.io/pdf?token=browserless-secret-token' => Http::response($multiPagePdf, 200, [
+                'Content-Type' => 'application/pdf',
+            ]),
+        ]);
+
+        Settings::updateOrCreate(['key' => 'pdfExportDriver'], ['value' => 'browserless']);
+        Settings::updateOrCreate(['key' => 'browserlessBaseUrl'], ['value' => 'https://production-sfo.browserless.io']);
+        Settings::updateOrCreate(['key' => 'browserlessToken'], ['value' => 'browserless-secret-token']);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('exceeded one A4 page');
+
+        app(BrowserLetterPdfService::class)->renderRequestPdf($this->createApprovedRequest());
+    }
+
     public function test_admin_pdf_export_surfaces_browserless_configuration_error(): void
     {
         $admin = $this->createAdminUser([
@@ -1825,17 +1843,23 @@ class SecurityRegressionTest extends TestCase
             ])
             ->assertRedirect(route('admin.templates'));
 
-        $this->withSession([
-            'tracking_verified_request_id' => $request->id,
-            'tracking_verified_tracking_id' => $request->tracking_id,
-            'tracking_verified_until' => now()->addMinutes(30)->timestamp,
-        ])->get(route('public.letter', ['tracking_id' => $request->tracking_id]))
-            ->assertOk()
-            ->assertSee('Updated Header ' . $request->tracking_id, false)
-            ->assertSee('Updated letter for', false)
-            ->assertDontSee('Letter for Letter Student', false)
-            ->assertDontSee('Scan to Verify', false)
-            ->assertSee('Courier New', false);
+        $letterService = app(LetterService::class);
+        $content = $letterService->generateLetterContent($request->fresh(), Template::findOrFail($request->template_id));
+        $html = view('public.letter', [
+            'request' => $request->fresh(),
+            'layout' => $content['layout'],
+            'header' => $letterService->sanitizeHtml($content['header']),
+            'body' => $letterService->sanitizeHtml($content['body']),
+            'footer' => $letterService->sanitizeHtml($content['footer']),
+            'signature' => $content['signature'],
+            'qrCode' => $content['qrCode'] ?? '',
+        ])->render();
+
+        $this->assertStringContainsString('Updated Header ' . $request->tracking_id, $html);
+        $this->assertStringContainsString('Updated letter for', $html);
+        $this->assertStringNotContainsString('Letter for Letter Student', $html);
+        $this->assertStringNotContainsString('Scan to Verify', $html);
+        $this->assertStringContainsString('Courier New', $html);
     }
 
     public function test_admin_preview_returns_browser_letter_content(): void
@@ -2010,15 +2034,26 @@ class SecurityRegressionTest extends TestCase
         $fake = new class(app(LetterService::class)) extends BrowserLetterPdfService {
             public array $renderedRequestIds = [];
             public array $zipRequestIds = [];
+            public ?\Throwable $renderException = null;
 
             public function renderRequestPdf(RequestRecord $request): array
             {
+                if ($this->renderException) {
+                    throw $this->renderException;
+                }
+
                 $this->renderedRequestIds[] = $request->id;
 
                 return [
                     'binary' => '%PDF-FAKE-' . $request->tracking_id,
                     'filename' => $this->pdfFilename($request),
                     'tracking_id' => $request->tracking_id,
+                    'page_count' => 1,
+                    'fit' => [
+                        'status' => 'fits',
+                        'page_count' => 1,
+                        'message' => 'Fits on one A4 page.',
+                    ],
                 ];
             }
 

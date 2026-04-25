@@ -852,8 +852,8 @@
                             <div class="action-stack">
                                 <a href="{{ route('public.letter', ['tracking_id' => $request->tracking_id]) }}"
                                     class="primary-action" target="_blank">
-                                    <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
-                                    View Recommendation Letter
+                                    <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
+                                    Review Official Letter
                                 </a>
                             </div>
                         @endif

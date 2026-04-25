@@ -51,13 +51,15 @@
         }
 
         body {
-            background: #e5e7eb;
+            background:
+                radial-gradient(circle at top left, rgba(15, 76, 129, 0.10), transparent 32rem),
+                linear-gradient(180deg, #f4f6f9 0%, #e7ebf0 100%);
             font-family: 'Times New Roman', Times, serif;
             display: flex;
             justify-content: center;
             align-items: flex-start;
             min-height: 100vh;
-            padding: 3rem 1rem;
+            padding: 5rem 1rem 3rem;
             color: #111827;
         }
 
@@ -364,24 +366,6 @@
             justify-content: flex-end;
         }
 
-        .toolbar-note {
-            max-width: 270px;
-            padding: 0.75rem 0.9rem;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.92);
-            color: #374151;
-            font-size: 0.8rem;
-            line-height: 1.4;
-            border: 1px solid rgba(209, 213, 219, 0.85);
-            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-
-        .toolbar-note strong {
-            color: #111827;
-        }
-
         .btn {
             padding: 0.625rem 1.125rem;
             border-radius: 9999px;
@@ -399,9 +383,9 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, rgba(79, 70, 229, 0.9), rgba(99, 102, 241, 0.9));
+            background: linear-gradient(135deg, rgba(30, 88, 164, 0.96), rgba(54, 96, 217, 0.96));
             color: white;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
@@ -496,11 +480,17 @@
                 top: auto;
                 bottom: 20px;
                 right: 20px;
+                left: 20px;
                 align-items: stretch;
             }
 
             .toolbar-actions {
                 flex-direction: column-reverse;
+                width: 100%;
+            }
+
+            .btn {
+                justify-content: center;
             }
         }
 
@@ -528,6 +518,7 @@
 
             .toolbar {
                 right: 10px;
+                left: 10px;
                 bottom: 10px;
             }
         }
@@ -545,19 +536,25 @@
                 </svg>
                 Back
             </a>
-            <button onclick="printOfficialLetter()" class="btn btn-primary" type="button">
+            <button onclick="printOfficialLetter()" class="btn btn-secondary" type="button">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="6 9 6 2 18 2 18 9" />
                     <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
                     <rect x="6" y="14" width="12" height="8" />
                 </svg>
-                Print / Save
+                Print Preview
             </button>
-        </div>
-        <div class="toolbar-note">
-            <strong>Best result:</strong> use <em>Print / Save</em> to open your browser's print dialog, then choose
-            your printer or <em>Save as PDF</em>.
+            <a href="{{ route('public.letter.pdf', ['tracking_id' => $request->tracking_id, 'download' => 1]) }}"
+                class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" x2="12" y1="15" y2="3" />
+                </svg>
+                Download Official PDF
+            </a>
         </div>
     </div>
 
@@ -754,6 +751,15 @@
                 adjustUnitlessVariable(page, '--footer-line-height', 0.03, 1.05);
                 guard += 1;
             }
+
+            const isOverflowing = page.scrollHeight > page.clientHeight + 2;
+            page.dataset.fitStatus = isOverflowing ? 'overflow' : 'fits';
+            document.dispatchEvent(new CustomEvent('letter-fit-ready', {
+                detail: {
+                    status: page.dataset.fitStatus,
+                    attempts: guard
+                }
+            }));
         }
 
         function printOfficialLetter() {

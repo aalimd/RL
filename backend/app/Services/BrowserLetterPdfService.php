@@ -29,11 +29,18 @@ class BrowserLetterPdfService
     {
         $html = $this->renderLetterHtml($request);
         $binary = $this->renderPdfFromHtml($html, $request->tracking_id);
+        $pageCount = $this->assertSinglePagePdf($binary, $request->tracking_id);
 
         return [
             'binary' => $binary,
             'filename' => $this->pdfFilename($request),
             'tracking_id' => $request->tracking_id,
+            'page_count' => $pageCount,
+            'fit' => [
+                'status' => 'fits',
+                'page_count' => $pageCount,
+                'message' => 'Fits on one A4 page.',
+            ],
         ];
     }
 
@@ -164,7 +171,7 @@ class BrowserLetterPdfService
         $preferredDriver = $this->preferredDriver();
 
         if ($preferredDriver === self::DRIVER_BROWSERLESS) {
-            return $this->renderPdfViaBrowserless($html, $trackingId);
+            return $this->renderPdfViaBrowserless($html, $trackingId, true);
         }
 
         try {
@@ -174,7 +181,7 @@ class BrowserLetterPdfService
                 throw $e;
             }
 
-            return $this->renderPdfViaBrowserless($html, $trackingId);
+            return $this->renderPdfViaBrowserless($html, $trackingId, true);
         }
     }
 
@@ -245,6 +252,8 @@ class BrowserLetterPdfService
                 throw new RuntimeException('The exported PDF for ' . $trackingId . ' could not be read.');
             }
 
+            $this->assertPdfBinary($binary, $trackingId, 'The browser');
+
             return $binary;
         } finally {
             @unlink($htmlPath);
@@ -255,11 +264,30 @@ class BrowserLetterPdfService
     /**
      * @throws RuntimeException
      */
-    private function renderPdfViaBrowserless(string $html, string $trackingId): string
+    private function renderPdfViaBrowserless(string $html, string $trackingId, bool $waitForLetterReady = false): string
     {
         $this->extendExecutionTime();
 
         $config = $this->browserlessConfig(true);
+        $payload = [
+            'html' => $html,
+            'gotoOptions' => [
+                'waitUntil' => 'networkidle0',
+                'timeout' => 30000,
+            ],
+            'options' => [
+                'printBackground' => true,
+                'format' => 'A4',
+                'preferCSSPageSize' => true,
+            ],
+        ];
+
+        if ($waitForLetterReady) {
+            $payload['waitForEvent'] = [
+                'event' => 'letter-fit-ready',
+                'timeout' => 8000,
+            ];
+        }
 
         $response = Http::timeout(120)
             ->accept('application/pdf')
@@ -267,14 +295,7 @@ class BrowserLetterPdfService
                 'Cache-Control' => 'no-cache',
                 'Content-Type' => 'application/json',
             ])
-            ->post($config['endpoint'], [
-                'html' => $html,
-                'options' => [
-                    'printBackground' => true,
-                    'format' => 'A4',
-                    'preferCSSPageSize' => true,
-                ],
-            ]);
+            ->post($config['endpoint'], $payload);
 
         if (!$response->successful()) {
             throw new RuntimeException(
@@ -287,13 +308,55 @@ class BrowserLetterPdfService
             throw new RuntimeException('Browserless did not return a PDF file for ' . $trackingId . '.');
         }
 
+        $this->assertPdfBinary($binary, $trackingId, 'Browserless');
+
+        return $binary;
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    private function assertPdfBinary(string $binary, string $trackingId, string $renderer): void
+    {
         if (!str_starts_with(ltrim($binary), '%PDF')) {
             throw new RuntimeException(
-                'Browserless returned a response, but it was not a valid PDF for ' . $trackingId . '. Please test Browserless in admin settings and verify the endpoint/token.'
+                $renderer . ' returned a response, but it was not a valid PDF for ' . $trackingId . '. Please test the PDF export renderer configuration.'
+            );
+        }
+    }
+
+    /**
+     * @throws RuntimeException
+     */
+    private function assertSinglePagePdf(string $binary, string $trackingId): int
+    {
+        $pageCount = $this->countPdfPages($binary);
+
+        if ($pageCount > 1) {
+            throw new RuntimeException(
+                'Official letter ' . $trackingId . ' exceeded one A4 page after browser rendering. Shorten the template content, footer, signature area, or decorative elements before exporting.'
             );
         }
 
-        return $binary;
+        return $pageCount;
+    }
+
+    private function countPdfPages(string $binary): int
+    {
+        $counts = [];
+
+        if (preg_match_all('/\/Type\s*\/Pages\b.*?\/Count\s+(\d+)/s', $binary, $pageTreeMatches)) {
+            foreach ($pageTreeMatches[1] as $count) {
+                $counts[] = (int) $count;
+            }
+        }
+
+        $pageObjects = preg_match_all('/\/Type\s*\/Page\b(?!s)/', $binary);
+        if ($pageObjects !== false && $pageObjects > 0) {
+            $counts[] = $pageObjects;
+        }
+
+        return max([1, ...$counts]);
     }
 
     private function waitForPdfOutput(Process $process, string $pdfPath, int $timeoutSeconds): array

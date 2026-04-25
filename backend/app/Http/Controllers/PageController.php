@@ -16,7 +16,7 @@ use App\Mail\RequestSubmittedToAdmin;
 
 
 use App\Services\LetterService;
-use App\Services\LetterPdfService;
+use App\Services\BrowserLetterPdfService;
 use App\Services\PublicAssetUrlService;
 use App\Services\WizardService;
 
@@ -31,12 +31,12 @@ class PageController extends Controller
     protected $wizardService;
     protected $telegramService;
     protected $publicAssetUrlService;
-    protected $letterPdfService;
+    protected $browserLetterPdfService;
 
-    public function __construct(LetterService $letterService, LetterPdfService $letterPdfService, WizardService $wizardService, \App\Services\TelegramService $telegramService, PublicAssetUrlService $publicAssetUrlService)
+    public function __construct(LetterService $letterService, BrowserLetterPdfService $browserLetterPdfService, WizardService $wizardService, \App\Services\TelegramService $telegramService, PublicAssetUrlService $publicAssetUrlService)
     {
         $this->letterService = $letterService;
-        $this->letterPdfService = $letterPdfService;
+        $this->browserLetterPdfService = $browserLetterPdfService;
         $this->wizardService = $wizardService;
         $this->telegramService = $telegramService;
         $this->publicAssetUrlService = $publicAssetUrlService;
@@ -1151,42 +1151,13 @@ class PageController extends Controller
         $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
         $this->ensureApprovedLetterAccess($request);
 
-        // Get Template - with try/catch for encrypted form_data
-        $templateId = null;
-        try {
-            $formData = $request->form_data ?? [];
-            $templateId = $formData['template_id'] ?? null;
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            \Illuminate\Support\Facades\Log::error('Decryption failed for request ' . $request->id . ': ' . $e->getMessage());
-            $formData = [];
-        }
-
-        $template = null;
-        if ($templateId) {
-            $template = \App\Models\Template::find($templateId);
-        }
-
-        if (!$template) {
-            $template = $this->resolveTemplate($request);
-        }
-
-        if (!$template) {
-            abort(404, 'Template not found');
-        }
-
-        $content = $this->letterService->generateLetterContent($request, $template);
-
-        $data = [
+        return view('public.letter-viewer', [
             'request' => $request,
-            'layout' => $content['layout'],
-            'header' => $this->letterService->sanitizeHtml($content['header']),
-            'body' => $this->letterService->sanitizeHtml($content['body']),
-            'footer' => $this->letterService->sanitizeHtml($content['footer']),
-            'signature' => $content['signature'],
-            'qrCode' => $content['qrCode'] ?? '',
-        ];
-
-        return view('public.letter', $data);
+            'settings' => $this->getPublicSettings(),
+            'pdfUrl' => route('public.letter.pdf', ['tracking_id' => $request->tracking_id]),
+            'downloadUrl' => route('public.letter.pdf', ['tracking_id' => $request->tracking_id, 'download' => 1]),
+            'trackingUrl' => url('/track/' . $request->tracking_id),
+        ]);
     }
 
     /**
@@ -1198,21 +1169,30 @@ class PageController extends Controller
         $this->ensureApprovedLetterAccess($request);
 
         try {
-            $compiled = $this->letterPdfService->compile($request);
+            $compiled = $this->browserLetterPdfService->renderRequestPdf($request);
 
-            if (($compiled['fit']['status'] ?? null) === 'too_long') {
-                return response('This recommendation letter is being adjusted to fit one official A4 page. Please contact administration.', 409);
-            }
-
-            $filename = 'Recommendation_Letter_' . $request->tracking_id . '.pdf';
+            $filename = $compiled['filename'] ?? ('Recommendation_Letter_' . $request->tracking_id . '.pdf');
             $disposition = $httpRequest->boolean('download') ? 'attachment' : 'inline';
 
-            return response($compiled['pdf_binary'], 200, [
+            return response($compiled['binary'], 200, [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => $disposition . '; filename="' . $filename . '"',
             ]);
         } catch (\RuntimeException $e) {
-            abort(404, 'Template not found');
+            if (str_contains($e->getMessage(), 'exceeded one A4 page')) {
+                return response('This recommendation letter needs administrator review before it can be exported as one official A4 page.', 409);
+            }
+
+            if (str_contains($e->getMessage(), 'No active template found')) {
+                abort(404, 'Template not found');
+            }
+
+            \Illuminate\Support\Facades\Log::error('PDF Generation Failed: ' . $e->getMessage(), [
+                'request_id' => $request->id,
+                'tracking_id' => $request->tracking_id,
+            ]);
+
+            abort(500, 'Failed to generate PDF. Please try again later.');
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('PDF Generation Failed: ' . $e->getMessage(), [
                 'request_id' => $request->id,
