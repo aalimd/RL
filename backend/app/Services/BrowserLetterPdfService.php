@@ -171,7 +171,7 @@ class BrowserLetterPdfService
         $preferredDriver = $this->preferredDriver();
 
         if ($preferredDriver === self::DRIVER_BROWSERLESS) {
-            return $this->renderPdfViaBrowserless($html, $trackingId, true);
+            return $this->renderPdfViaBrowserless($html, $trackingId);
         }
 
         try {
@@ -181,7 +181,7 @@ class BrowserLetterPdfService
                 throw $e;
             }
 
-            return $this->renderPdfViaBrowserless($html, $trackingId, true);
+            return $this->renderPdfViaBrowserless($html, $trackingId);
         }
     }
 
@@ -264,7 +264,7 @@ class BrowserLetterPdfService
     /**
      * @throws RuntimeException
      */
-    private function renderPdfViaBrowserless(string $html, string $trackingId, bool $waitForLetterReady = false): string
+    private function renderPdfViaBrowserless(string $html, string $trackingId): string
     {
         $this->extendExecutionTime();
 
@@ -281,13 +281,6 @@ class BrowserLetterPdfService
                 'preferCSSPageSize' => true,
             ],
         ];
-
-        if ($waitForLetterReady) {
-            $payload['waitForEvent'] = [
-                'event' => 'letter-fit-ready',
-                'timeout' => 8000,
-            ];
-        }
 
         $response = Http::timeout(120)
             ->accept('application/pdf')

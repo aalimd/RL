@@ -1241,7 +1241,8 @@ class SecurityRegressionTest extends TestCase
             return isset($data['html'], $data['options'])
                 && $data['options']['format'] === 'A4'
                 && $data['options']['printBackground'] === true
-                && $data['options']['preferCSSPageSize'] === true;
+                && $data['options']['preferCSSPageSize'] === true
+                && !isset($data['waitForEvent']);
         });
     }
 
