@@ -182,13 +182,51 @@ class PageController extends Controller
      */
     private function ensureApprovedLetterAccess(\App\Models\Request $requestModel): void
     {
+        if ($error = $this->approvedLetterAccessError($requestModel)) {
+            abort($error['status'], $error['message']);
+        }
+    }
+
+    /**
+     * Resolve why an approved-letter route is blocked without exposing the letter.
+     */
+    private function approvedLetterAccessError(\App\Models\Request $requestModel): ?array
+    {
         if (!$this->hasValidTrackingVerification($requestModel)) {
-            abort(403, 'Please verify your request with OTP before viewing the letter.');
+            return [
+                'status' => 403,
+                'reason' => 'verification_required',
+                'message' => 'Please verify your request with OTP before viewing or downloading the letter.',
+            ];
         }
 
         if ($requestModel->status !== 'Approved') {
-            abort(403, 'This request has not been approved yet.');
+            return [
+                'status' => 403,
+                'reason' => 'not_approved',
+                'message' => 'This request has not been approved yet.',
+            ];
         }
+
+        return null;
+    }
+
+    /**
+     * Return a polished response for blocked letter/PDF access.
+     */
+    private function blockedLetterAccessResponse(Request $httpRequest, \App\Models\Request $requestModel, array $error)
+    {
+        $payload = [
+            'status' => $error['reason'],
+            'message' => $error['message'],
+            'tracking_url' => route('public.tracking', ['id' => $requestModel->tracking_id]),
+        ];
+
+        if ($httpRequest->expectsJson() || $httpRequest->ajax()) {
+            return response()->json($payload, $error['status']);
+        }
+
+        abort($error['status'], $error['message']);
     }
 
     /**
@@ -1193,7 +1231,9 @@ class PageController extends Controller
     public function preparePdf($tracking_id, Request $httpRequest)
     {
         $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
-        $this->ensureApprovedLetterAccess($request);
+        if ($error = $this->approvedLetterAccessError($request)) {
+            return $this->blockedLetterAccessResponse($httpRequest, $request, $error);
+        }
 
         try {
             $compiled = $this->browserLetterPdfService->renderRequestPdf($request);
@@ -1245,7 +1285,9 @@ class PageController extends Controller
     public function downloadPdf($tracking_id, Request $httpRequest)
     {
         $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
-        $this->ensureApprovedLetterAccess($request);
+        if ($error = $this->approvedLetterAccessError($request)) {
+            return $this->blockedLetterAccessResponse($httpRequest, $request, $error);
+        }
 
         try {
             $compiled = $this->browserLetterPdfService->renderRequestPdf($request);

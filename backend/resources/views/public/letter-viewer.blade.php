@@ -503,8 +503,26 @@
                     });
 
                     if (!response.ok) {
-                        const message = await response.text();
-                        throw new Error(message || 'The official PDF could not be downloaded right now.');
+                        const contentType = response.headers.get('Content-Type') || '';
+                        let message = 'The official PDF could not be downloaded right now.';
+                        let trackingUrl = '';
+
+                        if (contentType.includes('application/json')) {
+                            const payload = await response.json().catch(function() {
+                                return {};
+                            });
+                            message = payload.message || message;
+                            trackingUrl = payload.tracking_url || '';
+                        } else {
+                            const text = await response.text();
+                            message = text && !text.trim().startsWith('<') ? text : message;
+                        }
+
+                        if (trackingUrl) {
+                            message += ' Open tracking again to complete verification.';
+                        }
+
+                        throw new Error(message);
                     }
 
                     const blob = await response.blob();

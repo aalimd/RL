@@ -102,7 +102,40 @@ class SecurityRegressionTest extends TestCase
         $request = $this->createApprovedRequest();
 
         $this->get(route('public.letter', ['tracking_id' => $request->tracking_id]))
-            ->assertForbidden();
+            ->assertForbidden()
+            ->assertSee('Verification required')
+            ->assertSee('Track and verify request')
+            ->assertSee(route('public.tracking', ['id' => $request->tracking_id]), false)
+            ->assertDontSee('normalize.css');
+    }
+
+    public function test_public_letter_pdf_prepare_returns_json_when_tracking_session_is_not_verified(): void
+    {
+        $request = $this->createApprovedRequest();
+
+        $this->postJson(route('public.letter.pdf.prepare', ['tracking_id' => $request->tracking_id]))
+            ->assertForbidden()
+            ->assertJson([
+                'status' => 'verification_required',
+                'message' => 'Please verify your request with OTP before viewing or downloading the letter.',
+                'tracking_url' => route('public.tracking', ['id' => $request->tracking_id]),
+            ]);
+    }
+
+    public function test_public_letter_pdf_download_returns_json_for_ajax_when_tracking_session_is_not_verified(): void
+    {
+        $request = $this->createApprovedRequest();
+
+        $this->withHeaders([
+            'Accept' => 'application/pdf',
+            'X-Requested-With' => 'XMLHttpRequest',
+        ])->get(route('public.letter.pdf', ['tracking_id' => $request->tracking_id]))
+            ->assertForbidden()
+            ->assertJson([
+                'status' => 'verification_required',
+                'message' => 'Please verify your request with OTP before viewing or downloading the letter.',
+                'tracking_url' => route('public.tracking', ['id' => $request->tracking_id]),
+            ]);
     }
 
     public function test_public_letter_is_available_with_verified_tracking_session(): void
