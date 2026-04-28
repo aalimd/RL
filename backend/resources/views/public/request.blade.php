@@ -1329,6 +1329,9 @@
                                 $showOptions = $templateMode === 'student_choice' && $allowCustom;
                                 $selectedContentOption = old('data.content_option', $formData['content_option'] ?? ($templateMode === 'custom_only' ? 'custom' : 'template'));
                                 $selectedTemplateId = old('data.template_id', $formData['template_id'] ?? ($templateMode === 'admin_fixed' && $templates->count() ? $templates->first()->id : ''));
+                                if ($templateMode === 'student_choice' && !$selectedTemplateId && $templates->count() === 1) {
+                                    $selectedTemplateId = $templates->first()->id;
+                                }
                             @endphp
 
                             @if($showOptions)

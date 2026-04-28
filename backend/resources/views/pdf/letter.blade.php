@@ -14,6 +14,14 @@
     $watermarkEnabled = (bool) ($watermarkConfig['enabled'] ?? false);
     $watermarkText = !empty($watermarkConfig['text']) ? $watermarkConfig['text'] : ($request->tracking_id ?? 'OFFICIAL COPY');
     $showDigitalFooter = $layout['footer']['enabled'] ?? true;
+    $frameConfig = is_array($layout['frame'] ?? null) ? $layout['frame'] : [];
+    $officialFrameEnabled = ($frameConfig['style'] ?? '') === 'ngha_green';
+    $safeFrameColor = static function ($color, string $fallback = '#2f8e55'): string {
+        $color = trim((string) $color);
+        return preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : $fallback;
+    };
+    $officialFrameColor = $safeFrameColor($frameConfig['color'] ?? ($layout['border']['color'] ?? '#2f8e55'));
+    $printableHeightMm = max(210, 297 - $pageMargins['top'] - $pageMargins['bottom']);
     $pdfFit = $layout['pdfFit'] ?? [];
     $lineHeight = max(1.22, min((float) ($pdfFit['lineHeight'] ?? ($direction === 'rtl' ? 1.52 : 1.45)), 1.6));
     $paragraphGap = max(3, min((float) ($pdfFit['paragraphGap'] ?? 8), 10));
@@ -66,8 +74,12 @@
 
         .page-container {
             width: 100%;
+            min-height: {{ $printableHeightMm }}mm;
             position: static;
-            @if(isset($layout['border']['enabled']) && $layout['border']['enabled'])
+            @if($officialFrameEnabled)
+                border: 4px double {{ $officialFrameColor }};
+                padding: {{ $borderPadding }}px;
+            @elseif(isset($layout['border']['enabled']) && $layout['border']['enabled'])
                 border: {{ max(1, min((int) ($layout['border']['width'] ?? 2), 3)) }}px {{ $layout['border']['style'] ?? 'solid' }} {{ $layout['border']['color'] ?? '#057f3a' }};
                 padding: {{ $borderPadding }}px;
             @endif

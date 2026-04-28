@@ -27,6 +27,8 @@ Route::post('/request/edit', [PageController::class, 'initializeEdit'])->middlew
 Route::get('/track/{id?}', [PageController::class, 'tracking'])->name('public.tracking');
 Route::post('/track', [PageController::class, 'doTracking'])->middleware('throttle:10,1')->name('public.tracking.post');
 Route::get('/letter/{tracking_id}', [PageController::class, 'viewLetter'])->middleware('throttle:10,1')->name('public.letter');
+Route::get('/letter/{tracking_id}/preview', [PageController::class, 'previewLetter'])->middleware('throttle:30,1')->name('public.letter.preview');
+Route::post('/letter/{tracking_id}/pdf/prepare', [PageController::class, 'preparePdf'])->middleware('throttle:30,1')->name('public.letter.pdf.prepare');
 Route::get('/letter/{tracking_id}/pdf', [PageController::class, 'downloadPdf'])->middleware('throttle:10,1')->name('public.letter.pdf');
 Route::get('/verify/{token}', [App\Http\Controllers\VerificationController::class, 'verify'])->name('public.verify');
 Route::get('/tracking/verify', [PageController::class, 'show2FAVerify'])->name('public.tracking.verify');
@@ -67,6 +69,7 @@ Route::middleware(['auth', 'active', 'twofactor'])->prefix('admin')->name('admin
         Route::get('/templates/{id}/edit', [AdminController::class, 'editTemplate'])->name('templates.edit');
         Route::put('/templates/{id}', [AdminController::class, 'updateTemplate'])->name('templates.update');
         Route::post('/templates/{id}/reset', [AdminController::class, 'resetTemplate'])->name('templates.reset');
+        Route::post('/templates/{id}/reset-default', [AdminController::class, 'saveTemplateResetDefault'])->name('templates.reset-default');
         Route::post('/templates/{id}/autosave', [AdminController::class, 'autoSaveTemplate'])->name('templates.autosave');
         Route::delete('/templates/{id}', [AdminController::class, 'deleteTemplate'])->name('templates.destroy');
 

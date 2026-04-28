@@ -215,8 +215,9 @@ class AdminController extends Controller
     {
         $settings = $this->getSettings();
         $request = RequestModel::findOrFail($id);
+        $templates = Template::where('is_active', true)->orderBy('name')->get();
 
-        return view('admin.request-details', compact('settings', 'request'));
+        return view('admin.request-details', compact('settings', 'request', 'templates'));
     }
 
     /**
@@ -288,10 +289,32 @@ class AdminController extends Controller
             'deadline' => 'nullable|date',
             'training_period' => 'nullable|date_format:Y-m',
             'custom_content' => 'nullable|string',
+            'content_option' => 'required|in:template,custom',
+            'template_id' => 'nullable|integer|exists:templates,id',
             'gender' => 'required|in:male,female',
             'phone' => 'nullable|string|max:20',
             'major' => 'nullable|string|max:255',
         ]);
+
+        if (($validated['content_option'] ?? 'template') === 'template') {
+            if (empty($validated['template_id'])) {
+                return back()
+                    ->withErrors(['template_id' => 'Please choose a template for this request.'])
+                    ->withInput();
+            }
+
+            $templateIsActive = Template::where('id', $validated['template_id'])
+                ->where('is_active', true)
+                ->exists();
+
+            if (!$templateIsActive) {
+                return back()
+                    ->withErrors(['template_id' => 'Selected template is inactive or unavailable.'])
+                    ->withInput();
+            }
+        } else {
+            $validated['template_id'] = null;
+        }
 
         // Extract gender before updating model (it goes in form_data, not directly)
         $gender = $validated['gender'];
@@ -303,6 +326,9 @@ class AdminController extends Controller
         $formData = $requestModel->form_data ?? [];
         $formData['gender'] = $gender;
         $formData['major'] = $validated['major'] ?? ($formData['major'] ?? null);
+        $formData['content_option'] = $validated['content_option'];
+        $formData['template_id'] = $validated['template_id'];
+        $formData['custom_content'] = $validated['custom_content'] ?? null;
         $requestModel->form_data = $formData;
         $requestModel->save();
 
@@ -661,6 +687,8 @@ class AdminController extends Controller
 
         $validated['is_active'] = $request->has('is_active');
         $validated['content'] = $validated['body_content'];
+        $validated['reset_data'] = $this->templateResetSnapshotFromData($validated);
+        $validated['reset_saved_at'] = now();
         // layout_settings is already an array and will be auto-encoded by the model's cast
 
         $template = Template::create($validated);
@@ -1901,6 +1929,7 @@ class AdminController extends Controller
         $formSettings = [
             'templateSelectionMode' => $settings['templateSelectionMode'] ?? 'student_choice',
             'defaultTemplateId' => $settings['defaultTemplateId'] ?? '',
+            'studentTemplateIds' => $settings['studentTemplateIds'] ?? '',
             'allowCustomContent' => $settings['allowCustomContent'] ?? 'true',
             'formFieldConfig' => $settings['formFieldConfig'] ?? '{}',
         ];
@@ -1920,6 +1949,8 @@ class AdminController extends Controller
         $validated = $request->validate([
             'templateSelectionMode' => 'required|in:student_choice,admin_fixed,custom_only',
             'defaultTemplateId' => 'nullable|integer|exists:templates,id',
+            'studentTemplateIds' => 'nullable|array',
+            'studentTemplateIds.*' => 'integer|exists:templates,id',
             'fields' => 'nullable|array',
         ]);
 
@@ -1944,6 +1975,25 @@ class AdminController extends Controller
             }
         }
 
+        $studentTemplateIds = array_values(array_unique(array_map('intval', $validated['studentTemplateIds'] ?? [])));
+        if ($templateSelectionMode === 'student_choice') {
+            if ($studentTemplateIds === []) {
+                return back()
+                    ->withErrors(['studentTemplateIds' => 'Choose at least one active template for students.'])
+                    ->withInput();
+            }
+
+            $activeStudentTemplateCount = Template::whereIn('id', $studentTemplateIds)
+                ->where('is_active', true)
+                ->count();
+
+            if ($activeStudentTemplateCount !== count($studentTemplateIds)) {
+                return back()
+                    ->withErrors(['studentTemplateIds' => 'Student-visible templates must be active.'])
+                    ->withInput();
+            }
+        }
+
         $allowCustomContent = $templateSelectionMode === 'custom_only'
             ? 'true'
             : ($request->has('allowCustomContent') ? 'true' : 'false');
@@ -1962,6 +2012,11 @@ class AdminController extends Controller
         Settings::updateOrCreate(
             ['key' => 'defaultTemplateId'],
             ['value' => $defaultTemplateToSave]
+        );
+
+        Settings::updateOrCreate(
+            ['key' => 'studentTemplateIds'],
+            ['value' => $templateSelectionMode === 'student_choice' ? json_encode($studentTemplateIds) : '[]']
         );
 
         // Save allow custom content
@@ -2021,7 +2076,7 @@ class AdminController extends Controller
     }
 
     /**
-     * Reset Template to Stable Default (Table-Based)
+     * Reset Template to the saved per-template default.
      */
     public function resetTemplate($id)
     {
@@ -2030,128 +2085,127 @@ class AdminController extends Controller
         }
 
         $template = Template::findOrFail($id);
+        $resetData = $this->templateResetData($template);
 
-        // ROBUST TABLE-BASED HEADER
-        $headerContent = '
-<table style="width: 100%; border-collapse: collapse; border: none; font-family: \'Times New Roman\', serif;">
-    <tr>
-        <!-- Left Column: English Info -->
-        <td style="width: 35%; vertical-align: top; text-align: left; padding: 0; line-height: 1.4; font-size: 11px; color: #000;">
-            <div style="margin-bottom: 5px;">
-                <strong>Kingdom of Saudi Arabia</strong><br>
-                National Guard<br>
-                Health Affairs<br>
-                King Abdulaziz Medical City - Jeddah<br>
-                King Khalid National Guard Hospital
-            </div>
-            <div style="color: #c00000; font-weight: bold; font-size: 11px;">Department of Emergency Medicine</div>
-        </td>
+        $template->update(array_merge($resetData, [
+            'draft_data' => null,
+            'last_draft_saved_at' => null,
+        ]));
 
-        <!-- Center Column: Logo -->
-        <td style="width: 30%; vertical-align: top; text-align: center; padding: 0;">
-            <img src="https://i.ibb.co/JW3Q0t7Y/mnghalogo.png" alt="NGHA Logo" style="max-width: 80px; height: auto;">
-        </td>
-
-        <!-- Right Column: Arabic Info -->
-        <td style="width: 35%; vertical-align: top; text-align: right; direction: rtl; padding: 0; line-height: 1.4; font-size: 12px; color: #000; font-family: \'DejaVu Sans\', sans-serif;">
-            <strong>المملكة العربية السعودية</strong><br>
-            وزارة الحرس الوطني<br>
-            الشؤون الصحية<br>
-            مدينة الملك عبدالعزيز الطبية بجدة<br>
-            مستشفى الملك خالد الحرس الوطني
-        </td>
-    </tr>
-</table>
-
-<!-- Contact Info Bar -->
-<table style="width: 100%; margin-top: 5px; border-collapse: collapse;">
-    <tr>
-        <td style="font-size: 10px; color: #000;">
-            Tel +966+2+2266666 Ext:62790-62791 | E-mail: emerg-education@ngha.med.sa
-        </td>
-        <td style="text-align: right; font-size: 10px; color: #000;">
-            Date: {{date}}
-        </td>
-    </tr>
-</table>
-
-<!-- Title Box -->
-<div style="text-align: center; margin-top: 15px;">
-    <span style="background-color: #2e5cb8; color: white; padding: 6px 20px; font-weight: bold; font-size: 12px; letter-spacing: 1px;">
-        RECOMMENDATION LETTER
-    </span>
-</div>';
-
-        // STANDARD BODY
-        $bodyContent = '
-<div style="font-family: \'Times New Roman\', serif; font-size: 11pt; color: #000;">
-    <h2 style="text-align: center; font-weight: bold; margin: 25px 0 35px 0;">Dr. {{studentName}}</h2>
-
-    <p style="margin-bottom: 15px; text-align: justify; line-height: 1.6;">
-        To Whom It May Concern,
-    </p>
-
-    <p style="margin-bottom: 15px; text-align: justify; line-height: 1.6;">
-        This letter is to certify that <strong>Dr. {{studentName}}</strong> completed a rotation in the Emergency Department at King Abdulaziz Medical City, Jeddah (MNGHA) during <strong>{{rotationMonth}}</strong> as part of {{his}} medical internship.
-    </p>
-
-    <p style="margin-bottom: 15px; text-align: justify; line-height: 1.6;">
-        Throughout {{his}} rotation, Dr. {{studentName}} demonstrated solid medical knowledge and a consistently professional attitude. {{He}} was diligent, dependable, and showed a clear commitment to learning and patient care. {{He}} interacted effectively with patients, residents, consultants, nursing staff, and other members of the healthcare team.
-    </p>
-
-    <p style="margin-bottom: 15px; text-align: justify; line-height: 1.6;">
-        Dr. {{studentName}} displayed particular interest in Emergency Medicine, with good situational awareness, appropriate prioritization, and the ability to work efficiently in a fast-paced environment. {{He}} was receptive to feedback and showed continuous improvement during {{his}} time in the department.
-    </p>
-
-    <p style="margin-bottom: 20px; text-align: justify; line-height: 1.6;">
-        Based on {{his}} performance, work ethic, and interpersonal skills, I believe Dr. {{studentName}} would be a valuable addition to any training program or institution {{he}} joins. I recommend {{him}} without reservation for the specialty {{he}} chooses to pursue.
-    </p>
-</div>';
-
-        // ROBUST TABLE-BASED FOOTER
-        $footerContent = '
-<div style="border-top: 3px solid #28a745; margin-top: 10px; padding-top: 10px;">
-    <table style="width: 100%; border-collapse: collapse; font-family: \'Times New Roman\', serif; font-size: 9px; color: #000;">
-        <tr>
-            <td style="width: 40%; vertical-align: top; text-align: left;">
-                <strong>P.O. BOX 9515</strong><br>
-                JEDDAH 21423<br>
-                KINGDOM OF SAUDI ARABIA
-            </td>
-            <td style="width: 20%; vertical-align: top; text-align: center;">
-                <strong>FAX: 624 7444</strong>
-            </td>
-            <td style="width: 40%; vertical-align: top; text-align: right; direction: rtl; font-family: \'DejaVu Sans\', sans-serif;">
-                <strong>ص.ب 9515</strong><br>
-                جدة 21423<br>
-                المملكة العربية السعودية
-            </td>
-        </tr>
-    </table>
-</div>';
-
-        // Update Template
-        $template->update([
-            'header_content' => $headerContent,
-            'body_content' => $bodyContent,
-            'footer_content' => $footerContent,
-            'signature_name' => 'Abdulrhman Al Zaharani MD, SBEM',
-            'signature_title' => 'Associate Consultant of Emergency Medicine',
-            'signature_institution' => 'King Abdulaziz Medical City',
-            'signature_department' => 'Emergency Department',
-            'signature_email' => 'zahraniab13@mngha.med.sa',
-            'signature_phone' => null,
-            'signature_image' => null,
-            'stamp_image' => null,
-            'layout_settings' => [
-                'margins' => ['top' => 20, 'bottom' => 20, 'left' => 20, 'right' => 20],
-                'fontSize' => 12,
-                'fontFamily' => 'Times New Roman',
-                'border' => ['enabled' => true, 'width' => 2, 'style' => 'solid', 'color' => '#057f3a']
-            ]
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'reset_template',
+            'details' => json_encode(['template_id' => $template->id])
         ]);
 
-        return redirect()->back()->with('success', 'Template reset to stable default successfully!');
+        return redirect()->back()->with('success', 'Template reset to the saved default successfully!');
+    }
+
+    /**
+     * Promote the current saved template as the reset default.
+     */
+    public function saveTemplateResetDefault($id)
+    {
+        if (Auth::user()->role !== 'admin') {
+            abort(403);
+        }
+
+        $template = Template::findOrFail($id);
+
+        $template->update([
+            'reset_data' => $this->templateResetSnapshot($template),
+            'reset_saved_at' => now(),
+            'draft_data' => null,
+            'last_draft_saved_at' => null,
+        ]);
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'save_template_reset_default',
+            'details' => json_encode(['template_id' => $template->id])
+        ]);
+
+        return redirect()->back()->with('success', 'Current template saved as the reset default.');
+    }
+
+    private function templateResetData(Template $template): array
+    {
+        $resetData = is_array($template->reset_data) ? $template->reset_data : [];
+
+        if (empty($resetData)) {
+            $resetData = $this->templateResetSnapshot($template);
+        }
+
+        return $this->normalizeTemplateResetData($resetData);
+    }
+
+    private function templateResetSnapshot(Template $template): array
+    {
+        return $this->templateResetSnapshotFromData([
+            'name' => $template->name,
+            'header_content' => $template->header_content,
+            'body_content' => $template->body_content ?? $template->content,
+            'footer_content' => $template->footer_content,
+            'signature_name' => $template->signature_name,
+            'signature_title' => $template->signature_title,
+            'signature_department' => $template->signature_department,
+            'signature_institution' => $template->signature_institution,
+            'signature_email' => $template->signature_email,
+            'signature_phone' => $template->signature_phone,
+            'signature_image' => $template->signature_image,
+            'stamp_image' => $template->stamp_image,
+            'language' => $template->language,
+            'is_active' => (bool) $template->is_active,
+            'layout_settings' => is_array($template->layout_settings) ? $template->layout_settings : [],
+        ]);
+    }
+
+    private function templateResetSnapshotFromData(array $data): array
+    {
+        $body = $data['body_content'] ?? $data['content'] ?? '';
+
+        return [
+            'name' => $data['name'] ?? 'Template',
+            'header_content' => $data['header_content'] ?? '',
+            'body_content' => $body,
+            'footer_content' => $data['footer_content'] ?? '',
+            'content' => $body,
+            'signature_name' => $data['signature_name'] ?? null,
+            'signature_title' => $data['signature_title'] ?? null,
+            'signature_department' => $data['signature_department'] ?? null,
+            'signature_institution' => $data['signature_institution'] ?? null,
+            'signature_email' => $data['signature_email'] ?? null,
+            'signature_phone' => $data['signature_phone'] ?? null,
+            'signature_image' => $data['signature_image'] ?? null,
+            'stamp_image' => $data['stamp_image'] ?? null,
+            'language' => in_array(($data['language'] ?? 'en'), ['en', 'ar'], true) ? $data['language'] : 'en',
+            'is_active' => (bool) ($data['is_active'] ?? true),
+            'layout_settings' => is_array($data['layout_settings'] ?? null) ? $data['layout_settings'] : [],
+        ];
+    }
+
+    private function normalizeTemplateResetData(array $data): array
+    {
+        $normalized = $this->templateResetSnapshotFromData($data);
+
+        return array_intersect_key($normalized, array_flip([
+            'name',
+            'header_content',
+            'body_content',
+            'footer_content',
+            'content',
+            'signature_name',
+            'signature_title',
+            'signature_department',
+            'signature_institution',
+            'signature_email',
+            'signature_phone',
+            'signature_image',
+            'stamp_image',
+            'language',
+            'is_active',
+            'layout_settings',
+        ]));
     }
 
     // ============================================

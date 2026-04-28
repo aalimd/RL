@@ -205,6 +205,16 @@
                         <p style="font-weight: 500; color: var(--text-main);">
                             {{ $request->content_option ?? 'Auto-Generate' }}</p>
                     </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Template</label>
+                        @php
+                            $currentTemplate = $templates->firstWhere('id', (int) $request->template_id);
+                        @endphp
+                        <p style="font-weight: 500; color: var(--text-main);">
+                            {{ $currentTemplate ? $currentTemplate->name : 'N/A' }}
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -534,6 +544,34 @@
                                     <option value="Other" {{ $request->purpose === "Other" ? 'selected' : '' }}>Other</option>
                                 </select>
                             </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Letter Source</label>
+                                <select name="content_option" id="adminContentOption" class="form-select"
+                                    style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;"
+                                    onchange="syncAdminTemplateField()">
+                                    <option value="template" {{ ($request->content_option ?? 'template') !== 'custom' ? 'selected' : '' }}>Use Template</option>
+                                    <option value="custom" {{ ($request->content_option ?? '') === 'custom' ? 'selected' : '' }}>Use Custom Content</option>
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 1rem;" id="adminTemplateField">
+                                <label
+                                    style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Template</label>
+                                <select name="template_id" id="adminTemplateId" class="form-select"
+                                    style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;">
+                                    <option value="">Select Template</option>
+                                    @foreach($templates as $template)
+                                        <option value="{{ $template->id }}" {{ (string) $request->template_id === (string) $template->id ? 'selected' : '' }}>
+                                            {{ $template->name }} ({{ strtoupper($template->language) }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small style="display: block; margin-top: 0.35rem; color: var(--text-muted);">
+                                    Changing this updates the template used for preview, approval, PDF export, and student letter access.
+                                </small>
+                            </div>
                         </div>
 
                         <div style="margin-bottom: 1rem;">
@@ -731,6 +769,7 @@
                 statusSelect.addEventListener('change', syncStatusForm);
                 syncStatusForm();
             }
+            syncAdminTemplateField();
         });
 
         function copyDriveLink(url) {
@@ -762,11 +801,27 @@
 
         function openEditModal() {
             document.getElementById('editModal').style.display = 'flex';
+            syncAdminTemplateField();
             if (typeof feather !== 'undefined') feather.replace();
         }
 
         function closeEditModal() {
             document.getElementById('editModal').style.display = 'none';
+        }
+
+        function syncAdminTemplateField() {
+            const contentOption = document.getElementById('adminContentOption');
+            const templateField = document.getElementById('adminTemplateField');
+            const templateId = document.getElementById('adminTemplateId');
+            const usingTemplate = !contentOption || contentOption.value === 'template';
+
+            if (templateField) {
+                templateField.style.display = usingTemplate ? 'block' : 'none';
+            }
+
+            if (templateId) {
+                templateId.required = usingTemplate;
+            }
         }
 
         function loadPreview() {
@@ -803,7 +858,12 @@
 
             // Border Logic (from Old App)
             const border = data.layout?.border || {};
-            const borderStyle = border.enabled ? `${border.width || 1}px ${border.style || 'solid'} ${border.color || '#000000'}` : 'none';
+            const frame = data.layout?.frame || {};
+            const frameColor = /^#[0-9a-fA-F]{6}$/.test(frame.color || '') ? frame.color : '#2f8e55';
+            const frameEnabled = frame.style === 'ngha_green';
+            const borderStyle = frameEnabled
+                ? `4px double ${frameColor}`
+                : (border.enabled ? `${border.width || 1}px ${border.style || 'solid'} ${border.color || '#000000'}` : 'none');
 
             // Construct styles for the preview container
             const style = `
@@ -910,7 +970,12 @@
 
             // Border Logic for Print
             const border = data.layout?.border || {};
-            const borderStyle = border.enabled ? `${border.width || 1}px ${border.style || 'solid'} ${border.color || '#000000'}` : 'none';
+            const frame = data.layout?.frame || {};
+            const frameColor = /^#[0-9a-fA-F]{6}$/.test(frame.color || '') ? frame.color : '#2f8e55';
+            const frameEnabled = frame.style === 'ngha_green';
+            const borderStyle = frameEnabled
+                ? `4px double ${frameColor}`
+                : (border.enabled ? `${border.width || 1}px ${border.style || 'solid'} ${border.color || '#000000'}` : 'none');
 
             // Footer positioning
             const footerBottom = Math.max((margins.bottom || 25) - 10, 10);

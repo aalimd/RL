@@ -864,6 +864,12 @@
                 <i data-feather="refresh-cw"></i>
                 Reset to Default
             </button>
+            @if(auth()->user()?->role === 'admin')
+            <button type="button" onclick="confirmSaveResetDefault()" style="margin-right: 0.5rem; background: #0f766e; color: white; border: none; padding: 0.625rem 1.25rem; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.backgroundColor='#115e59'" onmouseout="this.style.backgroundColor='#0f766e'">
+                <i data-feather="bookmark"></i>
+                Save as Default
+            </button>
+            @endif
             @endif
             
             <button type="submit" class="te-save-btn">
@@ -1064,6 +1070,28 @@
                             </div>
                         </div>
 
+                        <div class="te-field">
+                            <label class="te-label">Official Frame</label>
+                            <select name="layout_settings[frame][style]" id="frameStyle" class="te-input">
+                                <option value="" {{ ($layoutSettings['frame']['style'] ?? '') === '' ? 'selected' : '' }}>None</option>
+                                <option value="ngha_green" {{ ($layoutSettings['frame']['style'] ?? '') === 'ngha_green' ? 'selected' : '' }}>NGHA green frame</option>
+                            </select>
+                            <div style="margin-top: 0.75rem; display: grid; grid-template-columns: 1fr auto; gap: 0.75rem; align-items: end;">
+                                <div>
+                                    <label class="te-label" style="font-size: 0.7rem;">Frame Color</label>
+                                    <input type="color" name="layout_settings[frame][color]" id="frameColor"
+                                        class="te-input" style="height: 38px; padding: 2px;"
+                                        value="{{ $layoutSettings['frame']['color'] ?? '#2f8e55' }}">
+                                </div>
+                                <div style="font-size: 0.72rem; color: #64748b; line-height: 1.35; padding-bottom: 0.15rem;">
+                                    Matches official letterhead layouts.
+                                </div>
+                            </div>
+                            <input type="hidden" name="layout_settings[frame][topInset]" value="{{ $layoutSettings['frame']['topInset'] ?? 10 }}">
+                            <input type="hidden" name="layout_settings[frame][sideInset]" value="{{ $layoutSettings['frame']['sideInset'] ?? 10 }}">
+                            <input type="hidden" name="layout_settings[frame][bottomInset]" value="{{ ($layoutSettings['frame']['bottomInset'] ?? 8) > 18 ? 8 : ($layoutSettings['frame']['bottomInset'] ?? 8) }}">
+                        </div>
+
                         <!-- Security Settings Section -->
                         <div class="te-field" style="grid-column: span 2; margin-top: 1.5rem; border-top: 1px solid #e2e8f0; padding-top: 1rem;">
                             <h4 style="font-size: 0.9rem; font-weight: 700; color: #1e293b; margin-bottom: 1rem;">
@@ -1188,6 +1216,9 @@
 
 @if(isset($template))
 <form id="resetForm" action="{{ route('admin.templates.reset', $template->id) }}" method="POST" style="display: none;">
+    @csrf
+</form>
+<form id="resetDefaultForm" action="{{ route('admin.templates.reset-default', $template->id) }}" method="POST" style="display: none;">
     @csrf
 </form>
 @endif
@@ -1924,13 +1955,15 @@
         const fontSize = parseFloat(getFieldValue('settingSize') || '12');
         const language = getFieldValue('settingLang') || 'en';
         const direction = language === 'ar' ? 'rtl' : 'ltr';
+        const frameStyle = getFieldValue('frameStyle');
+        const frameColor = document.getElementById('frameColor')?.value || '#2f8e55';
         const marginTop = parseFloat(document.querySelector('[name="layout_settings[margins][top]"]')?.value || '20');
         const marginRight = parseFloat(document.querySelector('[name="layout_settings[margins][right]"]')?.value || '20');
         const marginBottom = parseFloat(document.querySelector('[name="layout_settings[margins][bottom]"]')?.value || '20');
         const marginLeft = parseFloat(document.querySelector('[name="layout_settings[margins][left]"]')?.value || '20');
         const previewQr = qrEnabled ? renderPreviewQrBlock() : '';
         const dynamicSamples = {
-            fullName: 'Dr. Sarah Alotaibi',
+            fullName: 'Sarah Ahmed Alotaibi',
             studentName: 'Sarah',
             middleName: 'Ahmed',
             lastName: 'Alotaibi',
@@ -2025,7 +2058,9 @@
         const paper = preview.closest('.te-paper');
         if (paper) {
             const borderEnabled = document.getElementById('borderEnabled')?.checked;
-            if (borderEnabled) {
+            if (frameStyle === 'ngha_green') {
+                paper.style.border = `4px double ${frameColor}`;
+            } else if (borderEnabled) {
                 const width = document.getElementById('borderWidth')?.value || 2;
                 const style = document.getElementById('borderStyle')?.value || 'solid';
                 const color = document.getElementById('borderColor')?.value || '#000000';
@@ -2070,7 +2105,7 @@
     });
     
     // Listen for border setting changes
-    ['borderEnabled', 'borderWidth', 'borderStyle', 'borderColor'].forEach(id => {
+    ['borderEnabled', 'borderWidth', 'borderStyle', 'borderColor', 'frameStyle', 'frameColor'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('change', function() {
@@ -2082,8 +2117,14 @@
 
 
     function confirmReset() {
-        if (confirm('Are you sure you want to reset this template to the stable default?\n\nThis will overwrite your current changes with the robust table-based layout.')) {
+        if (confirm('Are you sure you want to reset this template to its saved default?\n\nThis will overwrite the current template content with the default version saved for this template.')) {
             document.getElementById('resetForm').submit();
+        }
+    }
+
+    function confirmSaveResetDefault() {
+        if (confirm('Save the current saved template as the reset default?\n\nAfter this, Reset to Default will restore this current version. Save Template first if you have unsaved edits on this page.')) {
+            document.getElementById('resetDefaultForm').submit();
         }
     }
 </script>

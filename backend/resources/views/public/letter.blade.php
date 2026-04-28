@@ -7,29 +7,45 @@
     $fontFamily = $layout['fontFamily'] ?? "'Times New Roman', serif";
     $language = $layout['language'] ?? 'en';
     $direction = $layout['direction'] ?? ($language === 'ar' ? 'rtl' : 'ltr');
+    $embedded = (bool) ($embedded ?? false);
     $watermarkConfig = $layout['watermark'] ?? [];
     $watermarkEnabled = (bool) ($watermarkConfig['enabled'] ?? false);
     $watermarkText = !empty($watermarkConfig['text']) ? $watermarkConfig['text'] : ($request->tracking_id ?? 'OFFICIAL COPY');
     $showDigitalFooter = (bool) ($layout['footer']['enabled'] ?? true);
+    $frameConfig = is_array($layout['frame'] ?? null) ? $layout['frame'] : [];
+    $officialFrameEnabled = ($frameConfig['style'] ?? '') === 'ngha_green';
+    $safeFrameColor = static function ($color, string $fallback = '#2f8e55'): string {
+        $color = trim((string) $color);
+        return preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : $fallback;
+    };
+    $officialFrameColor = $safeFrameColor($frameConfig['color'] ?? ($layout['border']['color'] ?? '#2f8e55'));
+    $officialFrameTopInset = max(6, min((float) ($frameConfig['topInset'] ?? 9), 14));
+    $officialFrameSideInset = max(7, min((float) ($frameConfig['sideInset'] ?? 9), 14));
+    $rawFrameBottomInset = (float) ($frameConfig['bottomInset'] ?? 8);
+    $officialFrameBottomInset = $rawFrameBottomInset > 18 ? 8 : max(6, min($rawFrameBottomInset, 14));
     $verifyUrl = $request->verify_token ? route('public.verify', $request->verify_token) : null;
     $pageStyle = implode(' ', [
-        '--header-pad-top: ' . max(7, min($marginTop * 0.5, 16)) . 'mm;',
-        '--header-pad-side: ' . $marginSide . 'mm;',
-        '--header-pad-bottom: ' . max(3, min($marginTop * 0.25, 8)) . 'mm;',
-        '--body-pad-side: ' . max(10, min($marginSide + 1.5, 30)) . 'mm;',
+        '--official-frame-color: ' . $officialFrameColor . ';',
+        '--page-pad-top: ' . $officialFrameTopInset . 'mm;',
+        '--page-pad-side: ' . $officialFrameSideInset . 'mm;',
+        '--page-pad-bottom: ' . $officialFrameBottomInset . 'mm;',
+        '--frame-pad-top: ' . max(5, min($marginTop * 0.32, 9)) . 'mm;',
+        '--frame-pad-bottom: ' . max(4, min($marginBottom * 0.24, 7)) . 'mm;',
+        '--section-pad-side: ' . max(8, min($marginSide * 0.68, 14)) . 'mm;',
+        '--header-pad-bottom: ' . max(2.5, min($marginTop * 0.18, 5.5)) . 'mm;',
         '--body-font-size: ' . $fontSize . 'pt;',
         '--body-line-height: ' . ($direction === 'rtl' ? '1.65' : '1.55') . ';',
         '--paragraph-gap: 8px;',
         '--closing-pad-top: 10px;',
-        '--closing-pad-side: ' . $marginSide . 'mm;',
         '--closing-pad-bottom: 4px;',
         '--signature-name-size: ' . max(10.5, min($fontSize + 0.3, 13)) . 'pt;',
         '--signature-detail-size: ' . max(8.2, min($fontSize - 2, 10)) . 'pt;',
         '--signature-image-height: 58px;',
         '--stamp-size: 90px;',
-        '--footer-pad-top: 3mm;',
-        '--footer-pad-side: ' . $marginSide . 'mm;',
-        '--footer-pad-bottom: ' . max(3, min($marginBottom * 0.28, 8)) . 'mm;',
+        '--qr-size: 70px;',
+        '--digital-footer-font-size: ' . max(6.4, min($fontSize - 3.2, 7.6)) . 'pt;',
+        '--footer-pad-top: 2.5mm;',
+        '--footer-pad-bottom: ' . max(2.5, min($marginBottom * 0.18, 5)) . 'mm;',
         '--footer-font-size: ' . max(6.8, min($fontSize - 3, 8.2)) . 'pt;',
         '--footer-line-height: 1.2;',
         '--page-font-family: ' . $fontFamily . ';',
@@ -63,25 +79,46 @@
             color: #111827;
         }
 
+        body.embedded-letter-preview {
+            --embedded-scale: 1;
+            min-height: auto;
+            display: block;
+            padding: clamp(10px, 3vw, 18px);
+            background: #f1f5f9;
+            overflow-x: hidden;
+        }
+
+        body.embedded-letter-preview .letter-page {
+            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+            left: 50%;
+            margin: 0;
+            transform: translateX(-50%) scale(var(--embedded-scale));
+            transform-origin: top center;
+            transition: transform 160ms ease;
+        }
+
         .letter-page {
             --page-width: 210mm;
-            --page-height: 295.5mm;
-            --header-pad-top: 10mm;
-            --header-pad-side: 12mm;
+            --page-height: 297mm;
+            --page-pad-top: 9mm;
+            --page-pad-side: 9mm;
+            --page-pad-bottom: 8mm;
+            --frame-pad-top: 6mm;
+            --frame-pad-bottom: 5mm;
+            --section-pad-side: 12mm;
             --header-pad-bottom: 5mm;
-            --body-pad-side: 14mm;
             --body-font-size: 11pt;
             --body-line-height: 1.55;
             --paragraph-gap: 8px;
             --closing-pad-top: 10px;
-            --closing-pad-side: 14mm;
             --closing-pad-bottom: 4px;
             --signature-name-size: 11pt;
             --signature-detail-size: 8.8pt;
             --signature-image-height: 58px;
             --stamp-size: 90px;
+            --qr-size: 70px;
+            --digital-footer-font-size: 7.2pt;
             --footer-pad-top: 3.5mm;
-            --footer-pad-side: 14mm;
             --footer-pad-bottom: 5mm;
             --footer-font-size: 7.1pt;
             --footer-line-height: 1.2;
@@ -93,15 +130,67 @@
             max-height: var(--page-height);
             position: relative;
             overflow: hidden;
-            display: grid;
-            grid-template-rows: auto minmax(0, 1fr) auto auto;
+            padding: var(--page-pad-top) var(--page-pad-side) var(--page-pad-bottom);
             font-family: var(--page-font-family), 'Times New Roman', Times, serif;
             direction: inherit;
         }
 
+        .letter-frame {
+            position: relative;
+            z-index: 1;
+            height: 100%;
+            min-height: 0;
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+            padding: var(--frame-pad-top) 0 var(--frame-pad-bottom);
+            background: #fff;
+        }
+
+        .letter-frame.official-green-frame {
+            border: 2.4px solid var(--official-frame-color);
+            box-shadow:
+                0 0 0 1px rgba(47, 142, 85, 0.22),
+                inset 0 0 0 2px #fff,
+                inset 0 0 0 4px var(--official-frame-color);
+        }
+
+        .letter-frame.custom-border-frame {
+            border: var(--custom-frame-border, none);
+        }
+
+        .letter-frame.official-green-frame::after {
+            content: "";
+            position: absolute;
+            pointer-events: none;
+            z-index: 0;
+            top: 3mm;
+            right: 3mm;
+            bottom: 3mm;
+            left: 3mm;
+            border: 1px solid var(--official-frame-color);
+            opacity: 0.78;
+        }
+
+        .letter-page[data-fit-status="overflow"] {
+            height: auto;
+            max-height: none;
+            overflow: visible;
+        }
+
+        .letter-page[data-fit-status="overflow"] .letter-frame {
+            height: auto;
+            min-height: calc(var(--page-height) - var(--page-pad-top) - var(--page-pad-bottom));
+            overflow: visible;
+        }
+
+        .letter-page[data-fit-status="overflow"] .letter-body {
+            overflow: visible;
+        }
+
         /* Header Section */
         .letter-header {
-            padding: var(--header-pad-top) var(--header-pad-side) var(--header-pad-bottom) var(--header-pad-side);
+            padding: 0 var(--section-pad-side) var(--header-pad-bottom);
             flex-shrink: 0;
         }
 
@@ -138,7 +227,7 @@
 
         /* Body Section */
         .letter-body {
-            padding: 0 var(--body-pad-side);
+            padding: 0 var(--section-pad-side);
             line-height: var(--body-line-height);
             text-align: justify;
             min-height: 0;
@@ -203,7 +292,7 @@
 
         /* Signature Section */
         .letter-closing {
-            padding: var(--closing-pad-top) var(--closing-pad-side) var(--closing-pad-bottom) var(--closing-pad-side);
+            padding: var(--closing-pad-top) var(--section-pad-side) var(--closing-pad-bottom);
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -256,10 +345,10 @@
 
         .letter-qr svg,
         .letter-qr img {
-            width: 70px !important;
-            height: 70px !important;
-            max-width: 70px !important;
-            max-height: 70px !important;
+            width: var(--qr-size) !important;
+            height: var(--qr-size) !important;
+            max-width: var(--qr-size) !important;
+            max-height: var(--qr-size) !important;
         }
 
         .letter-qr p,
@@ -272,13 +361,15 @@
 
         /* Footer Section */
         .letter-footer {
-            padding: var(--footer-pad-top) var(--footer-pad-side) var(--footer-pad-bottom) var(--footer-pad-side);
+            margin: 0 var(--section-pad-side);
+            padding: var(--footer-pad-top) 0 var(--footer-pad-bottom);
             border-top: 1px solid #d1d5db;
             font-size: var(--footer-font-size);
             flex-shrink: 0;
-            background: #fff;
+            background: transparent;
             color: #374151;
             line-height: var(--footer-line-height);
+            overflow-wrap: anywhere;
             page-break-inside: avoid;
             break-inside: avoid;
         }
@@ -288,6 +379,7 @@
             line-height: inherit !important;
             margin-top: 0 !important;
             margin-bottom: 0 !important;
+            overflow-wrap: anywhere !important;
         }
 
         .letter-footer table {
@@ -297,13 +389,13 @@
         }
 
         .letter-digital-footer {
-            margin: 0 var(--footer-pad-side);
-            padding: 8px 12px;
+            margin: 0 var(--section-pad-side);
+            padding: 6px 10px;
             border-top: 1px solid #e5e7eb;
             border-bottom: 1px solid #e5e7eb;
             background: #f8fafc;
             color: #4b5563;
-            font-size: 7.6pt;
+            font-size: var(--digital-footer-font-size);
             line-height: 1.35;
             display: flex;
             flex-direction: column;
@@ -431,6 +523,22 @@
                 break-after: auto;
             }
 
+            .letter-frame {
+                height: 100% !important;
+                overflow: hidden !important;
+            }
+
+            .letter-page[data-fit-status="overflow"] {
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+
+            .letter-page[data-fit-status="overflow"] .letter-frame {
+                height: auto !important;
+                overflow: visible !important;
+            }
+
             .no-print {
                 display: none !important;
             }
@@ -442,7 +550,8 @@
 
             .letter-footer,
             .letter-closing,
-            .letter-header {
+            .letter-header,
+            .letter-frame {
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
             }
@@ -525,149 +634,165 @@
     </style>
 </head>
 
-<body>
+<body class="{{ $embedded ? 'embedded-letter-preview' : '' }}">
 
-    <div class="toolbar no-print">
-        <div class="toolbar-actions">
-            <a href="{{ url('/track/' . $request->tracking_id) }}" class="btn btn-secondary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="m15 18-6-6 6-6" />
-                </svg>
-                Back
-            </a>
-            <button onclick="printOfficialLetter()" class="btn btn-secondary" type="button">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="6 9 6 2 18 2 18 9" />
-                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                    <rect x="6" y="14" width="12" height="8" />
-                </svg>
-                Print Preview
-            </button>
-            <a href="{{ route('public.letter.pdf', ['tracking_id' => $request->tracking_id, 'download' => 1]) }}"
-                class="btn btn-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" x2="12" y1="15" y2="3" />
-                </svg>
-                Download Official PDF
-            </a>
+    @unless($embedded)
+        <div class="toolbar no-print">
+            <div class="toolbar-actions">
+                <a href="{{ url('/track/' . $request->tracking_id) }}" class="btn btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="m15 18-6-6 6-6" />
+                    </svg>
+                    Back
+                </a>
+                <button onclick="printOfficialLetter()" class="btn btn-secondary" type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 6 2 18 2 18 9" />
+                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                        <rect x="6" y="14" width="12" height="8" />
+                    </svg>
+                    Print Preview
+                </button>
+                <a href="{{ route('public.letter.pdf', ['tracking_id' => $request->tracking_id, 'download' => 1]) }}"
+                    class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" x2="12" y1="15" y2="3" />
+                    </svg>
+                    Download Official PDF
+                </a>
+            </div>
         </div>
-    </div>
+    @endunless
 
     @php
-        $borderStyle = isset($layout['border']['enabled']) && $layout['border']['enabled']
-            ? "border: {$layout['border']['width']}px {$layout['border']['style']} {$layout['border']['color']};"
-            : "";
+        $customFrameStyle = '';
+        if (!$officialFrameEnabled && isset($layout['border']['enabled']) && $layout['border']['enabled']) {
+            $allowedBorderStyles = ['solid', 'double', 'dashed', 'dotted'];
+            $borderWidth = max(1, min((int) ($layout['border']['width'] ?? 2), 4));
+            $borderLineStyle = in_array(($layout['border']['style'] ?? 'solid'), $allowedBorderStyles, true)
+                ? $layout['border']['style']
+                : 'solid';
+            $borderColor = $safeFrameColor($layout['border']['color'] ?? '#2f8e55');
+            $customFrameStyle = "--custom-frame-border: {$borderWidth}px {$borderLineStyle} {$borderColor};";
+        }
+
+        $pageClass = 'letter-page';
+        $frameClass = 'letter-frame'
+            . ($officialFrameEnabled ? ' official-green-frame' : '')
+            . ($customFrameStyle !== '' ? ' custom-border-frame' : '');
     @endphp
 
-    <div class="letter-page" style="{{ $borderStyle }} {{ $pageStyle }}">
-        @if($watermarkEnabled)
-            <div class="letter-watermark">{{ $watermarkText }}</div>
-        @endif
+    <div class="{{ $pageClass }}" style="{{ $pageStyle }}">
+        <div class="{{ $frameClass }}" style="{{ $customFrameStyle }}">
+            @if($watermarkEnabled)
+                <div class="letter-watermark">{{ $watermarkText }}</div>
+            @endif
 
-        <!-- Header -->
-        <div class="letter-header">
-            {!! $header !!}
-        </div>
-
-        <!-- Title Banner Removed (User-Controlled via Template) -->
-        {{-- <div class="title-banner">
-            RECOMMENDATION LETTER
-        </div> --}}
-
-        <!-- Body -->
-        <div class="letter-body">
-            <!-- Body Content from Template -->
-            <div class="content">
-                {!! $body !!}
+            <!-- Header -->
+            <div class="letter-header">
+                {!! $header !!}
             </div>
-        </div>
 
-        <!-- Signature, Stamp, QR -->
-        <div class="letter-closing">
-            <div class="letter-signature">
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                    <td style="vertical-align: top; width: 65%;">
-                        <!-- Name & Title -->
-                        <div class="signature-name">{{ $signature['name'] }}</div>
+            <!-- Title Banner Removed (User-Controlled via Template) -->
+            {{-- <div class="title-banner">
+                RECOMMENDATION LETTER
+            </div> --}}
 
-                        @if(!empty($signature['title']))
-                            <div class="signature-details" style="color: #333; font-weight: 500;">
-                                {{ $signature['title'] }}
-                            </div>
-                        @endif
-
-                        <!-- Dept & Institution -->
-                        @if((!empty($signature['institution'])) || (!empty($signature['department'])))
-                            <div class="signature-details" style="margin-top: 5px;">
-                                @if(!empty($signature['department']))
-                                    {{ $signature['department'] }}<br>
-                                @endif
-                                @if(!empty($signature['institution']))
-                                    {{ $signature['institution'] }}
-                                @endif
-                            </div>
-                        @endif
-
-                        <!-- Contact Info -->
-                        @if((!empty($signature['email'])) || (!empty($signature['phone'])))
-                            <div class="signature-details" style="margin-top: 8px;">
-                                @if(!empty($signature['email']))
-                                    <div>Email: {{ $signature['email'] }}</div>
-                                @endif
-                                @if(!empty($signature['phone']))
-                                    <div>Phone: {{ $signature['phone'] }}</div>
-                                @endif
-                            </div>
-                        @endif
-
-                        <!-- Signature Image (Now Below) -->
-                        @if(!empty($signature['image']))
-                            <div class="signature-image" style="margin-top: 15px;">
-                                <img src="{{ $signature['image'] }}" alt="Signature"
-                                    style="height: auto; max-height: 60px; max-width: 150px;">
-                            </div>
-                        @endif
-                    </td>
-
-                    <!-- Right Column: Stamp -->
-                    <td class="letter-side-column">
-                        @if(!empty($signature['stamp']))
-                            <div class="stamp-image" style="margin-bottom: 12px;">
-                                <img src="{{ $signature['stamp'] }}" alt="Official Stamp"
-                                    style="height: auto;">
-                            </div>
-                        @endif
-
-                        @if(!empty($qrCode))
-                            <div class="letter-qr">
-                                {!! $qrCode !!}
-                            </div>
-                        @endif
-                    </td>
-                </tr>
-            </table>
-        </div>
-        </div>
-
-        @if($showDigitalFooter && $verifyUrl)
-            <div class="letter-digital-footer">
-                <strong>Digitally verified document</strong>
-                <span>Reference ID: {{ $request->tracking_id }}</span>
-                <span>Verify this document:
-                    <a href="{{ $verifyUrl }}">{{ $verifyUrl }}</a>
-                </span>
+            <!-- Body -->
+            <div class="letter-body">
+                <!-- Body Content from Template -->
+                <div class="content">
+                    {!! $body !!}
+                </div>
             </div>
-        @endif
 
-        <!-- Footer -->
-        <div class="letter-footer">
-            {!! $footer !!}
+            <!-- Signature, Stamp, QR -->
+            <div class="letter-closing">
+                <div class="letter-signature">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="vertical-align: top; width: 65%;">
+                                <!-- Name & Title -->
+                                <div class="signature-name">{{ $signature['name'] }}</div>
+
+                                @if(!empty($signature['title']))
+                                    <div class="signature-details" style="color: #333; font-weight: 500;">
+                                        {{ $signature['title'] }}
+                                    </div>
+                                @endif
+
+                                <!-- Dept & Institution -->
+                                @if((!empty($signature['institution'])) || (!empty($signature['department'])))
+                                    <div class="signature-details" style="margin-top: 5px;">
+                                        @if(!empty($signature['department']))
+                                            {{ $signature['department'] }}<br>
+                                        @endif
+                                        @if(!empty($signature['institution']))
+                                            {{ $signature['institution'] }}
+                                        @endif
+                                    </div>
+                                @endif
+
+                                <!-- Contact Info -->
+                                @if((!empty($signature['email'])) || (!empty($signature['phone'])))
+                                    <div class="signature-details" style="margin-top: 8px;">
+                                        @if(!empty($signature['email']))
+                                            <div>Email: {{ $signature['email'] }}</div>
+                                        @endif
+                                        @if(!empty($signature['phone']))
+                                            <div>Phone: {{ $signature['phone'] }}</div>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                <!-- Signature Image (Now Below) -->
+                                @if(!empty($signature['image']))
+                                    <div class="signature-image" style="margin-top: 15px;">
+                                        <img src="{{ $signature['image'] }}" alt="Signature"
+                                            style="height: auto; max-height: 60px; max-width: 150px;">
+                                    </div>
+                                @endif
+                            </td>
+
+                            <!-- Right Column: Stamp -->
+                            <td class="letter-side-column">
+                                @if(!empty($signature['stamp']))
+                                    <div class="stamp-image" style="margin-bottom: 12px;">
+                                        <img src="{{ $signature['stamp'] }}" alt="Official Stamp"
+                                            style="height: auto;">
+                                    </div>
+                                @endif
+
+                                @if(!empty($qrCode))
+                                    <div class="letter-qr">
+                                        {!! $qrCode !!}
+                                    </div>
+                                @endif
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            @if($showDigitalFooter && $verifyUrl)
+                <div class="letter-digital-footer">
+                    <strong>Digitally verified document</strong>
+                    <span>Reference ID: {{ $request->tracking_id }}</span>
+                    <span>Verify this document:
+                        <a href="{{ $verifyUrl }}">{{ $verifyUrl }}</a>
+                    </span>
+                </div>
+            @endif
+
+            <!-- Footer -->
+            <div class="letter-footer">
+                {!! $footer !!}
+            </div>
         </div>
     </div>
 
@@ -697,30 +822,45 @@
         function captureLetterDefaults(page) {
             const style = getComputedStyle(page);
             letterFitDefaults = {
-                '--header-pad-top': style.getPropertyValue('--header-pad-top').trim(),
-                '--header-pad-side': style.getPropertyValue('--header-pad-side').trim(),
+                '--page-pad-top': style.getPropertyValue('--page-pad-top').trim(),
+                '--page-pad-side': style.getPropertyValue('--page-pad-side').trim(),
+                '--page-pad-bottom': style.getPropertyValue('--page-pad-bottom').trim(),
+                '--frame-pad-top': style.getPropertyValue('--frame-pad-top').trim(),
+                '--frame-pad-bottom': style.getPropertyValue('--frame-pad-bottom').trim(),
+                '--section-pad-side': style.getPropertyValue('--section-pad-side').trim(),
                 '--header-pad-bottom': style.getPropertyValue('--header-pad-bottom').trim(),
-                '--body-pad-side': style.getPropertyValue('--body-pad-side').trim(),
                 '--body-font-size': style.getPropertyValue('--body-font-size').trim(),
                 '--body-line-height': style.getPropertyValue('--body-line-height').trim(),
                 '--paragraph-gap': style.getPropertyValue('--paragraph-gap').trim(),
                 '--closing-pad-top': style.getPropertyValue('--closing-pad-top').trim(),
-                '--closing-pad-side': style.getPropertyValue('--closing-pad-side').trim(),
                 '--closing-pad-bottom': style.getPropertyValue('--closing-pad-bottom').trim(),
                 '--signature-name-size': style.getPropertyValue('--signature-name-size').trim(),
                 '--signature-detail-size': style.getPropertyValue('--signature-detail-size').trim(),
                 '--signature-image-height': style.getPropertyValue('--signature-image-height').trim(),
                 '--stamp-size': style.getPropertyValue('--stamp-size').trim(),
+                '--qr-size': style.getPropertyValue('--qr-size').trim(),
+                '--digital-footer-font-size': style.getPropertyValue('--digital-footer-font-size').trim(),
                 '--footer-pad-top': style.getPropertyValue('--footer-pad-top').trim(),
-                '--footer-pad-side': style.getPropertyValue('--footer-pad-side').trim(),
                 '--footer-pad-bottom': style.getPropertyValue('--footer-pad-bottom').trim(),
                 '--footer-font-size': style.getPropertyValue('--footer-font-size').trim(),
                 '--footer-line-height': style.getPropertyValue('--footer-line-height').trim(),
             };
         }
 
+        function isLetterOverflowing(page) {
+            const frame = page.querySelector('.letter-frame');
+            const body = page.querySelector('.letter-body');
+            const content = page.querySelector('.letter-body .content');
+            const pageOverflow = page.scrollHeight > page.clientHeight + 2;
+            const frameOverflow = frame ? frame.scrollHeight > frame.clientHeight + 2 : false;
+            const bodyOverflow = body && content ? content.scrollHeight > body.clientHeight + 2 : false;
+
+            return pageOverflow || frameOverflow || bodyOverflow;
+        }
+
         function fitLetterToSinglePage() {
             const page = document.querySelector('.letter-page');
+            const frame = page?.querySelector('.letter-frame');
             if (!page) {
                 return;
             }
@@ -730,30 +870,43 @@
             }
 
             Object.entries(letterFitDefaults).forEach(([key, value]) => page.style.setProperty(key, value));
+            delete page.dataset.fitStatus;
+            if (frame) {
+                delete frame.dataset.fitStatus;
+            }
 
             let guard = 0;
-            while (page.scrollHeight > page.clientHeight + 2 && guard < 18) {
-                adjustCssVariable(page, '--body-font-size', 0.2, 'pt', 9.5);
-                adjustUnitlessVariable(page, '--body-line-height', 0.03, 1.3);
-                adjustCssVariable(page, '--paragraph-gap', 1, 'px', 4);
-                adjustCssVariable(page, '--header-pad-top', 0.4, 'mm', 7.5);
-                adjustCssVariable(page, '--header-pad-bottom', 0.3, 'mm', 2.5);
-                adjustCssVariable(page, '--body-pad-side', 0.4, 'mm', 10);
+            while (isLetterOverflowing(page) && guard < 30) {
+                adjustCssVariable(page, '--body-font-size', 0.18, 'pt', 9);
+                adjustUnitlessVariable(page, '--body-line-height', 0.025, 1.25);
+                adjustCssVariable(page, '--paragraph-gap', 0.7, 'px', 3);
+                adjustCssVariable(page, '--page-pad-top', 0.12, 'mm', 6);
+                adjustCssVariable(page, '--page-pad-side', 0.12, 'mm', 7);
+                adjustCssVariable(page, '--page-pad-bottom', 0.12, 'mm', 6);
+                adjustCssVariable(page, '--frame-pad-top', 0.18, 'mm', 4);
+                adjustCssVariable(page, '--frame-pad-bottom', 0.15, 'mm', 3);
+                adjustCssVariable(page, '--section-pad-side', 0.2, 'mm', 7);
+                adjustCssVariable(page, '--header-pad-bottom', 0.2, 'mm', 2);
                 adjustCssVariable(page, '--closing-pad-top', 1, 'px', 4);
                 adjustCssVariable(page, '--closing-pad-bottom', 1, 'px', 1);
-                adjustCssVariable(page, '--signature-name-size', 0.15, 'pt', 9.5);
-                adjustCssVariable(page, '--signature-detail-size', 0.15, 'pt', 7.2);
-                adjustCssVariable(page, '--signature-image-height', 2, 'px', 42);
-                adjustCssVariable(page, '--stamp-size', 3, 'px', 68);
-                adjustCssVariable(page, '--footer-pad-top', 0.2, 'mm', 2);
-                adjustCssVariable(page, '--footer-pad-bottom', 0.2, 'mm', 3);
-                adjustCssVariable(page, '--footer-font-size', 0.15, 'pt', 6.1);
-                adjustUnitlessVariable(page, '--footer-line-height', 0.03, 1.05);
+                adjustCssVariable(page, '--signature-name-size', 0.12, 'pt', 9.2);
+                adjustCssVariable(page, '--signature-detail-size', 0.12, 'pt', 6.9);
+                adjustCssVariable(page, '--signature-image-height', 1.5, 'px', 38);
+                adjustCssVariable(page, '--stamp-size', 2.4, 'px', 58);
+                adjustCssVariable(page, '--qr-size', 1.8, 'px', 52);
+                adjustCssVariable(page, '--digital-footer-font-size', 0.12, 'pt', 5.8);
+                adjustCssVariable(page, '--footer-pad-top', 0.15, 'mm', 1.4);
+                adjustCssVariable(page, '--footer-pad-bottom', 0.15, 'mm', 2);
+                adjustCssVariable(page, '--footer-font-size', 0.12, 'pt', 5.8);
+                adjustUnitlessVariable(page, '--footer-line-height', 0.02, 1);
                 guard += 1;
             }
 
-            const isOverflowing = page.scrollHeight > page.clientHeight + 2;
+            const isOverflowing = isLetterOverflowing(page);
             page.dataset.fitStatus = isOverflowing ? 'overflow' : 'fits';
+            if (frame) {
+                frame.dataset.fitStatus = page.dataset.fitStatus;
+            }
             document.dispatchEvent(new CustomEvent('letter-fit-ready', {
                 detail: {
                     status: page.dataset.fitStatus,
@@ -767,6 +920,37 @@
             requestAnimationFrame(() => window.print());
         }
 
+        function fitEmbeddedPreviewToViewport() {
+            if (!document.body.classList.contains('embedded-letter-preview')) {
+                return;
+            }
+
+            const page = document.querySelector('.letter-page');
+            if (!page) {
+                return;
+            }
+
+            const bodyStyle = getComputedStyle(document.body);
+            const horizontalPadding = (parseFloat(bodyStyle.paddingLeft) || 0) + (parseFloat(bodyStyle.paddingRight) || 0);
+            const verticalPadding = (parseFloat(bodyStyle.paddingTop) || 0) + (parseFloat(bodyStyle.paddingBottom) || 0);
+            const availableWidth = Math.max(280, document.documentElement.clientWidth - horizontalPadding);
+            const pageWidth = page.offsetWidth || page.getBoundingClientRect().width || 1;
+            const pageHeight = page.offsetHeight || page.getBoundingClientRect().height || 1;
+            const scale = Math.min(1, Math.max(0.34, availableWidth / pageWidth));
+
+            document.body.style.setProperty('--embedded-scale', scale.toFixed(4));
+            page.style.marginBottom = `${Math.round(pageHeight * (scale - 1))}px`;
+            document.documentElement.style.minHeight = `${Math.ceil((pageHeight * scale) + verticalPadding)}px`;
+            document.body.style.minHeight = `${Math.ceil((pageHeight * scale) + verticalPadding)}px`;
+            document.dispatchEvent(new CustomEvent('letter-preview-scale-ready', {
+                detail: {
+                    scale,
+                    pageWidth,
+                    availableWidth
+                }
+            }));
+        }
+
         window.addEventListener('load', function() {
             const page = document.querySelector('.letter-page');
             if (page) {
@@ -774,8 +958,12 @@
             }
 
             fitLetterToSinglePage();
+            fitEmbeddedPreviewToViewport();
         });
         window.addEventListener('beforeprint', fitLetterToSinglePage);
+        window.addEventListener('resize', function() {
+            window.requestAnimationFrame(fitEmbeddedPreviewToViewport);
+        });
     </script>
 </body>
 

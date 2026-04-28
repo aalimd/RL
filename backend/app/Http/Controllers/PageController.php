@@ -1154,10 +1154,89 @@ class PageController extends Controller
         return view('public.letter-viewer', [
             'request' => $request,
             'settings' => $this->getPublicSettings(),
-            'pdfUrl' => route('public.letter.pdf', ['tracking_id' => $request->tracking_id]),
+            'previewUrl' => route('public.letter.preview', ['tracking_id' => $request->tracking_id]),
             'downloadUrl' => route('public.letter.pdf', ['tracking_id' => $request->tracking_id, 'download' => 1]),
+            'prepareUrl' => route('public.letter.pdf.prepare', ['tracking_id' => $request->tracking_id]),
             'trackingUrl' => url('/track/' . $request->tracking_id),
         ]);
+    }
+
+    /**
+     * Lightweight approved-letter HTML preview.
+     */
+    public function previewLetter($tracking_id, Request $httpRequest)
+    {
+        $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
+        $this->ensureApprovedLetterAccess($request);
+
+        $content = $this->letterService->generateLetterContent($request);
+
+        if ($content === [] || empty($content['template'])) {
+            abort(404, 'Template not found');
+        }
+
+        return view('public.letter', [
+            'request' => $request,
+            'layout' => $content['layout'],
+            'header' => $this->letterService->sanitizeHtml($content['header'] ?? ''),
+            'body' => $this->letterService->sanitizeHtml($content['body'] ?? ''),
+            'footer' => $this->letterService->sanitizeHtml($content['footer'] ?? ''),
+            'signature' => $content['signature'] ?? [],
+            'qrCode' => $content['qrCode'] ?? '',
+            'embedded' => true,
+        ]);
+    }
+
+    /**
+     * Prepare and cache the official PDF before the student clicks download.
+     */
+    public function preparePdf($tracking_id, Request $httpRequest)
+    {
+        $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
+        $this->ensureApprovedLetterAccess($request);
+
+        try {
+            $compiled = $this->browserLetterPdfService->renderRequestPdf($request);
+
+            return response()->json([
+                'status' => 'ready',
+                'message' => 'The official PDF is ready to download.',
+                'cached' => (bool) ($compiled['cached'] ?? false),
+                'page_count' => $compiled['page_count'] ?? 1,
+                'filename' => $compiled['filename'] ?? ('Recommendation_Letter_' . $request->tracking_id . '.pdf'),
+            ]);
+        } catch (\RuntimeException $e) {
+            if (str_contains($e->getMessage(), 'exceeded one A4 page')) {
+                return response()->json([
+                    'status' => 'needs_admin_review',
+                    'message' => 'This recommendation letter needs administrator review before it can be exported as one official A4 page.',
+                ], 409);
+            }
+
+            if (str_contains($e->getMessage(), 'No active template found')) {
+                abort(404, 'Template not found');
+            }
+
+            \Illuminate\Support\Facades\Log::error('PDF Preparation Failed: ' . $e->getMessage(), [
+                'request_id' => $request->id,
+                'tracking_id' => $request->tracking_id,
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The official PDF could not be prepared yet. Please try Download PDF again in a moment.',
+            ], 500);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('PDF Preparation Failed: ' . $e->getMessage(), [
+                'request_id' => $request->id,
+                'tracking_id' => $request->tracking_id,
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The official PDF could not be prepared yet. Please try Download PDF again in a moment.',
+            ], 500);
+        }
     }
 
     /**

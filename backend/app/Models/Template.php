@@ -16,7 +16,9 @@ class Template extends Model
         'layout_settings' => 'array',
         'is_active' => 'boolean',
         'draft_data' => 'array',
+        'reset_data' => 'array',
         'last_draft_saved_at' => 'datetime',
+        'reset_saved_at' => 'datetime',
     ];
 
     public function requests()

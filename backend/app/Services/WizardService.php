@@ -15,7 +15,7 @@ class WizardService
     public function getFormConfig(): array
     {
         try {
-            $allSettings = Settings::whereIn('key', ['templateSelectionMode', 'defaultTemplateId', 'allowCustomContent', 'formFieldConfig'])
+            $allSettings = Settings::whereIn('key', ['templateSelectionMode', 'defaultTemplateId', 'studentTemplateIds', 'allowCustomContent', 'formFieldConfig'])
                 ->pluck('value', 'key')
                 ->toArray();
         } catch (\Throwable $e) {
@@ -31,6 +31,7 @@ class WizardService
         }
 
         $defaultTemplateId = !empty($allSettings['defaultTemplateId']) ? (int) $allSettings['defaultTemplateId'] : null;
+        $studentTemplateIds = $this->decodeTemplateIdList($allSettings['studentTemplateIds'] ?? null);
         $allowCustomContent = ($allSettings['allowCustomContent'] ?? 'true') === 'true';
         if ($templateMode === 'custom_only') {
             // In custom-only mode, custom content must stay enabled.
@@ -50,6 +51,7 @@ class WizardService
         return [
             'templateMode' => $templateMode,
             'defaultTemplateId' => $defaultTemplateId,
+            'studentTemplateIds' => $studentTemplateIds,
             'allowCustomContent' => $allowCustomContent,
             'fields' => $fields,
         ];
@@ -71,7 +73,14 @@ class WizardService
                     ->get();
             }
 
-            return Template::where('is_active', true)->orderBy('name')->get();
+            $query = Template::where('is_active', true)->orderBy('name');
+            $studentTemplateIds = $formConfig['studentTemplateIds'] ?? [];
+
+            if (is_array($studentTemplateIds) && $studentTemplateIds !== []) {
+                $query->whereIn('id', $studentTemplateIds);
+            }
+
+            return $query->get();
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Template lookup failed for wizard. Returning no templates.', [
                 'error' => $e->getMessage(),
@@ -237,6 +246,11 @@ class WizardService
                 $errors['template'] = $templateMode === 'admin_fixed'
                     ? 'Configured fixed template is unavailable. Please contact the administrator.'
                     : 'Selected template is unavailable. Please choose another template.';
+            } elseif ($templateMode === 'student_choice') {
+                $studentTemplateIds = $formConfig['studentTemplateIds'] ?? [];
+                if (is_array($studentTemplateIds) && $studentTemplateIds !== [] && !in_array((int) $resolved['template_id'], $studentTemplateIds, true)) {
+                    $errors['template'] = 'Selected template is not currently available. Please choose another template.';
+                }
             }
         }
         if ($contentOption === 'custom' && empty($resolved['custom_content'])) {
@@ -252,5 +266,18 @@ class WizardService
     public function validateStep3(array $formData, array $formConfig): array
     {
         return $this->validateStep1Data($formData, $formConfig);
+    }
+
+    private function decodeTemplateIdList($value): array
+    {
+        $decoded = is_array($value) ? $value : json_decode((string) $value, true);
+
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map(static function ($id) {
+            return filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null;
+        }, $decoded))));
     }
 }

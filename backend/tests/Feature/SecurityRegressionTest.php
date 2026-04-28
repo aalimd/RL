@@ -19,11 +19,26 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SecurityRegressionTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['services.letter_pdf_cache.enabled' => false]);
+    }
+
+    protected function tearDown(): void
+    {
+        config(['services.letter_pdf_cache.enabled' => false]);
+
+        parent::tearDown();
+    }
 
     public function test_privileged_api_login_requires_second_factor_before_token_is_issued(): void
     {
@@ -103,7 +118,69 @@ class SecurityRegressionTest extends TestCase
             ->assertSee($request->student_name)
             ->assertSee('Review your letter before download')
             ->assertSee('Download PDF')
+            ->assertSee(route('public.letter.preview', ['tracking_id' => $request->tracking_id]), false)
+            ->assertSee(route('public.letter.pdf.prepare', ['tracking_id' => $request->tracking_id]), false)
+            ->assertSee('Preparing your official PDF version')
+            ->assertSee('rl:pdf-prepare')
+            ->assertSee('The official PDF will be prepared when you click Download PDF')
             ->assertSee(route('public.letter.pdf', ['tracking_id' => $request->tracking_id]), false);
+    }
+
+    public function test_public_letter_review_page_does_not_render_pdf_during_initial_load(): void
+    {
+        $request = $this->createApprovedRequest();
+        $fakePdfService = $this->bindFakeBrowserLetterPdfService();
+
+        $this->withSession([
+            'tracking_verified_request_id' => $request->id,
+            'tracking_verified_tracking_id' => $request->tracking_id,
+            'tracking_verified_until' => now()->addMinutes(30)->timestamp,
+        ])->get(route('public.letter', ['tracking_id' => $request->tracking_id]))
+            ->assertOk()
+            ->assertSee(route('public.letter.preview', ['tracking_id' => $request->tracking_id]), false);
+
+        $this->assertSame([], $fakePdfService->renderedRequestIds);
+    }
+
+    public function test_public_letter_preview_renders_lightweight_embedded_html(): void
+    {
+        $request = $this->createApprovedRequest();
+        $fakePdfService = $this->bindFakeBrowserLetterPdfService();
+
+        $this->withSession([
+            'tracking_verified_request_id' => $request->id,
+            'tracking_verified_tracking_id' => $request->tracking_id,
+            'tracking_verified_until' => now()->addMinutes(30)->timestamp,
+        ])->get(route('public.letter.preview', ['tracking_id' => $request->tracking_id]))
+            ->assertOk()
+            ->assertSee('embedded-letter-preview')
+            ->assertSee('--embedded-scale')
+            ->assertSee('fitEmbeddedPreviewToViewport')
+            ->assertSee('letter-preview-scale-ready')
+            ->assertSee('letter-page')
+            ->assertDontSee('Download Official PDF');
+
+        $this->assertSame([], $fakePdfService->renderedRequestIds);
+    }
+
+    public function test_public_letter_pdf_prepare_warms_pdf_for_verified_tracking_session(): void
+    {
+        $request = $this->createApprovedRequest();
+        $fakePdfService = $this->bindFakeBrowserLetterPdfService();
+
+        $this->withSession([
+            'tracking_verified_request_id' => $request->id,
+            'tracking_verified_tracking_id' => $request->tracking_id,
+            'tracking_verified_until' => now()->addMinutes(30)->timestamp,
+        ])->post(route('public.letter.pdf.prepare', ['tracking_id' => $request->tracking_id]))
+            ->assertOk()
+            ->assertJson([
+                'status' => 'ready',
+                'message' => 'The official PDF is ready to download.',
+                'page_count' => 1,
+            ]);
+
+        $this->assertSame([$request->id], $fakePdfService->renderedRequestIds);
     }
 
     public function test_public_letter_pdf_is_served_inline_for_verified_tracking_session(): void
@@ -1246,6 +1323,37 @@ class SecurityRegressionTest extends TestCase
         });
     }
 
+    public function test_browser_letter_pdf_service_caches_successful_pdf_for_same_letter_html(): void
+    {
+        config(['services.letter_pdf_cache.enabled' => true]);
+        Storage::fake('local');
+        Http::fake([
+            'https://production-sfo.browserless.io/pdf?token=browserless-secret-token' => Http::response('%PDF-BROWSERLESS-CACHED', 200, [
+                'Content-Type' => 'application/pdf',
+            ]),
+        ]);
+
+        Settings::updateOrCreate(['key' => 'pdfExportDriver'], ['value' => 'browserless']);
+        Settings::updateOrCreate(['key' => 'browserlessBaseUrl'], ['value' => 'https://production-sfo.browserless.io']);
+        Settings::updateOrCreate(['key' => 'browserlessToken'], ['value' => 'browserless-secret-token']);
+
+        $request = $this->createApprovedRequest();
+        $request->update([
+            'tracking_id' => 'REC-2026-CACHETST',
+            'verify_token' => 'cache-token-123',
+        ]);
+
+        $service = app(BrowserLetterPdfService::class);
+        $first = $service->renderRequestPdf($request->fresh());
+        $second = $service->renderRequestPdf($request->fresh());
+
+        $this->assertSame('%PDF-BROWSERLESS-CACHED', $first['binary']);
+        $this->assertSame($first['binary'], $second['binary']);
+        $this->assertFalse($first['cached']);
+        $this->assertTrue($second['cached']);
+        Http::assertSentCount(1);
+    }
+
     public function test_browser_letter_pdf_service_auto_uses_browserless_in_production_when_token_exists(): void
     {
         Http::fake([
@@ -1863,6 +1971,75 @@ class SecurityRegressionTest extends TestCase
         $this->assertStringContainsString('Courier New', $html);
     }
 
+    public function test_public_letter_keeps_all_official_sections_inside_the_frame(): void
+    {
+        $request = $this->createApprovedRequest();
+        $template = Template::findOrFail($request->template_id);
+
+        $template->update([
+            'layout_settings' => [
+                'frame' => [
+                    'style' => 'ngha_green',
+                    'color' => '#2f8e55',
+                    'topInset' => 10,
+                    'sideInset' => 10,
+                    'bottomInset' => 29,
+                ],
+                'qrCode' => [
+                    'enabled' => true,
+                ],
+                'footer' => [
+                    'enabled' => true,
+                ],
+            ],
+        ]);
+
+        $letterService = app(LetterService::class);
+        $content = $letterService->generateLetterContent($request->fresh(), $template->fresh());
+        $html = view('public.letter', [
+            'request' => $request->fresh(),
+            'layout' => $content['layout'],
+            'header' => $letterService->sanitizeHtml($content['header']),
+            'body' => $letterService->sanitizeHtml($content['body']),
+            'footer' => $letterService->sanitizeHtml($content['footer']),
+            'signature' => $content['signature'],
+            'qrCode' => $content['qrCode'] ?? '',
+        ])->render();
+
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+        $previousErrors = libxml_use_internal_errors(true);
+        $dom->loadHTML('<?xml encoding="utf-8" ?>' . $html);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousErrors);
+
+        $xpath = new \DOMXPath($dom);
+        $frame = $xpath->query("//*[contains(concat(' ', normalize-space(@class), ' '), ' letter-frame ')]")->item(0);
+
+        $this->assertNotNull($frame);
+        foreach (['letter-header', 'letter-body', 'letter-closing', 'letter-digital-footer', 'letter-footer'] as $class) {
+            $this->assertSame(
+                1,
+                $xpath->query(".//*[contains(concat(' ', normalize-space(@class), ' '), ' {$class} ')]", $frame)->length,
+                "{$class} should render inside the official frame."
+            );
+        }
+
+        $this->assertSame(
+            0,
+            $xpath->query("//*[contains(concat(' ', normalize-space(@class), ' '), ' letter-footer ') and not(ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' letter-frame ')])]")->length
+        );
+        $this->assertStringContainsString('--page-pad-bottom: 8mm;', $html);
+        $this->assertStringContainsString('isLetterOverflowing(page)', $html);
+        $this->assertMatchesRegularExpression(
+            '/\.letter-footer\s*\{[^}]*margin:\s*0 var\(--section-pad-side\);[^}]*padding:\s*var\(--footer-pad-top\) 0 var\(--footer-pad-bottom\);[^}]*background:\s*transparent;[^}]*overflow-wrap:\s*anywhere;/s',
+            $html
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.letter-digital-footer\s*\{[^}]*margin:\s*0 var\(--section-pad-side\);/s',
+            $html
+        );
+    }
+
     public function test_admin_preview_returns_browser_letter_content(): void
     {
         $admin = $this->createAdminUser([
@@ -1880,6 +2057,195 @@ class SecurityRegressionTest extends TestCase
             ->assertJsonFragment([
                 'body' => '<p>Letter for Letter Student</p>',
             ]);
+    }
+
+    public function test_admin_template_reset_uses_saved_template_default_snapshot(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $template = Template::create([
+            'name' => 'Edited Template',
+            'header_content' => '<p>Edited Header</p>',
+            'body_content' => '<p>Edited Body</p>',
+            'content' => '<p>Edited Body</p>',
+            'footer_content' => '<p>Edited Footer</p>',
+            'signature_name' => 'Edited Signer',
+            'language' => 'en',
+            'layout_settings' => ['fontSize' => 13],
+            'is_active' => true,
+            'reset_data' => [
+                'name' => 'Saved Default Template',
+                'header_content' => '<p>Default Header</p>',
+                'body_content' => '<p>Default Body</p>',
+                'content' => '<p>Default Body</p>',
+                'footer_content' => '<p>Default Footer</p>',
+                'signature_name' => 'Default Signer',
+                'language' => 'en',
+                'layout_settings' => ['fontSize' => 11],
+                'is_active' => true,
+            ],
+            'reset_saved_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->post(route('admin.templates.reset', $template->id))
+            ->assertRedirect();
+
+        $template->refresh();
+
+        $this->assertSame('Saved Default Template', $template->name);
+        $this->assertSame('<p>Default Header</p>', $template->header_content);
+        $this->assertSame('<p>Default Body</p>', $template->body_content);
+        $this->assertSame('<p>Default Body</p>', $template->content);
+        $this->assertSame('<p>Default Footer</p>', $template->footer_content);
+        $this->assertSame('Default Signer', $template->signature_name);
+        $this->assertSame(11, $template->layout_settings['fontSize'] ?? null);
+    }
+
+    public function test_admin_can_promote_current_template_as_reset_default(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $template = Template::create([
+            'name' => 'Current Default',
+            'header_content' => '<p>Current Header</p>',
+            'body_content' => '<p>Current Body</p>',
+            'content' => '<p>Current Body</p>',
+            'footer_content' => '<p>Current Footer</p>',
+            'signature_name' => 'Current Signer',
+            'language' => 'en',
+            'layout_settings' => ['fontSize' => 10],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->post(route('admin.templates.reset-default', $template->id))
+            ->assertRedirect();
+
+        $template->update([
+            'name' => 'Temporary Edit',
+            'header_content' => '<p>Temporary Header</p>',
+            'body_content' => '<p>Temporary Body</p>',
+            'content' => '<p>Temporary Body</p>',
+            'footer_content' => '<p>Temporary Footer</p>',
+            'signature_name' => 'Temporary Signer',
+            'layout_settings' => ['fontSize' => 14],
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->post(route('admin.templates.reset', $template->id))
+            ->assertRedirect();
+
+        $template->refresh();
+
+        $this->assertSame('Current Default', $template->name);
+        $this->assertSame('<p>Current Header</p>', $template->header_content);
+        $this->assertSame('<p>Current Body</p>', $template->body_content);
+        $this->assertSame('<p>Current Footer</p>', $template->footer_content);
+        $this->assertSame('Current Signer', $template->signature_name);
+        $this->assertSame(10, $template->layout_settings['fontSize'] ?? null);
+        $this->assertNotEmpty($template->reset_data);
+        $this->assertNotNull($template->reset_saved_at);
+    }
+
+    public function test_admin_can_change_template_for_existing_request(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $request = $this->createApprovedRequest();
+        $newTemplate = Template::create([
+            'name' => 'Alternate Template',
+            'header_content' => '<p>Alt Header</p>',
+            'body_content' => '<p>Alt body for {{fullName}}</p>',
+            'footer_content' => '<p>Alt Footer</p>',
+            'layout_settings' => [],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->put(route('admin.requests.update', $request->id), [
+                'student_name' => $request->student_name,
+                'middle_name' => $request->middle_name,
+                'last_name' => $request->last_name,
+                'student_email' => $request->student_email,
+                'university' => $request->university,
+                'verification_token' => $request->verification_token,
+                'purpose' => $request->purpose,
+                'deadline' => null,
+                'training_period' => $request->training_period,
+                'custom_content' => null,
+                'content_option' => 'template',
+                'template_id' => $newTemplate->id,
+                'gender' => 'male',
+                'phone' => null,
+                'major' => null,
+            ])
+            ->assertRedirect(route('admin.requests.show', $request->id));
+
+        $request->refresh();
+
+        $this->assertSame($newTemplate->id, $request->template_id);
+        $this->assertSame('template', $request->content_option);
+        $this->assertSame($newTemplate->id, $request->form_data['template_id'] ?? null);
+        $this->assertSame('template', $request->form_data['content_option'] ?? null);
+    }
+
+    public function test_admin_can_limit_templates_available_to_students(): void
+    {
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+        $availableTemplate = Template::create([
+            'name' => 'Student Visible Template',
+            'header_content' => '<p>Visible Header</p>',
+            'body_content' => '<p>Visible Body</p>',
+            'footer_content' => '<p>Visible Footer</p>',
+            'layout_settings' => [],
+            'is_active' => true,
+        ]);
+        $hiddenTemplate = Template::create([
+            'name' => 'Student Hidden Template',
+            'header_content' => '<p>Hidden Header</p>',
+            'body_content' => '<p>Hidden Body</p>',
+            'footer_content' => '<p>Hidden Footer</p>',
+            'layout_settings' => [],
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->put(route('admin.form-settings.update'), [
+                'templateSelectionMode' => 'student_choice',
+                'studentTemplateIds' => [$availableTemplate->id],
+            ])
+            ->assertRedirect(route('admin.form-settings'));
+
+        $wizard = app(\App\Services\WizardService::class);
+        $config = $wizard->getFormConfig();
+
+        $this->assertSame('student_choice', $config['templateMode']);
+        $this->assertSame([$availableTemplate->id], $config['studentTemplateIds']);
+        $this->assertTrue($wizard->getTemplates($config)->pluck('id')->contains($availableTemplate->id));
+        $this->assertFalse($wizard->getTemplates($config)->pluck('id')->contains($hiddenTemplate->id));
+        $this->assertSame([], $wizard->validateStep2([
+            'content_option' => 'template',
+            'template_id' => $availableTemplate->id,
+        ], $config));
+        $this->assertArrayHasKey('template', $wizard->validateStep2([
+            'content_option' => 'template',
+            'template_id' => $hiddenTemplate->id,
+        ], $config));
     }
 
     public function test_admin_can_approve_request_even_if_optional_pdf_route_is_too_long(): void

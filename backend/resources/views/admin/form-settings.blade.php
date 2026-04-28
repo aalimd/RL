@@ -6,6 +6,14 @@
     @php
         $selectedMode = old('templateSelectionMode', $formSettings['templateSelectionMode'] ?? 'student_choice');
         $selectedDefaultTemplate = old('defaultTemplateId', $formSettings['defaultTemplateId'] ?? '');
+        $selectedStudentTemplateIds = old('studentTemplateIds', json_decode($formSettings['studentTemplateIds'] ?? '[]', true) ?: []);
+        if (!is_array($selectedStudentTemplateIds)) {
+            $selectedStudentTemplateIds = [];
+        }
+        if ($selectedMode === 'student_choice' && $selectedStudentTemplateIds === []) {
+            $selectedStudentTemplateIds = $templates->pluck('id')->map(fn($id) => (string) $id)->all();
+        }
+        $selectedStudentTemplateIds = array_map('strval', $selectedStudentTemplateIds);
         $allowCustomChecked = old('allowCustomContent', ($formSettings['allowCustomContent'] ?? 'true') === 'true' ? '1' : null);
         $forceCustom = $selectedMode === 'custom_only';
         $lockedRequiredFields = ['student_email', 'verification_token'];
@@ -71,6 +79,23 @@
                         </select>
                         <small style="display: block; margin-top: 0.4rem; color: var(--text-muted);">
                             Required when mode is <strong>Fixed Template</strong>.
+                        </small>
+                    </div>
+
+                    <div id="studentTemplatesSection" style="{{ $selectedMode === 'student_choice' ? '' : 'display: none;' }}">
+                        <label class="form-label">Templates Students Can Choose</label>
+                        <div style="display: grid; gap: 0.6rem; margin-top: 0.5rem;">
+                            @foreach($templates as $template)
+                                <label style="display: flex; align-items: center; gap: 0.6rem; padding: 0.7rem 0.85rem; background: var(--input-bg); border: 1px solid var(--border-color); border-radius: 0.5rem; cursor: pointer;">
+                                    <input type="checkbox" name="studentTemplateIds[]" value="{{ $template->id }}"
+                                        {{ in_array((string) $template->id, $selectedStudentTemplateIds, true) ? 'checked' : '' }}>
+                                    <span style="font-weight: 600; color: var(--text-main);">{{ $template->name }}</span>
+                                    <span style="font-size: 0.75rem; color: var(--text-muted); margin-left: auto;">{{ strtoupper($template->language) }}</span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <small style="display: block; margin-top: 0.4rem; color: var(--text-muted);">
+                            Select one, both, or any future active templates. Students will choose exactly one template per request.
                         </small>
                     </div>
 
@@ -185,6 +210,7 @@
 <script>
     function toggleTemplateOptions(mode) {
         const fixedSection = document.getElementById('fixedTemplateSection');
+        const studentTemplatesSection = document.getElementById('studentTemplatesSection');
         const defaultTemplateId = document.getElementById('defaultTemplateId');
         const allowCustomContent = document.getElementById('allowCustomContent');
         const allowCustomContentHint = document.getElementById('allowCustomContentHint');
@@ -192,6 +218,10 @@
         if (fixedSection && defaultTemplateId) {
             fixedSection.style.display = mode === 'admin_fixed' ? 'block' : 'none';
             defaultTemplateId.required = mode === 'admin_fixed';
+        }
+
+        if (studentTemplatesSection) {
+            studentTemplatesSection.style.display = mode === 'student_choice' ? 'block' : 'none';
         }
 
         if (allowCustomContent) {

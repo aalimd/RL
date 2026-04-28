@@ -499,7 +499,7 @@ class LetterService
             '{{phone}}' => $request->phone ?? ($formData['phone'] ?? ''),
             '{{major}}' => $request->major ?? ($formData['major'] ?? ''),
             '{{notes}}' => $request->notes ?? ($formData['notes'] ?? ''),
-            '{{qrCode}}' => $this->generateQrCodeHtml($request),
+            '{{qrCode}}' => '',
             '{{signature}}' => ($request->status === 'Approved') ? 'signature_placeholder' : '',
             // Gender-aware pronouns (lowercase)
             '{{he}}' => $pronouns['subject'],

@@ -3,9 +3,12 @@
 namespace App\Services;
 
 use App\Models\Settings;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use App\Models\Request as RequestModel;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Symfony\Component\Process\Process;
 use ZipArchive;
@@ -15,6 +18,8 @@ class BrowserLetterPdfService
     private const DRIVER_LOCAL_BROWSER = 'local_browser';
     private const DRIVER_BROWSERLESS = 'browserless';
     private const DEFAULT_BROWSERLESS_BASE_URL = 'https://production-sfo.browserless.io';
+    private const PDF_CACHE_VERSION = 'official-letter-v3';
+    private const PDF_CACHE_DIR = 'letter-pdf-cache';
 
     public function __construct(private LetterService $letterService)
     {
@@ -28,17 +33,73 @@ class BrowserLetterPdfService
     public function renderRequestPdf(RequestModel $request): array
     {
         $html = $this->renderLetterHtml($request);
-        $binary = $this->renderPdfFromHtml($html, $request->tracking_id);
-        $pageCount = $this->assertSinglePagePdf($binary, $request->tracking_id);
+        $filename = $this->pdfFilename($request);
+
+        if (!$this->pdfCacheEnabled()) {
+            return $this->renderFreshPdfResult($html, $request->tracking_id, $filename);
+        }
+
+        $cacheKey = $this->pdfCacheKey($request, $html);
+        $cached = $this->readCachedPdf($cacheKey, $request->tracking_id);
+        if ($cached !== null) {
+            return $this->cachedPdfResult($cached, $request->tracking_id, $filename);
+        }
+
+        try {
+            return Cache::lock($this->pdfCacheLockKey($cacheKey), 120)->block(60, function () use ($cacheKey, $html, $request, $filename) {
+                $cached = $this->readCachedPdf($cacheKey, $request->tracking_id);
+                if ($cached !== null) {
+                    return $this->cachedPdfResult($cached, $request->tracking_id, $filename);
+                }
+
+                return $this->renderFreshPdfResult($html, $request->tracking_id, $filename, $cacheKey);
+            });
+        } catch (LockTimeoutException $e) {
+            $cached = $this->readCachedPdf($cacheKey, $request->tracking_id);
+            if ($cached !== null) {
+                return $this->cachedPdfResult($cached, $request->tracking_id, $filename);
+            }
+
+            throw new RuntimeException('The official PDF is still being prepared. Please try again in a few seconds.', 0, $e);
+        }
+    }
+
+    private function renderFreshPdfResult(string $html, string $trackingId, string $filename, ?string $cacheKey = null): array
+    {
+        $binary = $this->renderPdfFromHtml($html, $trackingId);
+        $pageCount = $this->assertSinglePagePdf($binary, $trackingId);
+        if ($cacheKey !== null) {
+            $this->writeCachedPdf($cacheKey, $binary);
+        }
 
         return [
             'binary' => $binary,
-            'filename' => $this->pdfFilename($request),
-            'tracking_id' => $request->tracking_id,
+            'filename' => $filename,
+            'tracking_id' => $trackingId,
             'page_count' => $pageCount,
+            'cached' => false,
             'fit' => [
                 'status' => 'fits',
                 'page_count' => $pageCount,
+                'message' => 'Fits on one A4 page.',
+            ],
+        ];
+    }
+
+    /**
+     * @param array{binary:string,page_count:int} $cached
+     */
+    private function cachedPdfResult(array $cached, string $trackingId, string $filename): array
+    {
+        return [
+            'binary' => $cached['binary'],
+            'filename' => $filename,
+            'tracking_id' => $trackingId,
+            'page_count' => $cached['page_count'],
+            'cached' => true,
+            'fit' => [
+                'status' => 'fits',
+                'page_count' => $cached['page_count'],
                 'message' => 'Fits on one A4 page.',
             ],
         ];
@@ -100,6 +161,73 @@ class BrowserLetterPdfService
     public function pdfFilename(RequestModel $request): string
     {
         return 'Recommendation_Letter_' . $request->tracking_id . '.pdf';
+    }
+
+    private function pdfCacheEnabled(): bool
+    {
+        return (bool) config('services.letter_pdf_cache.enabled', !app()->environment('testing'));
+    }
+
+    private function pdfCacheKey(RequestModel $request, string $html): string
+    {
+        return hash('sha256', implode('|', [
+            self::PDF_CACHE_VERSION,
+            $request->getKey(),
+            $request->tracking_id,
+            hash('sha256', $html),
+        ]));
+    }
+
+    private function pdfCachePath(string $cacheKey): string
+    {
+        return self::PDF_CACHE_DIR . '/' . $cacheKey . '.pdf';
+    }
+
+    private function pdfCacheLockKey(string $cacheKey): string
+    {
+        return self::PDF_CACHE_DIR . ':lock:' . $cacheKey;
+    }
+
+    /**
+     * @return array{binary:string,page_count:int}|null
+     */
+    private function readCachedPdf(string $cacheKey, string $trackingId): ?array
+    {
+        $path = $this->pdfCachePath($cacheKey);
+
+        if (!Storage::disk('local')->exists($path)) {
+            return null;
+        }
+
+        $binary = Storage::disk('local')->get($path);
+        if (!is_string($binary) || $binary === '') {
+            Storage::disk('local')->delete($path);
+
+            return null;
+        }
+
+        try {
+            $this->assertPdfBinary($binary, $trackingId, 'Cached PDF');
+            $pageCount = $this->assertSinglePagePdf($binary, $trackingId);
+        } catch (\Throwable) {
+            Storage::disk('local')->delete($path);
+
+            return null;
+        }
+
+        return [
+            'binary' => $binary,
+            'page_count' => $pageCount,
+        ];
+    }
+
+    private function writeCachedPdf(string $cacheKey, string $binary): void
+    {
+        try {
+            Storage::disk('local')->put($this->pdfCachePath($cacheKey), $binary);
+        } catch (\Throwable) {
+            // PDF export must still succeed even if the private cache cannot be written.
+        }
     }
 
     public function configurationSummary(): array
@@ -207,7 +335,7 @@ class BrowserLetterPdfService
             '--no-default-browser-check',
             '--allow-file-access-from-files',
             '--run-all-compositor-stages-before-draw',
-            '--virtual-time-budget=6000',
+            '--virtual-time-budget=2500',
             '--print-to-pdf-no-header',
             '--print-to-pdf=' . $pdfPath,
             'file://' . $htmlPath,
@@ -272,8 +400,8 @@ class BrowserLetterPdfService
         $payload = [
             'html' => $html,
             'gotoOptions' => [
-                'waitUntil' => 'networkidle0',
-                'timeout' => 30000,
+                'waitUntil' => 'load',
+                'timeout' => 20000,
             ],
             'options' => [
                 'printBackground' => true,

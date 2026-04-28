@@ -11,6 +11,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Review Official Letter - {{ $siteName }}</title>
     <style>
@@ -114,6 +115,32 @@
             transform: translateY(-1px);
         }
 
+        .btn[aria-disabled="true"] {
+            cursor: wait;
+            opacity: 0.84;
+            pointer-events: none;
+        }
+
+        .btn-spinner {
+            display: none;
+            width: 15px;
+            height: 15px;
+            border: 2px solid rgba(255, 255, 255, 0.42);
+            border-top-color: #fff;
+            border-radius: 999px;
+            animation: spin 800ms linear infinite;
+        }
+
+        .btn.is-loading .btn-spinner {
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
         .btn-primary {
             color: #fff;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
@@ -124,6 +151,34 @@
             color: #334155;
             background: #fff;
             border-color: var(--line);
+        }
+
+        .pdf-status {
+            grid-column: 1 / -1;
+            padding: 11px 14px;
+            border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+            border-radius: 14px;
+            background: color-mix(in srgb, var(--primary) 9%, #fff);
+            color: #334155;
+            font-size: 0.9rem;
+            font-weight: 700;
+            line-height: 1.45;
+        }
+
+        .pdf-status[hidden] {
+            display: none;
+        }
+
+        .pdf-status[data-tone="success"] {
+            border-color: rgba(22, 163, 74, 0.28);
+            background: #f0fdf4;
+            color: #166534;
+        }
+
+        .pdf-status[data-tone="error"] {
+            border-color: rgba(220, 38, 38, 0.28);
+            background: #fef2f2;
+            color: #991b1b;
         }
 
         .viewer-card {
@@ -162,7 +217,7 @@
             font-weight: 800;
         }
 
-        .pdf-frame {
+        .preview-frame {
             display: block;
             width: 100%;
             height: min(78vh, 980px);
@@ -207,9 +262,9 @@
                 grid-template-columns: 1fr;
             }
 
-            .pdf-frame {
-                height: 72vh;
-                min-height: 520px;
+            .preview-frame {
+                height: min(74vh, 640px);
+                min-height: 460px;
             }
         }
     </style>
@@ -222,16 +277,26 @@
                 <span class="eyebrow">Official letter review</span>
                 <h1 id="letter-title">Review your letter before download</h1>
                 <p class="viewer-copy">
-                    This is the official PDF version of your recommendation letter. Review it first, then download the PDF when everything looks correct.
+                    This is the official recommendation letter preview. Review it first, then download the PDF when everything looks correct.
                 </p>
             </div>
             <div class="viewer-actions">
                 <a href="{{ $trackingUrl }}" class="btn btn-secondary">Back to Tracking</a>
-                <a href="{{ $downloadUrl }}" class="btn btn-primary">Download PDF</a>
+                <a href="{{ $downloadUrl }}"
+                    class="btn btn-primary"
+                    id="downloadPdfBtn"
+                    data-download-url="{{ $downloadUrl }}"
+                    data-prepare-url="{{ $prepareUrl }}"
+                    data-tracking-id="{{ $request->tracking_id }}"
+                    data-filename="Recommendation_Letter_{{ $request->tracking_id }}.pdf">
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                    <span class="btn-label">Download PDF</span>
+                </a>
             </div>
+            <div id="pdfStatus" class="pdf-status" role="status" aria-live="polite" hidden></div>
         </section>
 
-        <section class="viewer-card" aria-label="Official recommendation letter PDF viewer">
+        <section class="viewer-card" aria-label="Official recommendation letter preview">
             <div class="viewer-meta">
                 <div class="meta-item">
                     <span class="meta-label">Student</span>
@@ -247,14 +312,213 @@
                 </div>
             </div>
 
-            <iframe class="pdf-frame" src="{{ $pdfUrl }}#toolbar=1&navpanes=0" title="Official recommendation letter PDF"></iframe>
+            <iframe class="preview-frame" src="{{ $previewUrl }}" title="Official recommendation letter preview"></iframe>
 
             <p class="viewer-fallback">
-                If the PDF viewer does not open on your device, use
+                If the preview does not open on your device, use
                 <a href="{{ $downloadUrl }}">Download PDF</a>.
             </p>
         </section>
     </main>
+
+    <script>
+        (function() {
+            const downloadButton = document.getElementById('downloadPdfBtn');
+            const previewFrame = document.querySelector('.preview-frame');
+            const statusBox = document.getElementById('pdfStatus');
+
+            if (!downloadButton || !statusBox) {
+                return;
+            }
+
+            const downloadUrl = downloadButton.dataset.downloadUrl;
+            const prepareUrl = downloadButton.dataset.prepareUrl;
+            const trackingId = downloadButton.dataset.trackingId || window.location.pathname;
+            const fallbackFilename = downloadButton.dataset.filename || 'Recommendation_Letter.pdf';
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const prepareStorageKey = `rl:pdf-prepare:${trackingId}`;
+            const prepareCooldownMs = 90 * 1000;
+            let preparePromise = null;
+            let statusTimer = null;
+
+            function setStatus(message, tone) {
+                if (statusTimer) {
+                    window.clearTimeout(statusTimer);
+                    statusTimer = null;
+                }
+
+                statusBox.textContent = message;
+                statusBox.dataset.tone = tone || 'info';
+                statusBox.hidden = false;
+            }
+
+            function hideStatusAfter(delay) {
+                if (statusTimer) {
+                    window.clearTimeout(statusTimer);
+                }
+
+                statusTimer = window.setTimeout(function() {
+                    statusBox.hidden = true;
+                }, delay);
+            }
+
+            function setLoading(isLoading) {
+                downloadButton.classList.toggle('is-loading', isLoading);
+                downloadButton.setAttribute('aria-disabled', isLoading ? 'true' : 'false');
+                downloadButton.querySelector('.btn-label').textContent = isLoading ? 'Preparing PDF' : 'Download PDF';
+            }
+
+            function filenameFromResponse(response) {
+                const disposition = response.headers.get('Content-Disposition') || '';
+                const utfMatch = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+                if (utfMatch) {
+                    return decodeURIComponent(utfMatch[1].replace(/"/g, ''));
+                }
+
+                const match = disposition.match(/filename="?([^"]+)"?/i);
+                return match ? match[1] : fallbackFilename;
+            }
+
+            function startBlobDownload(blob, filename) {
+                const objectUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = objectUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.setTimeout(function() {
+                    URL.revokeObjectURL(objectUrl);
+                }, 1000);
+            }
+
+            function hasRecentPrepareAttempt() {
+                try {
+                    const lastAttempt = Number(window.sessionStorage.getItem(prepareStorageKey) || 0);
+                    return lastAttempt > 0 && Date.now() - lastAttempt < prepareCooldownMs;
+                } catch (error) {
+                    return false;
+                }
+            }
+
+            function rememberPrepareAttempt() {
+                try {
+                    window.sessionStorage.setItem(prepareStorageKey, String(Date.now()));
+                } catch (error) {
+                    // Session storage is optional; PDF preparation still works without it.
+                }
+            }
+
+            async function preparePdfInBackground() {
+                if (preparePromise || !prepareUrl) {
+                    return preparePromise;
+                }
+
+                if (hasRecentPrepareAttempt()) {
+                    return null;
+                }
+
+                rememberPrepareAttempt();
+                setStatus('Preparing the official PDF version in the background so your download starts faster.', 'info');
+
+                preparePromise = fetch(prepareUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrfToken,
+                    },
+                }).then(async function(response) {
+                    const payload = await response.json().catch(function() {
+                        return {};
+                    });
+
+                    if (!response.ok) {
+                        const error = new Error(payload.message || 'The PDF could not be prepared yet.');
+                        error.status = response.status;
+                        throw error;
+                    }
+
+                    setStatus(payload.message || 'The official PDF is ready to download.', 'success');
+                    hideStatusAfter(6000);
+
+                    return payload;
+                }).catch(function(error) {
+                    if (error.status === 409) {
+                        setStatus(error.message, 'error');
+                        return null;
+                    }
+
+                    if (error.status === 429) {
+                        setStatus('The official PDF will be prepared when you click Download PDF.', 'info');
+                        hideStatusAfter(5000);
+                        return null;
+                    }
+
+                    setStatus('The PDF will be generated when you click Download PDF. It may take a few seconds the first time.', 'info');
+                    hideStatusAfter(7000);
+
+                    return null;
+                });
+
+                return preparePromise;
+            }
+
+            function scheduleBackgroundPreparation() {
+                const start = function() {
+                    preparePdfInBackground();
+                };
+
+                if ('requestIdleCallback' in window) {
+                    window.requestIdleCallback(start, { timeout: 2000 });
+                } else {
+                    window.setTimeout(start, 900);
+                }
+            }
+
+            previewFrame?.addEventListener('load', scheduleBackgroundPreparation, { once: true });
+            window.addEventListener('load', function() {
+                window.setTimeout(function() {
+                    if (!preparePromise) {
+                        scheduleBackgroundPreparation();
+                    }
+                }, 1200);
+            });
+
+            downloadButton.addEventListener('click', async function(event) {
+                event.preventDefault();
+
+                setLoading(true);
+                setStatus('Preparing your official PDF version. This can take a few seconds the first time.', 'info');
+
+                try {
+                    const response = await fetch(downloadUrl, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/pdf',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        const message = await response.text();
+                        throw new Error(message || 'The official PDF could not be downloaded right now.');
+                    }
+
+                    const blob = await response.blob();
+                    startBlobDownload(blob, filenameFromResponse(response));
+                    setStatus('PDF is ready. Your download has started.', 'success');
+                    hideStatusAfter(6000);
+                } catch (error) {
+                    setStatus(error.message || 'The official PDF could not be downloaded right now. Please try again.', 'error');
+                } finally {
+                    setLoading(false);
+                }
+            });
+        })();
+    </script>
 </body>
 
 </html>
