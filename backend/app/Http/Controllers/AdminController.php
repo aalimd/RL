@@ -670,7 +670,8 @@ class AdminController extends Controller
     public function createTemplate()
     {
         $settings = $this->getSettings();
-        return view('admin.template-editor', compact('settings'));
+        $dropdownOptions = $this->resolveDropdownOptions($settings);
+        return view('admin.template-editor', compact('settings', 'dropdownOptions'));
     }
 
     /**
@@ -714,6 +715,7 @@ class AdminController extends Controller
                 }
             ],
             'language' => 'required|in:en,ar',
+            'target_trainee_levels' => 'nullable|array',
             'layout_settings' => 'nullable|array',
         ]);
 
@@ -746,9 +748,7 @@ class AdminController extends Controller
      */
     public function editTemplate($id)
     {
-        $settings = $this->getSettings();
-        $template = Template::findOrFail($id);
-        $draftLoaded = false;
+        $dropdownOptions = $this->resolveDropdownOptions($settings);
 
         if (
             is_array($template->draft_data)
@@ -759,7 +759,7 @@ class AdminController extends Controller
             $draftLoaded = true;
         }
 
-        return view('admin.template-editor', compact('settings', 'template', 'draftLoaded'));
+        return view('admin.template-editor', compact('settings', 'template', 'draftLoaded', 'dropdownOptions'));
     }
 
     /**
@@ -805,6 +805,7 @@ class AdminController extends Controller
                 }
             ],
             'language' => 'required|in:en,ar',
+            'target_trainee_levels' => 'nullable|array',
             'layout_settings' => 'nullable|array',
         ]);
 
@@ -857,6 +858,7 @@ class AdminController extends Controller
             'signature_image' => 'nullable|string|max:10000',
             'stamp_image' => 'nullable|string|max:10000',
             'language' => 'nullable|in:en,ar',
+            'target_trainee_levels' => 'nullable|array',
             'layout_settings' => 'nullable|array',
         ]);
 

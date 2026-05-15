@@ -15,6 +15,7 @@ class Template extends Model
     protected $casts = [
         'layout_settings' => 'array',
         'is_active' => 'boolean',
+        'target_trainee_levels' => 'array',
         'draft_data' => 'array',
         'reset_data' => 'array',
         'last_draft_saved_at' => 'datetime',

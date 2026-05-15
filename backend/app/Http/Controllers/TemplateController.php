@@ -71,6 +71,7 @@ class TemplateController extends Controller
                 'signatureImage' => ['nullable', 'string', 'max:10000'],
                 'stampImage' => ['nullable', 'string', 'max:10000'],
                 'isActive' => 'nullable|boolean',
+                'targetTraineeLevels' => 'nullable|array',
                 'layoutSettings' => 'nullable|array',
             ]);
 
@@ -132,6 +133,7 @@ class TemplateController extends Controller
                 'signatureImage' => ['nullable', 'string', 'max:10000'],
                 'stampImage' => ['nullable', 'string', 'max:10000'],
                 'isActive' => 'nullable|boolean',
+                'targetTraineeLevels' => 'nullable|array',
                 'layoutSettings' => 'nullable|array',
             ]);
 
@@ -225,6 +227,7 @@ class TemplateController extends Controller
             'layoutSettings' => 'layout_settings',
             'language' => 'language',
             'isActive' => 'is_active',
+            'targetTraineeLevels' => 'target_trainee_levels',
         ];
 
         $output = [];

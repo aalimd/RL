@@ -75,6 +75,9 @@ class RequestController extends Controller
                 'gpa' => 'nullable|numeric|min:0|max:4',
                 'deadline' => 'nullable|date',
                 'trainingPeriod' => 'nullable|date_format:Y-m',
+                'traineeLevel' => 'nullable|string|max:255',
+                'department' => 'nullable|string|max:255',
+                'workLocation' => 'nullable|string|max:255',
                 'templateId' => 'nullable|integer|exists:templates,id',
                 'customContent' => 'nullable|string',
                 'contentOption' => 'nullable|in:template,custom',
@@ -99,6 +102,15 @@ class RequestController extends Controller
             }
             if (!array_key_exists('training_period', $formData) && !empty($validated['trainingPeriod'])) {
                 $formData['training_period'] = $validated['trainingPeriod'];
+            }
+            if (!array_key_exists('trainee_level', $formData) && !empty($validated['traineeLevel'])) {
+                $formData['trainee_level'] = $validated['traineeLevel'];
+            }
+            if (!array_key_exists('department', $formData) && !empty($validated['department'])) {
+                $formData['department'] = $validated['department'];
+            }
+            if (!array_key_exists('work_location', $formData) && !empty($validated['workLocation'])) {
+                $formData['work_location'] = $validated['workLocation'];
             }
             if (!array_key_exists('template_id', $formData) && !empty($validated['templateId'])) {
                 $formData['template_id'] = $validated['templateId'];
@@ -130,6 +142,9 @@ class RequestController extends Controller
                 'gpa' => $validated['gpa'] ?? null,
                 'deadline' => $validated['deadline'] ?? null,
                 'training_period' => $validated['trainingPeriod'] ?? null,
+                'trainee_level' => $validated['traineeLevel'] ?? null,
+                'department' => $validated['department'] ?? null,
+                'work_location' => $validated['workLocation'] ?? null,
                 'template_id' => $validated['templateId'] ?? null,
                 'custom_content' => $validated['customContent'] ?? null,
                 'content_option' => $validated['contentOption'] ?? null,
@@ -220,6 +235,9 @@ class RequestController extends Controller
             'gpa' => 'sometimes|nullable|numeric|min:0|max:4',
             'deadline' => 'sometimes|nullable|date',
             'trainingPeriod' => 'sometimes|nullable|date_format:Y-m',
+            'traineeLevel' => 'sometimes|nullable|string|max:255',
+            'department' => 'sometimes|nullable|string|max:255',
+            'workLocation' => 'sometimes|nullable|string|max:255',
             'templateId' => 'sometimes|nullable|integer|exists:templates,id',
             'customContent' => 'sometimes|nullable|string',
             'contentOption' => 'sometimes|nullable|in:template,custom',
@@ -247,6 +265,12 @@ class RequestController extends Controller
             $data['deadline'] = $validated['deadline'];
         if (array_key_exists('trainingPeriod', $validated))
             $data['training_period'] = $validated['trainingPeriod'];
+        if (array_key_exists('traineeLevel', $validated))
+            $data['trainee_level'] = $validated['traineeLevel'];
+        if (array_key_exists('department', $validated))
+            $data['department'] = $validated['department'];
+        if (array_key_exists('workLocation', $validated))
+            $data['work_location'] = $validated['workLocation'];
         if (array_key_exists('templateId', $validated))
             $data['template_id'] = $validated['templateId'];
         if (array_key_exists('customContent', $validated))
@@ -259,6 +283,9 @@ class RequestController extends Controller
             || array_key_exists('lastName', $validated)
             || array_key_exists('phone', $validated)
             || array_key_exists('trainingPeriod', $validated)
+            || array_key_exists('traineeLevel', $validated)
+            || array_key_exists('department', $validated)
+            || array_key_exists('workLocation', $validated)
             || array_key_exists('templateId', $validated)
             || array_key_exists('customContent', $validated)
             || array_key_exists('contentOption', $validated);
@@ -282,6 +309,15 @@ class RequestController extends Controller
             }
             if (array_key_exists('trainingPeriod', $validated)) {
                 $formData['training_period'] = $validated['trainingPeriod'];
+            }
+            if (array_key_exists('traineeLevel', $validated)) {
+                $formData['trainee_level'] = $validated['traineeLevel'];
+            }
+            if (array_key_exists('department', $validated)) {
+                $formData['department'] = $validated['department'];
+            }
+            if (array_key_exists('workLocation', $validated)) {
+                $formData['work_location'] = $validated['workLocation'];
             }
             if (array_key_exists('templateId', $validated)) {
                 $formData['template_id'] = $validated['templateId'];
@@ -373,6 +409,9 @@ class RequestController extends Controller
                 'gpa' => $item['gpa'],
                 'purpose' => $item['purpose'],
                 'status' => $item['status'],
+                'traineeLevel' => $item['trainee_level'],
+                'department' => $item['department'],
+                'workLocation' => $item['work_location'],
                 'deadline' => $item['deadline'],
                 'trainingPeriod' => $item['training_period'],
                 'templateId' => $item['template_id'],

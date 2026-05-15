@@ -1033,6 +1033,26 @@
                                 <option value="ar" {{ old('language', $template->language ?? '') === 'ar' ? 'selected' : '' }}>العربية</option>
                             </select>
                         </div>
+                        
+                        <div class="te-field" style="grid-column: span 2;">
+                            <label class="te-label">Target Trainee Levels</label>
+                            <p style="font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem;">Select which levels this template is for. If none selected, it appears for ALL levels.</p>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; padding: 1rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+                                @php
+                                    $currentTargetLevels = old('target_trainee_levels', $template->target_trainee_levels ?? []);
+                                    if (is_string($currentTargetLevels)) {
+                                        $currentTargetLevels = json_decode($currentTargetLevels, true) ?? [];
+                                    }
+                                @endphp
+                                @foreach($dropdownOptions['trainee_level'] ?? [] as $level)
+                                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.875rem; color: #1e293b; min-width: 140px;">
+                                        <input type="checkbox" name="target_trainee_levels[]" value="{{ $level }}"
+                                            {{ in_array($level, $currentTargetLevels) ? 'checked' : '' }}>
+                                        <span>{{ $level }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
                         <div class="te-field">
                             <label class="te-label">Page Border</label>
                             <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0; cursor: pointer;">

@@ -58,9 +58,9 @@ class WizardService
     }
 
     /**
-     * Get Available Templates based on Config
+     * Get Available Templates based on Config and optional Trainee Level
      */
-    public function getTemplates(array $formConfig)
+    public function getTemplates(array $formConfig, ?string $traineeLevel = null)
     {
         try {
             if (($formConfig['templateMode'] ?? 'student_choice') === 'admin_fixed') {
@@ -74,6 +74,17 @@ class WizardService
             }
 
             $query = Template::where('is_active', true)->orderBy('name');
+
+            // Filtering by Trainee Level if provided
+            if ($traineeLevel) {
+                $query->where(function ($q) use ($traineeLevel) {
+                    $q->whereJsonContains('target_trainee_levels', $traineeLevel)
+                        ->orWhereNull('target_trainee_levels')
+                        ->orWhere('target_trainee_levels', '[]')
+                        ->orWhere('target_trainee_levels', '');
+                });
+            }
+
             $studentTemplateIds = $formConfig['studentTemplateIds'] ?? [];
 
             if (is_array($studentTemplateIds) && $studentTemplateIds !== []) {
@@ -84,6 +95,7 @@ class WizardService
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Template lookup failed for wizard. Returning no templates.', [
                 'error' => $e->getMessage(),
+                'traineeLevel' => $traineeLevel
             ]);
 
             return collect();
@@ -233,6 +245,7 @@ class WizardService
         $resolved = $this->resolveContentData($formData, $formConfig);
         $contentOption = $resolved['content_option'];
         $templateMode = $formConfig['templateMode'] ?? 'student_choice';
+        $traineeLevel = $formData['trainee_level'] ?? null;
         $errors = [];
 
         if ($contentOption === 'template' && empty($resolved['template_id'])) {
@@ -240,22 +253,32 @@ class WizardService
                 ? 'No fixed template is configured. Please contact the administrator.'
                 : 'Please select a template';
         }
-        if ($contentOption === 'template' && !empty($resolved['template_id'])) {
-            $templateAvailable = Template::where('id', $resolved['template_id'])
-                ->where('is_active', true)
-                ->exists();
 
-            if (!$templateAvailable) {
-                $errors['template'] = $templateMode === 'admin_fixed'
-                    ? 'Configured fixed template is unavailable. Please contact the administrator.'
-                    : 'Selected template is unavailable. Please choose another template.';
-            } elseif ($templateMode === 'student_choice') {
-                $studentTemplateIds = $formConfig['studentTemplateIds'] ?? [];
-                if (is_array($studentTemplateIds) && $studentTemplateIds !== [] && !in_array((int) $resolved['template_id'], $studentTemplateIds, true)) {
-                    $errors['template'] = 'Selected template is not currently available. Please choose another template.';
+        if ($contentOption === 'template' && !empty($resolved['template_id'])) {
+            // Re-fetch valid templates for this specific level to ensure isolation
+            $validTemplates = $this->getTemplates($formConfig, $traineeLevel);
+            $isValidForLevel = $validTemplates->contains('id', (int) $resolved['template_id']);
+
+            if (!$isValidForLevel) {
+                $errors['template'] = 'The selected template is not available for your trainee level.';
+            } else {
+                $templateAvailable = Template::where('id', $resolved['template_id'])
+                    ->where('is_active', true)
+                    ->exists();
+
+                if (!$templateAvailable) {
+                    $errors['template'] = $templateMode === 'admin_fixed'
+                        ? 'Configured fixed template is unavailable. Please contact the administrator.'
+                        : 'Selected template is unavailable. Please choose another template.';
+                } elseif ($templateMode === 'student_choice') {
+                    $studentTemplateIds = $formConfig['studentTemplateIds'] ?? [];
+                    if (is_array($studentTemplateIds) && $studentTemplateIds !== [] && !in_array((int) $resolved['template_id'], $studentTemplateIds, true)) {
+                        $errors['template'] = 'Selected template is not currently available. Please choose another template.';
+                    }
                 }
             }
         }
+
         if ($contentOption === 'custom' && empty($resolved['custom_content'])) {
             $errors['custom_content'] = 'Please enter custom content';
         }

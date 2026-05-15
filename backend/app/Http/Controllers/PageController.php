@@ -562,7 +562,11 @@ class PageController extends Controller
     {
         $settings = $this->getPublicSettings();
         $formConfig = $this->wizardService->getFormConfig();
-        $templates = $this->wizardService->getTemplates($formConfig);
+        
+        // Get existing form data from session early for template filtering
+        $formData = session('wizard_data', []);
+        $traineeLevel = $formData['trainee_level'] ?? null;
+        $templates = $this->wizardService->getTemplates($formConfig, $traineeLevel);
 
         // Get current step (default: 1)
         $step = (int) $request->query('step', session('wizard_step', 1));
@@ -587,8 +591,7 @@ class PageController extends Controller
             }
         }
 
-        // Get existing form data from session
-        $formData = session('wizard_data', []);
+        // Check if we need to reset step to 1 if data is missing
         if (empty($formData) && !$request->has('step')) {
             $step = 1;
         }
@@ -613,7 +616,15 @@ class PageController extends Controller
     {
         $settings = $this->getPublicSettings();
         $formConfig = $this->wizardService->getFormConfig();
-        $templates = $this->wizardService->getTemplates($formConfig);
+        
+        // Get form data from request and merge with session
+        $formData = session('wizard_data', []);
+        $newData = $request->input('data', []);
+        $formData = array_merge($formData, $newData);
+        $formData = $this->normalizeWizardPurpose($formData);
+
+        $traineeLevel = $formData['trainee_level'] ?? null;
+        $templates = $this->wizardService->getTemplates($formConfig, $traineeLevel);
 
         $currentStep = (int) $request->input('step', 1);
         $action = $request->input('action', 'next');
@@ -635,12 +646,6 @@ class PageController extends Controller
                     ->with('error', 'Your edit session expired or this request is no longer editable.');
             }
         }
-
-        // Get form data from request
-        $formData = session('wizard_data', []);
-        $newData = $request->input('data', []);
-        $formData = array_merge($formData, $newData);
-        $formData = $this->normalizeWizardPurpose($formData);
 
         // Handle back action
         if ($action === 'back') {
