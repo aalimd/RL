@@ -63,9 +63,10 @@ class WizardService
     public function getTemplates(array $formConfig, ?string $traineeLevel = null)
     {
         try {
+            // 1. If admin fixed mode, return the single assigned template
             if (($formConfig['templateMode'] ?? 'student_choice') === 'admin_fixed') {
                 if (empty($formConfig['defaultTemplateId'])) {
-                    return Template::whereRaw('1 = 0')->get();
+                    return collect();
                 }
 
                 return Template::where('id', $formConfig['defaultTemplateId'])
@@ -73,29 +74,49 @@ class WizardService
                     ->get();
             }
 
+            // 2. Fetch all active templates
             $query = Template::where('is_active', true)->orderBy('name');
-
-            // Filtering by Trainee Level if provided
-            if ($traineeLevel) {
-                $query->where(function ($q) use ($traineeLevel) {
-                    $q->whereJsonContains('target_trainee_levels', $traineeLevel)
-                        ->orWhereNull('target_trainee_levels')
-                        ->orWhere('target_trainee_levels', '[]')
-                        ->orWhere('target_trainee_levels', '');
-                });
-            }
-
+            
+            // 3. Apply global template restrictions if configured by admin
             $studentTemplateIds = $formConfig['studentTemplateIds'] ?? [];
-
-            if (is_array($studentTemplateIds) && $studentTemplateIds !== []) {
+            if (is_array($studentTemplateIds) && !empty($studentTemplateIds)) {
                 $query->whereIn('id', $studentTemplateIds);
             }
 
-            return $query->get();
+            $templates = $query->get();
+
+            // 4. Dynamic Level-Based Filtering (PHP-side for maximum DB compatibility)
+            if ($traineeLevel) {
+                $templates = $templates->filter(function ($template) use ($traineeLevel) {
+                    $targetLevels = $template->target_trainee_levels;
+                    
+                    // If no specific levels are assigned, it's a "Universal" template (available to everyone)
+                    if (empty($targetLevels)) {
+                        return true;
+                    }
+                    
+                    // If assigned to specific levels, check if the requester's level is one of them
+                    if (is_array($targetLevels)) {
+                        return in_array($traineeLevel, $targetLevels, true);
+                    }
+                    
+                    return true;
+                })->values(); // Reset keys for JSON serialization
+            }
+
+            if ($templates->isEmpty()) {
+                \Illuminate\Support\Facades\Log::info('No templates found for requester', [
+                    'traineeLevel' => $traineeLevel,
+                    'mode' => $formConfig['templateMode'] ?? 'n/a',
+                    'restrictedToIds' => $studentTemplateIds
+                ]);
+            }
+
+            return $templates;
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Template lookup failed for wizard. Returning no templates.', [
-                'error' => $e->getMessage(),
-                'traineeLevel' => $traineeLevel
+            \Illuminate\Support\Facades\Log::error('Template lookup failed: ' . $e->getMessage(), [
+                'traineeLevel' => $traineeLevel,
+                'trace' => $e->getTraceAsString()
             ]);
 
             return collect();
