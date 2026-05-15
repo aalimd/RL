@@ -122,6 +122,21 @@
                     </div>
 
                     <div style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Trainee Level</label>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->trainee_level ?? 'N/A' }}</p>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Department</label>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->department ?? 'N/A' }}</p>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
+                        <label style="font-size: 0.75rem; color: var(--text-muted);">Work Location</label>
+                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->work_location ?? 'N/A' }}</p>
+                    </div>
+
+                    <div style="margin-bottom: 1rem;">
                         <label style="font-size: 0.75rem; color: var(--text-muted);">Gender</label>
                         @php
                             $formData = $request->form_data ?? [];
@@ -491,6 +506,36 @@
                             </div>
 
                             <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Trainee Level</label>
+                                <select name="trainee_level" class="form-select" style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                                    <option value="">Select Level</option>
+                                    @foreach($dropdownOptions['trainee_level'] as $option)
+                                        <option value="{{ $option }}" {{ $request->trainee_level === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Department</label>
+                                <select name="department" class="form-select" style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                                    <option value="">Select Department</option>
+                                    @foreach($dropdownOptions['department'] as $option)
+                                        <option value="{{ $option }}" {{ $request->department === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Work Location</label>
+                                <select name="work_location" class="form-select" style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                                    <option value="">Select Work Location</option>
+                                    @foreach($dropdownOptions['work_location'] as $option)
+                                        <option value="{{ $option }}" {{ $request->work_location === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 1rem;">
                                 <label
                                     style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Major</label>
                                 <input type="text" name="major" value="{{ $request->major ?? ($formData['major'] ?? '') }}"
@@ -532,16 +577,11 @@
                                 <label
                                     style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Purpose</label>
                                 <select name="purpose" class="form-select"
-                                    style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;">
+                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
                                     <option value="">Select Purpose</option>
-                                    <option value="Master's Application" {{ $request->purpose === "Master's Application" ? 'selected' : '' }}>Master's Application</option>
-                                    <option value="PhD Application" {{ $request->purpose === "PhD Application" ? 'selected' : '' }}>PhD Application</option>
-                                    <option value="Job Application" {{ $request->purpose === "Job Application" ? 'selected' : '' }}>Job Application</option>
-                                    <option value="Internship" {{ $request->purpose === "Internship" ? 'selected' : '' }}>
-                                        Internship</option>
-                                    <option value="Scholarship" {{ $request->purpose === "Scholarship" ? 'selected' : '' }}>
-                                        Scholarship</option>
-                                    <option value="Other" {{ $request->purpose === "Other" ? 'selected' : '' }}>Other</option>
+                                    @foreach($dropdownOptions['purpose'] as $option)
+                                        <option value="{{ $option }}" {{ $request->purpose === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                    @endforeach
                                 </select>
                             </div>
 

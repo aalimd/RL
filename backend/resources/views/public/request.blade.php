@@ -1087,7 +1087,7 @@
                             @php
                                 $fieldConfig = $formConfig['fields'] ?? [];
                                 $isVisible = fn($key) => ($fieldConfig[$key]['visible'] ?? true);
-                                $isRequired = fn($key) => ($fieldConfig[$key]['required'] ?? in_array($key, ['student_name', 'last_name', 'student_email', 'gender', 'university', 'verification_token', 'training_period', 'purpose', 'deadline']));
+                                $isRequired = fn($key) => ($fieldConfig[$key]['required'] ?? in_array($key, ['student_name', 'last_name', 'student_email', 'gender', 'university', 'trainee_level', 'department', 'work_location', 'verification_token', 'training_period', 'purpose', 'deadline']));
                                 $requirementTag = fn($key) => $isRequired($key)
                                     ? '<span class="required">*</span>'
                                     : '<span class="optional-badge">Optional</span>';
@@ -1178,6 +1178,51 @@
                                     </div>
                                 @endif
 
+                                @if($isVisible('trainee_level'))
+                                    <div class="form-group">
+                                        <label class="form-label">Trainee Level {!! $requirementTag('trainee_level') !!}</label>
+                                        <select name="data[trainee_level]" class="form-select @error('data.trainee_level') error @enderror" {{ $isRequired('trainee_level') ? 'required' : '' }}>
+                                            <option value="">Select Level</option>
+                                            @foreach($dropdownOptions['trainee_level'] as $option)
+                                                <option value="{{ $option }}" {{ old('data.trainee_level', $formData['trainee_level'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('data.trainee_level')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+                                @endif
+
+                                @if($isVisible('department'))
+                                    <div class="form-group">
+                                        <label class="form-label">Department / Section {!! $requirementTag('department') !!}</label>
+                                        <select name="data[department]" class="form-select @error('data.department') error @enderror" {{ $isRequired('department') ? 'required' : '' }}>
+                                            <option value="">Select Department</option>
+                                            @foreach($dropdownOptions['department'] as $option)
+                                                <option value="{{ $option }}" {{ old('data.department', $formData['department'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('data.department')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+                                @endif
+
+                                @if($isVisible('work_location'))
+                                    <div class="form-group">
+                                        <label class="form-label">Work Location {!! $requirementTag('work_location') !!}</label>
+                                        <select name="data[work_location]" class="form-select @error('data.work_location') error @enderror" {{ $isRequired('work_location') ? 'required' : '' }}>
+                                            <option value="">Select Work Location</option>
+                                            @foreach($dropdownOptions['work_location'] as $option)
+                                                <option value="{{ $option }}" {{ old('data.work_location', $formData['work_location'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                            @endforeach
+                                        </select>
+                                        @error('data.work_location')
+                                            <span class="field-error">{{ $message }}</span>
+                                        @enderror
+                                    </div>
+                                @endif
+
                                 @if($isVisible('verification_token'))
                                     <div class="form-group">
                                         <label class="form-label">Student / National ID {!! $requirementTag('verification_token') !!}</label>
@@ -1245,13 +1290,9 @@
                                         <label class="form-label">Purpose of Recommendation {!! $requirementTag('purpose') !!}</label>
                                         <select name="data[purpose]" class="form-select @error('data.purpose') error @enderror" {{ $isRequired('purpose') ? 'required' : '' }}>
                                             <option value="">Select Purpose</option>
-                                            <option value="Residency" {{ $selectedPurpose === 'Residency' ? 'selected' : '' }}>Residency</option>
-                                            <option value="Master's Application" {{ $selectedPurpose === "Master's Application" ? 'selected' : '' }}>Master's Application</option>
-                                            <option value="PhD Application" {{ $selectedPurpose === 'PhD Application' ? 'selected' : '' }}>PhD Application</option>
-                                            <option value="Job Application" {{ $selectedPurpose === 'Job Application' ? 'selected' : '' }}>Job Application</option>
-                                            <option value="Internship" {{ $selectedPurpose === 'Internship' ? 'selected' : '' }}>Internship</option>
-                                            <option value="Scholarship" {{ $selectedPurpose === 'Scholarship' ? 'selected' : '' }}>Scholarship</option>
-                                            <option value="Other" {{ $selectedPurpose === 'Other' ? 'selected' : '' }}>Other</option>
+                                            @foreach($dropdownOptions['purpose'] as $option)
+                                                <option value="{{ $option }}" {{ $selectedPurpose === $option ? 'selected' : '' }}>{{ $option }}</option>
+                                            @endforeach
                                         </select>
                                         @error('data.purpose')
                                             <span class="field-error">{{ $message }}</span>

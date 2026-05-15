@@ -864,6 +864,18 @@
                                 <p class="meta-value mono">{{ $request->tracking_id }}</p>
                             </div>
                             <div class="meta-card">
+                                <span class="meta-label">Level</span>
+                                <p class="meta-value">{{ $request->trainee_level ?? '-' }}</p>
+                            </div>
+                            <div class="meta-card">
+                                <span class="meta-label">Department</span>
+                                <p class="meta-value">{{ $request->department ?? '-' }}</p>
+                            </div>
+                            <div class="meta-card">
+                                <span class="meta-label">Location</span>
+                                <p class="meta-value">{{ $request->work_location ?? '-' }}</p>
+                            </div>
+                            <div class="meta-card">
                                 <span class="meta-label">Submitted</span>
                                 <p class="meta-value">{{ $request->created_at->format('M d, Y') }}</p>
                             </div>

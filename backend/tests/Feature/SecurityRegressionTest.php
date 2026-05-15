@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\SendRequestStatusUpdatedNotifications;
+use App\Jobs\SyncRequestLetterToGoogleDrive;
+use App\Jobs\WarmApprovedLetterPdf;
 use App\Mail\TwoFactorCodeMail;
 use App\Mail\RequestStatusUpdated;
 use App\Mail\TrackingVerificationCode;
@@ -19,6 +22,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -992,6 +996,44 @@ class SecurityRegressionTest extends TestCase
         Mail::assertSent(RequestStatusUpdated::class);
     }
 
+    public function test_admin_status_approval_queues_student_notification_and_pdf_warmup(): void
+    {
+        config(['queue.default' => 'database']);
+        Queue::fake();
+
+        $admin = $this->createAdminUser([
+            'two_factor_confirmed_at' => null,
+            'two_factor_method' => null,
+        ]);
+
+        $request = RequestRecord::create([
+            'tracking_id' => 'REC-2026-QUEUE01',
+            'student_name' => 'Queued',
+            'last_name' => 'Approval',
+            'student_email' => 'queue-approval@example.test',
+            'verification_token' => 'ID-QUEUE-1',
+            'university' => 'Queue University',
+            'purpose' => 'Residency',
+            'training_period' => '2026-04',
+            'status' => 'Submitted',
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['2fa_verified' => true])
+            ->patch(route('admin.requests.update-status', $request->id), [
+                'status' => 'Approved',
+            ])
+            ->assertRedirect();
+
+        Queue::assertPushed(SendRequestStatusUpdatedNotifications::class, function ($job) use ($request) {
+            return $job->requestId === $request->id;
+        });
+
+        Queue::assertPushed(WarmApprovedLetterPdf::class, function ($job) use ($request) {
+            return $job->requestId === $request->id;
+        });
+    }
+
     public function test_api_request_update_ignores_token_mutations_even_for_admin(): void
     {
         $user = $this->createAdminUser();
@@ -1653,34 +1695,39 @@ class SecurityRegressionTest extends TestCase
 
     public function test_admin_can_sync_single_approved_letter_to_google_drive(): void
     {
+        Queue::fake();
+
         $admin = $this->createAdminUser([
             'two_factor_confirmed_at' => null,
             'two_factor_method' => null,
         ]);
         $request = $this->createApprovedRequest();
-        $fakeDriveService = $this->bindFakeGoogleDriveLetterBackupService();
 
         $this->actingAs($admin)
             ->withSession(['2fa_verified' => true])
             ->from(route('admin.requests.show', $request->id))
             ->post(route('admin.requests.letter-drive', $request->id))
             ->assertRedirect(route('admin.requests.show', $request->id))
-            ->assertSessionHas('success', 'Letter backed up to Google Drive successfully.');
+            ->assertSessionHas('success', 'Letter backup was queued for Google Drive processing.');
 
         $request->refresh();
 
-        $this->assertSame([$request->id], $fakeDriveService->syncedRequestIds);
-        $this->assertSame('synced', $request->drive_backup_status);
-        $this->assertSame('drive-file-' . $request->id, $request->drive_backup_file_id);
-        $this->assertSame('https://drive.google.com/file/d/drive-file-' . $request->id . '/view', $request->drive_backup_url);
+        $this->assertSame('queued', $request->drive_backup_status);
+        Queue::assertPushed(SyncRequestLetterToGoogleDrive::class, function ($job) use ($request, $admin) {
+            return $job->requestId === $request->id
+                && $job->initiatedByUserId === $admin->id
+                && $job->source === 'single';
+        });
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'admin_sync_letter_google_drive',
+            'action' => 'admin_sync_letter_google_drive_queued',
             'target_id' => $request->id,
         ]);
     }
 
     public function test_admin_can_export_selected_approved_letters_to_google_drive(): void
     {
+        Queue::fake();
+
         $admin = $this->createAdminUser([
             'two_factor_confirmed_at' => null,
             'two_factor_method' => null,
@@ -1698,8 +1745,6 @@ class SecurityRegressionTest extends TestCase
             'status' => 'Submitted',
         ]);
 
-        $fakeDriveService = $this->bindFakeGoogleDriveLetterBackupService();
-
         $this->actingAs($admin)
             ->withSession(['2fa_verified' => true])
             ->from('/admin/requests')
@@ -1710,18 +1755,26 @@ class SecurityRegressionTest extends TestCase
             ->assertRedirect('/admin/requests')
             ->assertSessionHas('success', function ($message) {
                 return is_string($message)
-                    && str_contains($message, 'Backed up 1 approved letter(s) to Google Drive.')
+                    && str_contains($message, 'Queued 1 approved letter(s) for Google Drive backup.')
                     && str_contains($message, 'skipped because they are not approved');
             });
 
-        $this->assertSame([$approved->id], $fakeDriveService->syncedRequestIds);
+        $approved->refresh();
+        $this->assertSame('queued', $approved->drive_backup_status);
+        Queue::assertPushed(SyncRequestLetterToGoogleDrive::class, function ($job) use ($approved, $admin) {
+            return $job->requestId === $approved->id
+                && $job->initiatedByUserId === $admin->id
+                && $job->source === 'bulk';
+        });
         $this->assertDatabaseHas('audit_logs', [
-            'action' => 'admin_export_letters_google_drive',
+            'action' => 'admin_export_letters_google_drive_queued',
         ]);
     }
 
     public function test_admin_can_export_filtered_approved_letters_to_google_drive(): void
     {
+        Queue::fake();
+
         $admin = $this->createAdminUser([
             'two_factor_confirmed_at' => null,
             'two_factor_method' => null,
@@ -1778,8 +1831,6 @@ class SecurityRegressionTest extends TestCase
             'status' => 'Approved',
         ]);
 
-        $fakeDriveService = $this->bindFakeGoogleDriveLetterBackupService();
-
         $this->actingAs($admin)
             ->withSession(['2fa_verified' => true])
             ->from('/admin/requests')
@@ -1793,10 +1844,20 @@ class SecurityRegressionTest extends TestCase
             ->assertRedirect('/admin/requests')
             ->assertSessionHas('success', function ($message) {
                 return is_string($message)
-                    && str_contains($message, 'Backed up 2 approved letter(s) to Google Drive.');
+                    && str_contains($message, 'Queued 2 approved letter(s) for Google Drive backup.');
             });
 
-        $this->assertEqualsCanonicalizing([$approvedA->id, $approvedB->id], $fakeDriveService->syncedRequestIds);
+        Queue::assertPushed(SyncRequestLetterToGoogleDrive::class, 2);
+        Queue::assertPushed(SyncRequestLetterToGoogleDrive::class, function ($job) use ($approvedA, $admin) {
+            return $job->requestId === $approvedA->id
+                && $job->initiatedByUserId === $admin->id
+                && $job->source === 'bulk';
+        });
+        Queue::assertPushed(SyncRequestLetterToGoogleDrive::class, function ($job) use ($approvedB, $admin) {
+            return $job->requestId === $approvedB->id
+                && $job->initiatedByUserId === $admin->id
+                && $job->source === 'bulk';
+        });
     }
 
     public function test_admin_request_details_page_shows_download_pdf_button_for_approved_request(): void

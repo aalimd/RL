@@ -326,8 +326,8 @@ class BrowserLetterPdfService
 
         file_put_contents($htmlPath, $html);
 
-        $command = [
-            $browserBinary,
+        // Build Chrome flags (flags MUST come before the URL argument).
+        $chromeFlags = [
             '--headless=new',
             '--disable-gpu',
             '--disable-dev-shm-usage',
@@ -338,11 +338,22 @@ class BrowserLetterPdfService
             '--virtual-time-budget=2500',
             '--print-to-pdf-no-header',
             '--print-to-pdf=' . $pdfPath,
-            'file://' . $htmlPath,
         ];
 
         if ($this->shouldDisableSandbox()) {
-            $command[] = '--no-sandbox';
+            $chromeFlags[] = '--no-sandbox';
+        }
+
+        // The URL must be the last argument.
+        $chromeFlags[] = 'file://' . $htmlPath;
+
+        // On macOS ARM, XAMPP ships an x86_64 PHP which would force Chrome
+        // to run under Rosetta (x86_64 emulation), causing it to fail.
+        // Prefix with `arch -arm64` to launch Chrome natively on ARM.
+        if ($this->shouldForceArmArchitecture()) {
+            $command = array_merge(['arch', '-arm64', $browserBinary], $chromeFlags);
+        } else {
+            $command = array_merge([$browserBinary], $chromeFlags);
         }
 
         $process = new Process($command, base_path(), null, null, null);
@@ -695,7 +706,48 @@ class BrowserLetterPdfService
 
     private function shouldDisableSandbox(): bool
     {
-        return PHP_OS_FAMILY === 'Linux' && function_exists('posix_geteuid') && posix_geteuid() === 0;
+        // Linux: disable sandbox when running as root.
+        if (PHP_OS_FAMILY === 'Linux' && function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            return true;
+        }
+
+        // macOS: XAMPP's Apache (httpd) process does not carry the entitlements
+        // Chrome requires to initialise its sandbox. When PHP is running as a
+        // web-server SAPI (not CLI), Chrome will fail with:
+        //   "sandbox initialization failed: Operation not permitted"
+        // Adding --no-sandbox is safe here because the PDF export only opens
+        // a trusted, locally-generated HTML file.
+        if (PHP_OS_FAMILY === 'Darwin' && PHP_SAPI !== 'cli') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Detect when macOS ARM needs `arch -arm64` to launch Chrome natively.
+     *
+     * XAMPP ships an x86_64-only PHP binary. On Apple Silicon Macs this means
+     * PHP itself runs under Rosetta, and any child process it spawns inherits
+     * the x86_64 architecture. Chrome's universal binary then picks x86_64 and
+     * prints "The use of Rosetta to run the x64 version of Chromium on Arm is
+     * neither tested nor maintained". Prefixing the command with `arch -arm64`
+     * forces Chrome to run natively on ARM.
+     */
+    private function shouldForceArmArchitecture(): bool
+    {
+        if (PHP_OS_FAMILY !== 'Darwin') {
+            return false;
+        }
+
+        // Check if the hardware is ARM (Apple Silicon)
+        $hwArch = trim((string) @shell_exec('sysctl -n hw.optional.arm64 2>/dev/null'));
+        if ($hwArch !== '1') {
+            return false;
+        }
+
+        // Only needed when PHP is running as x86_64 (Rosetta)
+        return PHP_INT_SIZE === 8 && php_uname('m') === 'x86_64';
     }
 
     private function makeTempPath(string $prefix, string $extension): string

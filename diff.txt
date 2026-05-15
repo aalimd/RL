@@ -1,0 +1,980 @@
+diff --git a/backend/app/Http/Controllers/AdminController.php b/backend/app/Http/Controllers/AdminController.php
+index d99f38a..43b42a1 100644
+--- a/backend/app/Http/Controllers/AdminController.php
++++ b/backend/app/Http/Controllers/AdminController.php
+@@ -41,6 +41,7 @@ class AdminController extends Controller
+         'status',
+         'search',
+         'university',
++        'trainee_level',
+         'date_from',
+         'date_to',
+     ];
+@@ -197,6 +198,10 @@ class AdminController extends Controller
+             $query->where('university', 'like', '%' . $filters['university'] . '%');
+         }
+ 
++        if (!empty($filters['trainee_level'])) {
++            $query->where('trainee_level', $filters['trainee_level']);
++        }
++
+         if (!empty($filters['date_from'])) {
+             $query->whereDate('created_at', '>=', $filters['date_from']);
+         }
+@@ -216,8 +221,14 @@ class AdminController extends Controller
+         $settings = $this->getSettings();
+         $request = RequestModel::findOrFail($id);
+         $templates = Template::where('is_active', true)->orderBy('name')->get();
++        $dropdownOptions = [
++            'trainee_level' => json_decode($settings['dropdownOptions_trainee_level'] ?? '["Medical Student","Intern","Resident","Senior Registrar","Fellow","Other"]', true),
++            'department' => json_decode($settings['dropdownOptions_department'] ?? '["Emergency Medicine"]', true),
++            'work_location' => json_decode($settings['dropdownOptions_work_location'] ?? '["King Abdulaziz Medical City, Jeddah (MNGHA)"]', true),
++            'purpose' => json_decode($settings['dropdownOptions_purpose'] ?? '["Residency","Master\'s Application","PhD Application","Job Application","Internship","Scholarship","Other"]', true),
++        ];
+ 
+-        return view('admin.request-details', compact('settings', 'request', 'templates'));
++        return view('admin.request-details', compact('settings', 'request', 'templates', 'dropdownOptions'));
+     }
+ 
+     /**
+@@ -284,6 +295,8 @@ class AdminController extends Controller
+             'last_name' => 'nullable|string|max:255',
+             'student_email' => 'required|email|max:255',
+             'university' => 'nullable|string|max:255',
++            'trainee_level' => 'nullable|string|max:100',
++            'department' => 'nullable|string|max:255',
+             'verification_token' => 'nullable|string|max:100',
+             'purpose' => 'nullable|string|max:100',
+             'deadline' => 'nullable|date',
+@@ -443,6 +456,9 @@ class AdminController extends Controller
+                 'Student Name',
+                 'Email',
+                 'University',
++                'Trainee Level',
++                'Department',
++                'Work Location',
+                 'Purpose',
+                 'Status',
+                 'Deadline',
+@@ -457,6 +473,9 @@ class AdminController extends Controller
+                     $this->sanitizeCsvCell($req->student_name),
+                     $this->sanitizeCsvCell($req->student_email),
+                     $this->sanitizeCsvCell($req->university ?? ''),
++                    $this->sanitizeCsvCell($req->trainee_level ?? ''),
++                    $this->sanitizeCsvCell($req->department ?? ''),
++                    $this->sanitizeCsvCell($req->work_location ?? ''),
+                     $this->sanitizeCsvCell($req->purpose ?? ''),
+                     $this->sanitizeCsvCell($req->status),
+                     $this->sanitizeCsvCell($req->deadline ? date('Y-m-d', strtotime($req->deadline)) : ''),
+@@ -1934,7 +1953,14 @@ class AdminController extends Controller
+             'formFieldConfig' => $settings['formFieldConfig'] ?? '{}',
+         ];
+ 
+-        return view('admin.form-settings', compact('settings', 'templates', 'formSettings'));
++        $dropdownOptions = [
++            'trainee_level' => json_decode($settings['dropdownOptions_trainee_level'] ?? '["Medical Student","Intern","Resident","Senior Registrar","Fellow","Other"]', true),
++            'department' => json_decode($settings['dropdownOptions_department'] ?? '["Emergency Medicine"]', true),
++            'work_location' => json_decode($settings['dropdownOptions_work_location'] ?? '["King Abdulaziz Medical City, Jeddah (MNGHA)"]', true),
++            'purpose' => json_decode($settings['dropdownOptions_purpose'] ?? '["Residency","Master\'s Application","PhD Application","Job Application","Internship","Scholarship","Other"]', true),
++        ];
++
++        return view('admin.form-settings', compact('settings', 'templates', 'formSettings', 'dropdownOptions'));
+     }
+ 
+     /**
+@@ -1952,6 +1978,8 @@ class AdminController extends Controller
+             'studentTemplateIds' => 'nullable|array',
+             'studentTemplateIds.*' => 'integer|exists:templates,id',
+             'fields' => 'nullable|array',
++            'dropdownOptions' => 'nullable|array',
++            'dropdownOptions.*' => 'nullable|array',
+         ]);
+ 
+         $templateSelectionMode = $validated['templateSelectionMode'];
+@@ -2034,6 +2062,9 @@ class AdminController extends Controller
+             'gender',
+             'student_email',
+             'university',
++            'trainee_level',
++            'department',
++            'work_location',
+             'verification_token',
+             'training_period',
+             'phone',
+@@ -2072,6 +2103,15 @@ class AdminController extends Controller
+             ['value' => json_encode($fieldConfig)]
+         );
+ 
++        if (isset($validated['dropdownOptions'])) {
++            foreach (['trainee_level', 'department', 'work_location', 'purpose'] as $dropdownKey) {
++                if (isset($validated['dropdownOptions'][$dropdownKey])) {
++                    $options = array_values(array_filter($validated['dropdownOptions'][$dropdownKey], fn($v) => trim((string)$v) !== ''));
++                    Settings::updateOrCreate(['key' => "dropdownOptions_{$dropdownKey}"], ['value' => json_encode($options)]);
++                }
++            }
++        }
++
+         return redirect()->route('admin.form-settings')->with('success', 'Form settings updated successfully!');
+     }
+ 
+diff --git a/backend/app/Http/Controllers/AuthController.php b/backend/app/Http/Controllers/AuthController.php
+index 4c5a9b1..a2b969b 100644
+--- a/backend/app/Http/Controllers/AuthController.php
++++ b/backend/app/Http/Controllers/AuthController.php
+@@ -130,7 +130,7 @@ class AuthController extends Controller
+                 return false;
+             }
+ 
+-            return $this->google2fa()->verifyKey($secret, $code);
++            return $this->google2fa()->verifyKey((string) $secret, $code);
+         }
+ 
+         if ($user->two_factor_method === 'email') {
+diff --git a/backend/app/Http/Controllers/PageController.php b/backend/app/Http/Controllers/PageController.php
+index 0e32deb..154d92c 100644
+--- a/backend/app/Http/Controllers/PageController.php
++++ b/backend/app/Http/Controllers/PageController.php
+@@ -8,6 +8,7 @@ use App\Models\Settings;
+ use App\Models\User;
+ use Illuminate\Http\Request;
+ use Illuminate\Support\Carbon;
++use Illuminate\Support\Facades\Auth;
+ use Illuminate\Support\Facades\Cookie;
+ use Illuminate\Support\Facades\Mail;
+ use Illuminate\Support\Facades\Storage;
+@@ -111,6 +112,17 @@ class PageController extends Controller
+         }
+     }
+ 
++    private function getDropdownOptions(): array
++    {
++        $rawSettings = Settings::whereIn('key', ['dropdownOptions_trainee_level', 'dropdownOptions_department', 'dropdownOptions_work_location', 'dropdownOptions_purpose'])->pluck('value', 'key')->toArray();
++        return [
++            'trainee_level' => json_decode($rawSettings['dropdownOptions_trainee_level'] ?? '["Medical Student","Intern","Resident","Senior Registrar","Fellow","Other"]', true),
++            'department' => json_decode($rawSettings['dropdownOptions_department'] ?? '["Emergency Medicine"]', true),
++            'work_location' => json_decode($rawSettings['dropdownOptions_work_location'] ?? '["King Abdulaziz Medical City, Jeddah (MNGHA)"]', true),
++            'purpose' => json_decode($rawSettings['dropdownOptions_purpose'] ?? '["Residency","Master\'s Application","PhD Application","Job Application","Internship","Scholarship","Other"]', true),
++        ];
++    }
++
+     /**
+      * Serve files stored on the public disk when a storage symlink is unavailable.
+      */
+@@ -158,7 +170,7 @@ class PageController extends Controller
+     /**
+      * Check whether the student has a valid verified tracking session.
+      */
+-    private function hasValidTrackingVerification(?\App\Models\Request $requestModel = null): bool
++    private function hasValidTrackingVerification(?RequestModel $requestModel = null): bool
+     {
+         $verifiedRequestId = session('tracking_verified_request_id');
+         $verifiedTrackingId = session('tracking_verified_tracking_id');
+@@ -180,7 +192,7 @@ class PageController extends Controller
+     /**
+      * Require a valid verified tracking session before exposing approved letters.
+      */
+-    private function ensureApprovedLetterAccess(\App\Models\Request $requestModel): void
++    private function ensureApprovedLetterAccess(RequestModel $requestModel): void
+     {
+         if ($error = $this->approvedLetterAccessError($requestModel)) {
+             abort($error['status'], $error['message']);
+@@ -190,7 +202,7 @@ class PageController extends Controller
+     /**
+      * Resolve why an approved-letter route is blocked without exposing the letter.
+      */
+-    private function approvedLetterAccessError(\App\Models\Request $requestModel): ?array
++    private function approvedLetterAccessError(RequestModel $requestModel): ?array
+     {
+         if (!$this->hasValidTrackingVerification($requestModel)) {
+             return [
+@@ -214,7 +226,7 @@ class PageController extends Controller
+     /**
+      * Return a polished response for blocked letter/PDF access.
+      */
+-    private function blockedLetterAccessResponse(Request $httpRequest, \App\Models\Request $requestModel, array $error)
++    private function blockedLetterAccessResponse(Request $httpRequest, RequestModel $requestModel, array $error)
+     {
+         $payload = [
+             'status' => $error['reason'],
+@@ -322,7 +334,7 @@ class PageController extends Controller
+     /**
+      * Queue a trusted-browser cookie after a successful OTP verification.
+      */
+-    private function rememberTrackingBrowser(RequestModel $requestModel): Carbon
++    private function rememberTrackingBrowser(RequestModel $requestModel): \Carbon\CarbonInterface
+     {
+         $rememberUntil = now()->addDays(self::TRUSTED_TRACKING_DAYS);
+ 
+@@ -422,18 +434,11 @@ class PageController extends Controller
+     /**
+      * Build wizard form data from a stored request.
+      */
+-    private function buildWizardDataFromRequest(\App\Models\Request $requestModel): array
++    private function buildWizardDataFromRequest(RequestModel $requestModel): array
+     {
+         $storedFormData = is_array($requestModel->form_data) ? $requestModel->form_data : [];
+-        $knownPurposes = [
+-            "Master's Application",
+-            'PhD Application',
+-            'Job Application',
+-            'Internship',
+-            'Scholarship',
+-            'Residency',
+-            'Other',
+-        ];
++        $dropdownOptions = $this->getDropdownOptions();
++        $knownPurposes = $dropdownOptions['purpose'];
+         $purpose = $requestModel->purpose;
+ 
+         if (!empty($purpose) && !in_array($purpose, $knownPurposes, true)) {
+@@ -448,6 +453,8 @@ class PageController extends Controller
+             'student_email' => $requestModel->student_email,
+             'phone' => $requestModel->phone,
+             'university' => $requestModel->university,
++            'trainee_level' => $requestModel->trainee_level,
++            'department' => $requestModel->department,
+             'verification_token' => $requestModel->verification_token,
+             'training_period' => $requestModel->training_period,
+             'purpose' => $purpose,
+@@ -515,7 +522,7 @@ class PageController extends Controller
+         }
+ 
+         // Log user in
+-        auth()->login($user);
++        Auth::login($user);
+         $request->session()->regenerate();
+         $request->session()->regenerateToken();
+ 
+@@ -527,7 +534,7 @@ class PageController extends Controller
+      */
+     public function logout(Request $request)
+     {
+-        auth()->logout();
++        Auth::logout();
+         $request->session()->invalidate();
+         $request->session()->regenerateToken();
+ 
+@@ -551,7 +558,7 @@ class PageController extends Controller
+         $isEditMode = session('wizard_mode') === 'edit';
+         if ($isEditMode) {
+             $editTrackingId = session('wizard_tracking_id');
+-            $editRequest = $editTrackingId ? \App\Models\Request::where('tracking_id', $editTrackingId)->first() : null;
++            $editRequest = $editTrackingId ? RequestModel::where('tracking_id', $editTrackingId)->first() : null;
+ 
+             if (
+                 !$editRequest ||
+@@ -577,7 +584,9 @@ class PageController extends Controller
+ 
+         session(['wizard_step' => $step]);
+ 
+-        return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig'));
++        $dropdownOptions = $this->getDropdownOptions();
++
++        return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig', 'dropdownOptions'));
+     }
+ 
+     /**
+@@ -599,7 +608,7 @@ class PageController extends Controller
+         $editingRequest = null;
+ 
+         if ($isEditMode) {
+-            $editingRequest = $editTrackingId ? \App\Models\Request::where('tracking_id', $editTrackingId)->first() : null;
++            $editingRequest = $editTrackingId ? RequestModel::where('tracking_id', $editTrackingId)->first() : null;
+             if (
+                 !$editingRequest ||
+                 !$this->hasActiveEditSession() ||
+@@ -630,7 +639,8 @@ class PageController extends Controller
+                 $sessionPayload['wizard_edit_expires_at'] = now()->addMinutes(30)->timestamp;
+             }
+             session($sessionPayload);
+-            return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig'));
++            $dropdownOptions = $this->getDropdownOptions();
++            return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig', 'dropdownOptions'));
+         }
+ 
+         // Validation based on current step
+@@ -639,7 +649,10 @@ class PageController extends Controller
+         } elseif ($currentStep == 2) {
+             $errors = $this->wizardService->validateStep2($formData, $formConfig);
+             if (!empty($errors)) {
+-                return back()->withErrors($errors)->withInput();
++                $dropdownOptions = $this->getDropdownOptions();
++                /** @var \Illuminate\View\View $view */
++                $view = view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig', 'dropdownOptions'));
++                return $view->withErrors($errors);
+             }
+ 
+             // Normalize content selection against admin form settings.
+@@ -673,7 +686,7 @@ class PageController extends Controller
+ 
+                 try {
+                     $updatedRequest = \Illuminate\Support\Facades\DB::transaction(function () use ($editTrackingId, $formData, $originalUpdatedAt) {
+-                        $requestModel = \App\Models\Request::where('tracking_id', $editTrackingId)->lockForUpdate()->first();
++                        $requestModel = RequestModel::where('tracking_id', $editTrackingId)->lockForUpdate()->first();
+ 
+                         if (!$requestModel) {
+                             throw new \RuntimeException('REQUEST_NOT_FOUND');
+@@ -715,6 +728,8 @@ class PageController extends Controller
+                             'phone' => $formData['phone'] ?? null,
+                             'verification_token' => $formData['verification_token'] ?? $requestModel->verification_token,
+                             'university' => $formData['university'] ?? $requestModel->university ?? '',
++                            'trainee_level' => $formData['trainee_level'] ?? null,
++                            'department' => $formData['department'] ?? null,
+                             'purpose' => $formData['purpose'] ?? null,
+                             'deadline' => $deadline,
+                             'training_period' => $trainingPeriod,
+@@ -801,7 +816,7 @@ class PageController extends Controller
+                         'custom_content' => $customContent,
+                     ]);
+ 
+-                    return \App\Models\Request::create([
++                    return RequestModel::create([
+                         'tracking_id' => $trackingId,
+                         'student_name' => $formData['student_name'] ?? '',
+                         'middle_name' => $formData['middle_name'] ?? null,
+@@ -811,6 +826,8 @@ class PageController extends Controller
+                         'verification_token' => $formData['verification_token'] ?? \Str::random(60),
+                         'verify_token' => \Str::random(32), // For QR code verification
+                         'university' => $formData['university'] ?? '',
++                        'trainee_level' => $formData['trainee_level'] ?? null,
++                        'department' => $formData['department'] ?? null,
+                         'purpose' => $formData['purpose'] ?? null,
+                         'deadline' => $formData['deadline'] ?? null,
+                         'training_period' => $formData['training_period'] ?? null,
+@@ -874,8 +891,10 @@ class PageController extends Controller
+             $sessionPayload['wizard_edit_expires_at'] = now()->addMinutes(30)->timestamp;
+         }
+         session($sessionPayload);
++        $step = (int) session('wizard_step', 1);
+ 
+-        return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig'));
++        $dropdownOptions = $this->getDropdownOptions();
++        return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig', 'dropdownOptions'));
+     }
+ 
+     /**
+@@ -888,7 +907,7 @@ class PageController extends Controller
+         ]);
+ 
+         $trackingId = trim((string) $request->input('tracking_id'));
+-        $requestModel = \App\Models\Request::where('tracking_id', $trackingId)->first();
++        $requestModel = RequestModel::where('tracking_id', $trackingId)->first();
+ 
+         if (!$requestModel) {
+             return redirect()->route('public.tracking', ['id' => $trackingId])
+@@ -966,7 +985,7 @@ class PageController extends Controller
+         ]);
+         $this->clearTrackingVerificationSession();
+ 
+-        $result = \App\Models\Request::where('tracking_id', $trackingId)
++        $result = RequestModel::where('tracking_id', $trackingId)
+             ->where('verification_token', $verificationToken)
+             ->first();
+ 
+@@ -1037,13 +1056,13 @@ class PageController extends Controller
+         $expiresAt = session('2fa_expires');
+ 
+         try {
+-            $expiresAt = $expiresAt ? \Illuminate\Support\Carbon::parse($expiresAt) : null;
++            $expiresAt = $expiresAt ? Carbon::parse($expiresAt) : null;
+         } catch (\Throwable $e) {
+             $expiresAt = null;
+         }
+ 
+         $hasActiveCode = session()->has('2fa_otp')
+-            && $expiresAt instanceof \Illuminate\Support\Carbon
++            && $expiresAt instanceof Carbon
+             && now()->lessThan($expiresAt);
+ 
+         return view('public.2fa_verify', compact('settings', 'deliveryMethod', 'deliveryHint', 'trackingId', 'expiresAt', 'hasActiveCode'));
+@@ -1066,7 +1085,7 @@ class PageController extends Controller
+         $isExpired = true;
+         if ($expires) {
+             try {
+-                $isExpired = now()->greaterThan(\Illuminate\Support\Carbon::parse($expires));
++                $isExpired = now()->greaterThan(Carbon::parse($expires));
+             } catch (\Throwable $e) {
+                 $isExpired = true;
+             }
+@@ -1090,7 +1109,7 @@ class PageController extends Controller
+         // OTP Valid - Clear session 2FA data but keep request context? 
+         // Or just load the view directly.
+ 
+-        $result = \App\Models\Request::find($requestId);
++        $result = RequestModel::find($requestId);
+         if (!$result) {
+             $this->clearTrackingVerificationSession();
+             return redirect()->route('public.tracking')
+@@ -1186,7 +1205,7 @@ class PageController extends Controller
+      */
+     public function viewLetter($tracking_id, Request $httpRequest)
+     {
+-        $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
++        $request = RequestModel::where('tracking_id', $tracking_id)->firstOrFail();
+         $this->ensureApprovedLetterAccess($request);
+ 
+         return view('public.letter-viewer', [
+@@ -1204,7 +1223,7 @@ class PageController extends Controller
+      */
+     public function previewLetter($tracking_id, Request $httpRequest)
+     {
+-        $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
++        $request = RequestModel::where('tracking_id', $tracking_id)->firstOrFail();
+         $this->ensureApprovedLetterAccess($request);
+ 
+         $content = $this->letterService->generateLetterContent($request);
+@@ -1230,7 +1249,7 @@ class PageController extends Controller
+      */
+     public function preparePdf($tracking_id, Request $httpRequest)
+     {
+-        $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
++        $request = RequestModel::where('tracking_id', $tracking_id)->firstOrFail();
+         if ($error = $this->approvedLetterAccessError($request)) {
+             return $this->blockedLetterAccessResponse($httpRequest, $request, $error);
+         }
+@@ -1284,7 +1303,7 @@ class PageController extends Controller
+      */
+     public function downloadPdf($tracking_id, Request $httpRequest)
+     {
+-        $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
++        $request = RequestModel::where('tracking_id', $tracking_id)->firstOrFail();
+         if ($error = $this->approvedLetterAccessError($request)) {
+             return $this->blockedLetterAccessResponse($httpRequest, $request, $error);
+         }
+@@ -1326,7 +1345,7 @@ class PageController extends Controller
+     /**
+      * Helper to resolve template from request or defaults
+      */
+-    private function resolveTemplate(\App\Models\Request $request)
++    private function resolveTemplate(RequestModel $request)
+     {
+         $template = null;
+         if ($request->template_id) {
+diff --git a/backend/app/Models/Request.php b/backend/app/Models/Request.php
+index 8b715ce..2537233 100644
+--- a/backend/app/Models/Request.php
++++ b/backend/app/Models/Request.php
+@@ -18,6 +18,9 @@ class Request extends Model
+         'student_email',
+         'phone',
+         'university',
++        'trainee_level',
++        'department',
++        'work_location',
+         'gpa',
+         'purpose',
+         'deadline',
+diff --git a/backend/app/Services/BrowserLetterPdfService.php b/backend/app/Services/BrowserLetterPdfService.php
+index b079e95..3268180 100644
+--- a/backend/app/Services/BrowserLetterPdfService.php
++++ b/backend/app/Services/BrowserLetterPdfService.php
+@@ -326,8 +326,8 @@ class BrowserLetterPdfService
+ 
+         file_put_contents($htmlPath, $html);
+ 
+-        $command = [
+-            $browserBinary,
++        // Build Chrome flags (flags MUST come before the URL argument).
++        $chromeFlags = [
+             '--headless=new',
+             '--disable-gpu',
+             '--disable-dev-shm-usage',
+@@ -338,11 +338,22 @@ class BrowserLetterPdfService
+             '--virtual-time-budget=2500',
+             '--print-to-pdf-no-header',
+             '--print-to-pdf=' . $pdfPath,
+-            'file://' . $htmlPath,
+         ];
+ 
+         if ($this->shouldDisableSandbox()) {
+-            $command[] = '--no-sandbox';
++            $chromeFlags[] = '--no-sandbox';
++        }
++
++        // The URL must be the last argument.
++        $chromeFlags[] = 'file://' . $htmlPath;
++
++        // On macOS ARM, XAMPP ships an x86_64 PHP which would force Chrome
++        // to run under Rosetta (x86_64 emulation), causing it to fail.
++        // Prefix with `arch -arm64` to launch Chrome natively on ARM.
++        if ($this->shouldForceArmArchitecture()) {
++            $command = array_merge(['arch', '-arm64', $browserBinary], $chromeFlags);
++        } else {
++            $command = array_merge([$browserBinary], $chromeFlags);
+         }
+ 
+         $process = new Process($command, base_path(), null, null, null);
+@@ -695,7 +706,48 @@ class BrowserLetterPdfService
+ 
+     private function shouldDisableSandbox(): bool
+     {
+-        return PHP_OS_FAMILY === 'Linux' && function_exists('posix_geteuid') && posix_geteuid() === 0;
++        // Linux: disable sandbox when running as root.
++        if (PHP_OS_FAMILY === 'Linux' && function_exists('posix_geteuid') && posix_geteuid() === 0) {
++            return true;
++        }
++
++        // macOS: XAMPP's Apache (httpd) process does not carry the entitlements
++        // Chrome requires to initialise its sandbox. When PHP is running as a
++        // web-server SAPI (not CLI), Chrome will fail with:
++        //   "sandbox initialization failed: Operation not permitted"
++        // Adding --no-sandbox is safe here because the PDF export only opens
++        // a trusted, locally-generated HTML file.
++        if (PHP_OS_FAMILY === 'Darwin' && PHP_SAPI !== 'cli') {
++            return true;
++        }
++
++        return false;
++    }
++
++    /**
++     * Detect when macOS ARM needs `arch -arm64` to launch Chrome natively.
++     *
++     * XAMPP ships an x86_64-only PHP binary. On Apple Silicon Macs this means
++     * PHP itself runs under Rosetta, and any child process it spawns inherits
++     * the x86_64 architecture. Chrome's universal binary then picks x86_64 and
++     * prints "The use of Rosetta to run the x64 version of Chromium on Arm is
++     * neither tested nor maintained". Prefixing the command with `arch -arm64`
++     * forces Chrome to run natively on ARM.
++     */
++    private function shouldForceArmArchitecture(): bool
++    {
++        if (PHP_OS_FAMILY !== 'Darwin') {
++            return false;
++        }
++
++        // Check if the hardware is ARM (Apple Silicon)
++        $hwArch = trim((string) @shell_exec('sysctl -n hw.optional.arm64 2>/dev/null'));
++        if ($hwArch !== '1') {
++            return false;
++        }
++
++        // Only needed when PHP is running as x86_64 (Rosetta)
++        return PHP_INT_SIZE === 8 && php_uname('m') === 'x86_64';
+     }
+ 
+     private function makeTempPath(string $prefix, string $extension): string
+diff --git a/backend/app/Services/LetterService.php b/backend/app/Services/LetterService.php
+index 4758a18..465f2f0 100644
+--- a/backend/app/Services/LetterService.php
++++ b/backend/app/Services/LetterService.php
+@@ -491,6 +491,9 @@ class LetterService
+             '{{studentEmail}}' => $request->student_email,
+             '{{university}}' => $request->university ?? '',
+             '{{purpose}}' => $request->purpose ?? '',
++            '{{traineeLevel}}' => $request->trainee_level ?? '',
++            '{{department}}' => $request->department ?? '',
++            '{{workLocation}}' => $request->work_location ?? '',
+             '{{trackingId}}' => $request->tracking_id,
+             '{{date}}' => now()->format('F d, Y'),
+             '{{rotationMonth}}' => $rotationMonthFormatted,
+diff --git a/backend/app/Services/WizardService.php b/backend/app/Services/WizardService.php
+index ab5fdf9..5a94857 100644
+--- a/backend/app/Services/WizardService.php
++++ b/backend/app/Services/WizardService.php
+@@ -143,6 +143,9 @@ class WizardService
+             'gender' => ['display' => 'Gender', 'rule' => 'in:male,female'],
+             'student_email' => ['display' => 'Email', 'rule' => 'email|max:255'],
+             'university' => ['display' => 'University', 'rule' => 'string|max:255'],
++            'trainee_level' => ['display' => 'Trainee level', 'rule' => 'string|max:100'],
++            'department' => ['display' => 'Department', 'rule' => 'string|max:255'],
++            'work_location' => ['display' => 'Work location', 'rule' => 'string|max:255'],
+             'verification_token' => ['display' => 'Student / National ID', 'rule' => 'string|max:100'],
+             'training_period' => ['display' => 'Training period', 'rule' => 'date_format:Y-m'],
+             'phone' => ['display' => 'Phone number', 'rule' => 'regex:/^([0-9\s\-\+\(\)]*)$/|min:10|max:20'],
+@@ -154,7 +157,7 @@ class WizardService
+         ];
+ 
+         // Default required fields
+-        $defaultRequired = ['student_name', 'last_name', 'student_email', 'gender', 'university', 'verification_token', 'training_period', 'purpose', 'deadline'];
++        $defaultRequired = ['student_name', 'last_name', 'student_email', 'gender', 'university', 'trainee_level', 'work_location', 'verification_token', 'training_period', 'purpose', 'deadline'];
+         $lockedRequiredFields = ['student_email', 'verification_token'];
+ 
+         foreach ($fieldMeta as $key => $meta) {
+diff --git a/backend/config/sanctum.php b/backend/config/sanctum.php
+index 5537bdc..bf6c2a1 100644
+--- a/backend/config/sanctum.php
++++ b/backend/config/sanctum.php
+@@ -1,6 +1,6 @@
+ <?php
+ 
+-use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
++use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+ use Laravel\Sanctum\Sanctum;
+ 
+ return [
+@@ -76,7 +76,7 @@ return [
+     'middleware' => [
+         'authenticate_session' => Laravel\Sanctum\Http\Middleware\AuthenticateSession::class,
+         'encrypt_cookies' => Illuminate\Cookie\Middleware\EncryptCookies::class,
+-        'verify_csrf_token' => PreventRequestForgery::class,
++        'verify_csrf_token' => ValidateCsrfToken::class,
+     ],
+ 
+ ];
+diff --git a/backend/resources/views/admin/form-settings.blade.php b/backend/resources/views/admin/form-settings.blade.php
+index 74e70ae..b4603f9 100644
+--- a/backend/resources/views/admin/form-settings.blade.php
++++ b/backend/resources/views/admin/form-settings.blade.php
+@@ -113,6 +113,89 @@
+                 </div>
+             </div>
+         </div>
++        </div>
++
++        <!-- Dropdown Options Manager -->
++        <div class="card" style="margin-bottom: 1.5rem;">
++            <div class="card-header">
++                <h3>Dropdown Options Manager</h3>
++                <span style="font-size: 0.875rem; color: var(--text-muted);">Manage the choices available in form dropdown lists</span>
++            </div>
++            <div class="card-body">
++                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
++                    <!-- Trainee Levels -->
++                    <div class="dropdown-manager">
++                        <label class="form-label">Trainee Levels</label>
++                        <div id="traineeLevelsList" class="options-list">
++                            @foreach($dropdownOptions['trainee_level'] as $index => $option)
++                                <div class="option-item" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
++                                    <input type="text" name="dropdownOptions[trainee_level][]" value="{{ $option }}" class="form-input" style="flex: 1;" required>
++                                    <button type="button" class="btn btn-ghost text-error" onclick="this.parentElement.remove()">✕</button>
++                                </div>
++                            @endforeach
++                        </div>
++                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
++                            <input type="text" id="newTraineeLevel" class="form-input" style="flex: 1;" placeholder="New Level...">
++                            <button type="button" class="btn btn-secondary" onclick="addDropdownOption('traineeLevelsList', 'trainee_level', 'newTraineeLevel')">Add</button>
++                        </div>
++                    </div>
++
++                    <!-- Departments -->
++                    <div class="dropdown-manager">
++                        <label class="form-label">Departments / Sections</label>
++                        <div id="departmentsList" class="options-list">
++                            @foreach($dropdownOptions['department'] as $index => $option)
++                                <div class="option-item" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
++                                    <input type="text" name="dropdownOptions[department][]" value="{{ $option }}" class="form-input" style="flex: 1;" required>
++                                    <button type="button" class="btn btn-ghost text-error" onclick="this.parentElement.remove()">✕</button>
++                                </div>
++                            @endforeach
++                        </div>
++                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
++                            <input type="text" id="newDepartment" class="form-input" style="flex: 1;" placeholder="New Department...">
++                            <button type="button" class="btn btn-secondary" onclick="addDropdownOption('departmentsList', 'department', 'newDepartment')">Add</button>
++                        </div>
++                    </div>
++
++                    <!-- Work Locations -->
++                    <div class="dropdown-manager">
++                        <label class="form-label">Work Locations / Hospitals</label>
++                        <div id="workLocationsList" class="options-list">
++                            @foreach($dropdownOptions['work_location'] as $index => $option)
++                                <div class="option-item" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
++                                    <input type="text" name="dropdownOptions[work_location][]" value="{{ $option }}" class="form-input" style="flex: 1;" required>
++                                    <button type="button" class="btn btn-ghost text-error" onclick="this.parentElement.remove()">✕</button>
++                                </div>
++                            @endforeach
++                        </div>
++                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
++                            <input type="text" id="newWorkLocation" class="form-input" style="flex: 1;" placeholder="New Location...">
++                            <button type="button" class="btn btn-secondary" onclick="addDropdownOption('workLocationsList', 'work_location', 'newWorkLocation')">Add</button>
++                        </div>
++                    </div>
++
++                    <!-- Purpose -->
++                    <div class="dropdown-manager">
++                        <label class="form-label">Purposes of Recommendation</label>
++                        <div id="purposesList" class="options-list">
++                            @foreach($dropdownOptions['purpose'] as $index => $option)
++                                <div class="option-item" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
++                                    <input type="text" name="dropdownOptions[purpose][]" value="{{ $option }}" class="form-input" style="flex: 1;" required>
++                                    <button type="button" class="btn btn-ghost text-error" onclick="this.parentElement.remove()">✕</button>
++                                </div>
++                            @endforeach
++                        </div>
++                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
++                            <input type="text" id="newPurpose" class="form-input" style="flex: 1;" placeholder="New Purpose...">
++                            <button type="button" class="btn btn-secondary" onclick="addDropdownOption('purposesList', 'purpose', 'newPurpose')">Add</button>
++                        </div>
++                    </div>
++                </div>
++                <small style="display: block; margin-top: 1rem; color: var(--text-muted);">
++                    Note: Empty options will be automatically removed when saving.
++                </small>
++            </div>
++        </div>
+ 
+         <!-- Form Fields Configuration -->
+         <div class="card">
+@@ -139,6 +222,9 @@
+                                     'gender' => 'Gender',
+                                     'student_email' => 'Email Address',
+                                     'university' => 'University / Institution',
++                                    'trainee_level' => 'Trainee Level',
++                                    'department' => 'Department / Section',
++                                    'work_location' => 'Work Location',
+                                     'verification_token' => 'Student ID / National ID',
+                                     'training_period' => 'Training Period',
+                                     'phone' => 'Phone Number',
+@@ -258,5 +344,26 @@
+             toggleTemplateOptions(modeSelect.value);
+         }
+     });
++
++    function addDropdownOption(listId, fieldName, inputId) {
++        const list = document.getElementById(listId);
++        const input = document.getElementById(inputId);
++        const value = input.value.trim();
++
++        if (value === '') return;
++
++        const div = document.createElement('div');
++        div.className = 'option-item';
++        div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
++        
++        div.innerHTML = `
++            <input type="text" name="dropdownOptions[${fieldName}][]" value="${value.replace(/"/g, '&quot;')}" class="form-input" style="flex: 1;" required>
++            <button type="button" class="btn btn-ghost text-error" onclick="this.parentElement.remove()">✕</button>
++        `;
++
++        list.appendChild(div);
++        input.value = '';
++        input.focus();
++    }
+ </script>
+ @endsection
+diff --git a/backend/resources/views/admin/request-details.blade.php b/backend/resources/views/admin/request-details.blade.php
+index 4874452..45c91d4 100644
+--- a/backend/resources/views/admin/request-details.blade.php
++++ b/backend/resources/views/admin/request-details.blade.php
+@@ -121,6 +121,21 @@
+                         <p style="font-weight: 500; color: var(--text-main);">{{ $request->university ?? 'N/A' }}</p>
+                     </div>
+ 
++                    <div style="margin-bottom: 1rem;">
++                        <label style="font-size: 0.75rem; color: var(--text-muted);">Trainee Level</label>
++                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->trainee_level ?? 'N/A' }}</p>
++                    </div>
++
++                    <div style="margin-bottom: 1rem;">
++                        <label style="font-size: 0.75rem; color: var(--text-muted);">Department</label>
++                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->department ?? 'N/A' }}</p>
++                    </div>
++
++                    <div style="margin-bottom: 1rem;">
++                        <label style="font-size: 0.75rem; color: var(--text-muted);">Work Location</label>
++                        <p style="font-weight: 500; color: var(--text-main);">{{ $request->work_location ?? 'N/A' }}</p>
++                    </div>
++
+                     <div style="margin-bottom: 1rem;">
+                         <label style="font-size: 0.75rem; color: var(--text-muted);">Gender</label>
+                         @php
+@@ -490,6 +505,36 @@
+                                     style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                             </div>
+ 
++                            <div style="margin-bottom: 1rem;">
++                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Trainee Level</label>
++                                <select name="trainee_level" class="form-select" style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
++                                    <option value="">Select Level</option>
++                                    @foreach($dropdownOptions['trainee_level'] as $option)
++                                        <option value="{{ $option }}" {{ $request->trainee_level === $option ? 'selected' : '' }}>{{ $option }}</option>
++                                    @endforeach
++                                </select>
++                            </div>
++
++                            <div style="margin-bottom: 1rem;">
++                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Department</label>
++                                <select name="department" class="form-select" style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
++                                    <option value="">Select Department</option>
++                                    @foreach($dropdownOptions['department'] as $option)
++                                        <option value="{{ $option }}" {{ $request->department === $option ? 'selected' : '' }}>{{ $option }}</option>
++                                    @endforeach
++                                </select>
++                            </div>
++
++                            <div style="margin-bottom: 1rem;">
++                                <label style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Work Location</label>
++                                <select name="work_location" class="form-select" style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
++                                    <option value="">Select Work Location</option>
++                                    @foreach($dropdownOptions['work_location'] as $option)
++                                        <option value="{{ $option }}" {{ $request->work_location === $option ? 'selected' : '' }}>{{ $option }}</option>
++                                    @endforeach
++                                </select>
++                            </div>
++
+                             <div style="margin-bottom: 1rem;">
+                                 <label
+                                     style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">Major</label>
+@@ -532,16 +577,11 @@
+                                 <label
+                                     style="display: block; font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-main);">Purpose</label>
+                                 <select name="purpose" class="form-select"
+-                                    style="width: 100%; padding: 0.5rem 1rem; border-radius: 0.5rem;">
++                                    style="width: 100%; padding: 0.5rem 1rem; border: 1px solid var(--border-color); border-radius: 0.5rem;">
+                                     <option value="">Select Purpose</option>
+-                                    <option value="Master's Application" {{ $request->purpose === "Master's Application" ? 'selected' : '' }}>Master's Application</option>
+-                                    <option value="PhD Application" {{ $request->purpose === "PhD Application" ? 'selected' : '' }}>PhD Application</option>
+-                                    <option value="Job Application" {{ $request->purpose === "Job Application" ? 'selected' : '' }}>Job Application</option>
+-                                    <option value="Internship" {{ $request->purpose === "Internship" ? 'selected' : '' }}>
+-                                        Internship</option>
+-                                    <option value="Scholarship" {{ $request->purpose === "Scholarship" ? 'selected' : '' }}>
+-                                        Scholarship</option>
+-                                    <option value="Other" {{ $request->purpose === "Other" ? 'selected' : '' }}>Other</option>
++                                    @foreach($dropdownOptions['purpose'] as $option)
++                                        <option value="{{ $option }}" {{ $request->purpose === $option ? 'selected' : '' }}>{{ $option }}</option>
++                                    @endforeach
+                                 </select>
+                             </div>
+ 
+diff --git a/backend/resources/views/pdf/letter.blade.php b/backend/resources/views/pdf/letter.blade.php
+index 562aa1a..031036f 100644
+--- a/backend/resources/views/pdf/letter.blade.php
++++ b/backend/resources/views/pdf/letter.blade.php
+@@ -16,11 +16,8 @@
+     $showDigitalFooter = $layout['footer']['enabled'] ?? true;
+     $frameConfig = is_array($layout['frame'] ?? null) ? $layout['frame'] : [];
+     $officialFrameEnabled = ($frameConfig['style'] ?? '') === 'ngha_green';
+-    $safeFrameColor = static function ($color, string $fallback = '#2f8e55'): string {
+-        $color = trim((string) $color);
+-        return preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : $fallback;
+-    };
+-    $officialFrameColor = $safeFrameColor($frameConfig['color'] ?? ($layout['border']['color'] ?? '#2f8e55'));
++    $rawFrameColor = trim((string) ($frameConfig['color'] ?? ($layout['border']['color'] ?? '#2f8e55')));
++    $officialFrameColor = preg_match('/^#[0-9a-fA-F]{6}$/', $rawFrameColor) ? $rawFrameColor : '#2f8e55';
+     $printableHeightMm = max(210, 297 - $pageMargins['top'] - $pageMargins['bottom']);
+     $pdfFit = $layout['pdfFit'] ?? [];
+     $lineHeight = max(1.22, min((float) ($pdfFit['lineHeight'] ?? ($direction === 'rtl' ? 1.52 : 1.45)), 1.6));
+diff --git a/backend/resources/views/public/letter.blade.php b/backend/resources/views/public/letter.blade.php
+index 5583d39..1ec0fd2 100644
+--- a/backend/resources/views/public/letter.blade.php
++++ b/backend/resources/views/public/letter.blade.php
+@@ -14,11 +14,8 @@
+     $showDigitalFooter = (bool) ($layout['footer']['enabled'] ?? true);
+     $frameConfig = is_array($layout['frame'] ?? null) ? $layout['frame'] : [];
+     $officialFrameEnabled = ($frameConfig['style'] ?? '') === 'ngha_green';
+-    $safeFrameColor = static function ($color, string $fallback = '#2f8e55'): string {
+-        $color = trim((string) $color);
+-        return preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : $fallback;
+-    };
+-    $officialFrameColor = $safeFrameColor($frameConfig['color'] ?? ($layout['border']['color'] ?? '#2f8e55'));
++    $rawFrameColor = trim((string) ($frameConfig['color'] ?? ($layout['border']['color'] ?? '#2f8e55')));
++    $officialFrameColor = preg_match('/^#[0-9a-fA-F]{6}$/', $rawFrameColor) ? $rawFrameColor : '#2f8e55';
+     $officialFrameTopInset = max(6, min((float) ($frameConfig['topInset'] ?? 9), 14));
+     $officialFrameSideInset = max(7, min((float) ($frameConfig['sideInset'] ?? 9), 14));
+     $rawFrameBottomInset = (float) ($frameConfig['bottomInset'] ?? 8);
+@@ -677,7 +674,8 @@
+             $borderLineStyle = in_array(($layout['border']['style'] ?? 'solid'), $allowedBorderStyles, true)
+                 ? $layout['border']['style']
+                 : 'solid';
+-            $borderColor = $safeFrameColor($layout['border']['color'] ?? '#2f8e55');
++            $rawBorderColor = trim((string) ($layout['border']['color'] ?? '#2f8e55'));
++            $borderColor = preg_match('/^#[0-9a-fA-F]{6}$/', $rawBorderColor) ? $rawBorderColor : '#2f8e55';
+             $customFrameStyle = "--custom-frame-border: {$borderWidth}px {$borderLineStyle} {$borderColor};";
+         }
+ 
+diff --git a/backend/resources/views/public/request.blade.php b/backend/resources/views/public/request.blade.php
+index d86ebbc..5362712 100644
+--- a/backend/resources/views/public/request.blade.php
++++ b/backend/resources/views/public/request.blade.php
+@@ -1087,7 +1087,7 @@
+                             @php
+                                 $fieldConfig = $formConfig['fields'] ?? [];
+                                 $isVisible = fn($key) => ($fieldConfig[$key]['visible'] ?? true);
+-                                $isRequired = fn($key) => ($fieldConfig[$key]['required'] ?? in_array($key, ['student_name', 'last_name', 'student_email', 'gender', 'university', 'verification_token', 'training_period', 'purpose', 'deadline']));
++                                $isRequired = fn($key) => ($fieldConfig[$key]['required'] ?? in_array($key, ['student_name', 'last_name', 'student_email', 'gender', 'university', 'trainee_level', 'verification_token', 'training_period', 'purpose', 'deadline']));
+                                 $requirementTag = fn($key) => $isRequired($key)
+                                     ? '<span class="required">*</span>'
+                                     : '<span class="optional-badge">Optional</span>';
+@@ -1178,6 +1178,51 @@
+                                     </div>
+                                 @endif
+ 
++                                @if($isVisible('trainee_level'))
++                                    <div class="form-group">
++                                        <label class="form-label">Trainee Level {!! $requirementTag('trainee_level') !!}</label>
++                                        <select name="data[trainee_level]" class="form-select @error('data.trainee_level') error @enderror" {{ $isRequired('trainee_level') ? 'required' : '' }}>
++                                            <option value="">Select Level</option>
++                                            @foreach($dropdownOptions['trainee_level'] as $option)
++                                                <option value="{{ $option }}" {{ old('data.trainee_level', $formData['trainee_level'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
++                                            @endforeach
++                                        </select>
++                                        @error('data.trainee_level')
++                                            <span class="field-error">{{ $message }}</span>
++                                        @enderror
++                                    </div>
++                                @endif
++
++                                @if($isVisible('department'))
++                                    <div class="form-group">
++                                        <label class="form-label">Department / Section {!! $requirementTag('department') !!}</label>
++                                        <select name="data[department]" class="form-select @error('data.department') error @enderror" {{ $isRequired('department') ? 'required' : '' }}>
++                                            <option value="">Select Department</option>
++                                            @foreach($dropdownOptions['department'] as $option)
++                                                <option value="{{ $option }}" {{ old('data.department', $formData['department'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
++                                            @endforeach
++                                        </select>
++                                        @error('data.department')
++                                            <span class="field-error">{{ $message }}</span>
++                                        @enderror
++                                    </div>
++                                @endif
++
++                                @if($isVisible('work_location'))
++                                    <div class="form-group">
++                                        <label class="form-label">Work Location {!! $requirementTag('work_location') !!}</label>
++                                        <select name="data[work_location]" class="form-select @error('data.work_location') error @enderror" {{ $isRequired('work_location') ? 'required' : '' }}>
++                                            <option value="">Select Work Location</option>
++                                            @foreach($dropdownOptions['work_location'] as $option)
++                                                <option value="{{ $option }}" {{ old('data.work_location', $formData['work_location'] ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
++                                            @endforeach
++                                        </select>
++                                        @error('data.work_location')
++                                            <span class="field-error">{{ $message }}</span>
++                                        @enderror
++                                    </div>
++                                @endif
++
+                                 @if($isVisible('verification_token'))
+                                     <div class="form-group">
+                                         <label class="form-label">Student / National ID {!! $requirementTag('verification_token') !!}</label>
+@@ -1245,13 +1290,9 @@
+                                         <label class="form-label">Purpose of Recommendation {!! $requirementTag('purpose') !!}</label>
+                                         <select name="data[purpose]" class="form-select @error('data.purpose') error @enderror" {{ $isRequired('purpose') ? 'required' : '' }}>
+                                             <option value="">Select Purpose</option>
+-                                            <option value="Residency" {{ $selectedPurpose === 'Residency' ? 'selected' : '' }}>Residency</option>
+-                                            <option value="Master's Application" {{ $selectedPurpose === "Master's Application" ? 'selected' : '' }}>Master's Application</option>
+-                                            <option value="PhD Application" {{ $selectedPurpose === 'PhD Application' ? 'selected' : '' }}>PhD Application</option>
+-                                            <option value="Job Application" {{ $selectedPurpose === 'Job Application' ? 'selected' : '' }}>Job Application</option>
+-                                            <option value="Internship" {{ $selectedPurpose === 'Internship' ? 'selected' : '' }}>Internship</option>
+-                                            <option value="Scholarship" {{ $selectedPurpose === 'Scholarship' ? 'selected' : '' }}>Scholarship</option>
+-                                            <option value="Other" {{ $selectedPurpose === 'Other' ? 'selected' : '' }}>Other</option>
++                                            @foreach($dropdownOptions['purpose'] as $option)
++                                                <option value="{{ $option }}" {{ $selectedPurpose === $option ? 'selected' : '' }}>{{ $option }}</option>
++                                            @endforeach
+                                         </select>
+                                         @error('data.purpose')
+                                             <span class="field-error">{{ $message }}</span>
+diff --git a/backend/resources/views/public/tracking.blade.php b/backend/resources/views/public/tracking.blade.php
+index 5da7fc5..ac681d7 100644
+--- a/backend/resources/views/public/tracking.blade.php
++++ b/backend/resources/views/public/tracking.blade.php
+@@ -863,6 +863,18 @@
+                                 <span class="meta-label">Tracking ID</span>
+                                 <p class="meta-value mono">{{ $request->tracking_id }}</p>
+                             </div>
++                            <div class="meta-card">
++                                <span class="meta-label">Level</span>
++                                <p class="meta-value">{{ $request->trainee_level ?? '-' }}</p>
++                            </div>
++                            <div class="meta-card">
++                                <span class="meta-label">Department</span>
++                                <p class="meta-value">{{ $request->department ?? '-' }}</p>
++                            </div>
++                            <div class="meta-card">
++                                <span class="meta-label">Location</span>
++                                <p class="meta-value">{{ $request->work_location ?? '-' }}</p>
++                            </div>
+                             <div class="meta-card">
+                                 <span class="meta-label">Submitted</span>
+                                 <p class="meta-value">{{ $request->created_at->format('M d, Y') }}</p>

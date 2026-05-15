@@ -16,11 +16,8 @@
     $showDigitalFooter = $layout['footer']['enabled'] ?? true;
     $frameConfig = is_array($layout['frame'] ?? null) ? $layout['frame'] : [];
     $officialFrameEnabled = ($frameConfig['style'] ?? '') === 'ngha_green';
-    $safeFrameColor = static function ($color, string $fallback = '#2f8e55'): string {
-        $color = trim((string) $color);
-        return preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : $fallback;
-    };
-    $officialFrameColor = $safeFrameColor($frameConfig['color'] ?? ($layout['border']['color'] ?? '#2f8e55'));
+    $rawFrameColor = trim((string) ($frameConfig['color'] ?? ($layout['border']['color'] ?? '#2f8e55')));
+    $officialFrameColor = preg_match('/^#[0-9a-fA-F]{6}$/', $rawFrameColor) ? $rawFrameColor : '#2f8e55';
     $printableHeightMm = max(210, 297 - $pageMargins['top'] - $pageMargins['bottom']);
     $pdfFit = $layout['pdfFit'] ?? [];
     $lineHeight = max(1.22, min((float) ($pdfFit['lineHeight'] ?? ($direction === 'rtl' ? 1.52 : 1.45)), 1.6));

@@ -2,22 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendRequestSubmittedNotifications;
 use App\Mail\TrackingVerificationCode;
 use App\Models\Request as RequestModel;
 use App\Models\Settings;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
-use App\Mail\RequestSubmittedToStudent;
-use App\Mail\RequestSubmittedToAdmin;
-
-
+use Illuminate\Support\Str;
 use App\Services\LetterService;
 use App\Services\BrowserLetterPdfService;
 use App\Services\PublicAssetUrlService;
+use App\Services\TelegramService;
 use App\Services\WizardService;
 
 class PageController extends Controller
@@ -27,13 +29,13 @@ class PageController extends Controller
     private const TRUSTED_TRACKING_DAYS = 30;
     private const TRACKING_VERIFIED_MINUTES = 30;
 
-    protected $letterService;
-    protected $wizardService;
-    protected $telegramService;
-    protected $publicAssetUrlService;
-    protected $browserLetterPdfService;
+    protected LetterService $letterService;
+    protected WizardService $wizardService;
+    protected TelegramService $telegramService;
+    protected PublicAssetUrlService $publicAssetUrlService;
+    protected BrowserLetterPdfService $browserLetterPdfService;
 
-    public function __construct(LetterService $letterService, BrowserLetterPdfService $browserLetterPdfService, WizardService $wizardService, \App\Services\TelegramService $telegramService, PublicAssetUrlService $publicAssetUrlService)
+    public function __construct(LetterService $letterService, BrowserLetterPdfService $browserLetterPdfService, WizardService $wizardService, TelegramService $telegramService, PublicAssetUrlService $publicAssetUrlService)
     {
         $this->letterService = $letterService;
         $this->browserLetterPdfService = $browserLetterPdfService;
@@ -103,12 +105,35 @@ class PageController extends Controller
 
             return $this->publicAssetUrlService->normalizeSettings($settings);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Public settings lookup failed. Using empty defaults.', [
+            Log::warning('Public settings lookup failed. Using empty defaults.', [
                 'error' => $e->getMessage(),
             ]);
 
             return [];
         }
+    }
+
+    private function getDropdownOptions(): array
+    {
+        $defaults = config('request_form.dropdown_defaults', []);
+        $rawSettings = [];
+
+        try {
+            $rawSettings = Settings::whereIn('key', ['dropdownOptions_trainee_level', 'dropdownOptions_department', 'dropdownOptions_work_location', 'dropdownOptions_purpose'])
+                ->pluck('value', 'key')
+                ->toArray();
+        } catch (\Throwable $e) {
+            Log::warning('Dropdown settings lookup failed. Using fallback defaults.', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return [
+            'trainee_level' => json_decode($rawSettings['dropdownOptions_trainee_level'] ?? json_encode($defaults['trainee_level'] ?? []), true),
+            'department' => json_decode($rawSettings['dropdownOptions_department'] ?? json_encode($defaults['department'] ?? []), true),
+            'work_location' => json_decode($rawSettings['dropdownOptions_work_location'] ?? json_encode($defaults['work_location'] ?? []), true),
+            'purpose' => json_decode($rawSettings['dropdownOptions_purpose'] ?? json_encode($defaults['purpose'] ?? []), true),
+        ];
     }
 
     /**
@@ -158,7 +183,7 @@ class PageController extends Controller
     /**
      * Check whether the student has a valid verified tracking session.
      */
-    private function hasValidTrackingVerification(?\App\Models\Request $requestModel = null): bool
+    private function hasValidTrackingVerification(?RequestModel $requestModel = null): bool
     {
         $verifiedRequestId = session('tracking_verified_request_id');
         $verifiedTrackingId = session('tracking_verified_tracking_id');
@@ -180,7 +205,7 @@ class PageController extends Controller
     /**
      * Require a valid verified tracking session before exposing approved letters.
      */
-    private function ensureApprovedLetterAccess(\App\Models\Request $requestModel): void
+    private function ensureApprovedLetterAccess(RequestModel $requestModel): void
     {
         if ($error = $this->approvedLetterAccessError($requestModel)) {
             abort($error['status'], $error['message']);
@@ -190,7 +215,7 @@ class PageController extends Controller
     /**
      * Resolve why an approved-letter route is blocked without exposing the letter.
      */
-    private function approvedLetterAccessError(\App\Models\Request $requestModel): ?array
+    private function approvedLetterAccessError(RequestModel $requestModel): ?array
     {
         if (!$this->hasValidTrackingVerification($requestModel)) {
             return [
@@ -214,7 +239,7 @@ class PageController extends Controller
     /**
      * Return a polished response for blocked letter/PDF access.
      */
-    private function blockedLetterAccessResponse(Request $httpRequest, \App\Models\Request $requestModel, array $error)
+    private function blockedLetterAccessResponse(Request $httpRequest, RequestModel $requestModel, array $error)
     {
         $payload = [
             'status' => $error['reason'],
@@ -322,7 +347,7 @@ class PageController extends Controller
     /**
      * Queue a trusted-browser cookie after a successful OTP verification.
      */
-    private function rememberTrackingBrowser(RequestModel $requestModel): Carbon
+    private function rememberTrackingBrowser(RequestModel $requestModel): \Carbon\CarbonInterface
     {
         $rememberUntil = now()->addDays(self::TRUSTED_TRACKING_DAYS);
 
@@ -412,7 +437,7 @@ class PageController extends Controller
                 "🔐 <b>Verification Code</b>\n\nYour code to access request details is: <code>{$otp}</code>\n\nDo not share this code with anyone."
             );
         } catch (\Exception $e) {
-            \Log::warning('Tracking OTP Telegram send failed: ' . $e->getMessage(), [
+            Log::warning('Tracking OTP Telegram send failed: ' . $e->getMessage(), [
                 'tracking_id' => $requestModel->tracking_id,
                 'request_id' => $requestModel->id,
             ]);
@@ -422,18 +447,11 @@ class PageController extends Controller
     /**
      * Build wizard form data from a stored request.
      */
-    private function buildWizardDataFromRequest(\App\Models\Request $requestModel): array
+    private function buildWizardDataFromRequest(RequestModel $requestModel): array
     {
         $storedFormData = is_array($requestModel->form_data) ? $requestModel->form_data : [];
-        $knownPurposes = [
-            "Master's Application",
-            'PhD Application',
-            'Job Application',
-            'Internship',
-            'Scholarship',
-            'Residency',
-            'Other',
-        ];
+        $dropdownOptions = $this->getDropdownOptions();
+        $knownPurposes = $dropdownOptions['purpose'];
         $purpose = $requestModel->purpose;
 
         if (!empty($purpose) && !in_array($purpose, $knownPurposes, true)) {
@@ -448,6 +466,9 @@ class PageController extends Controller
             'student_email' => $requestModel->student_email,
             'phone' => $requestModel->phone,
             'university' => $requestModel->university,
+            'trainee_level' => $requestModel->trainee_level,
+            'department' => $requestModel->department,
+            'work_location' => $requestModel->work_location,
             'verification_token' => $requestModel->verification_token,
             'training_period' => $requestModel->training_period,
             'purpose' => $purpose,
@@ -506,7 +527,7 @@ class PageController extends Controller
             ->orWhere('username', $request->loginIdentifier)
             ->first();
 
-        if (!$user || !\Hash::check($request->password, $user->password)) {
+        if (!$user || !Hash::check($request->password, $user->password)) {
             return back()->withErrors(['loginIdentifier' => 'Invalid credentials'])->withInput();
         }
 
@@ -515,7 +536,7 @@ class PageController extends Controller
         }
 
         // Log user in
-        auth()->login($user);
+        Auth::login($user);
         $request->session()->regenerate();
         $request->session()->regenerateToken();
 
@@ -527,7 +548,7 @@ class PageController extends Controller
      */
     public function logout(Request $request)
     {
-        auth()->logout();
+        Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
@@ -551,7 +572,7 @@ class PageController extends Controller
         $isEditMode = session('wizard_mode') === 'edit';
         if ($isEditMode) {
             $editTrackingId = session('wizard_tracking_id');
-            $editRequest = $editTrackingId ? \App\Models\Request::where('tracking_id', $editTrackingId)->first() : null;
+            $editRequest = $editTrackingId ? RequestModel::where('tracking_id', $editTrackingId)->first() : null;
 
             if (
                 !$editRequest ||
@@ -577,7 +598,9 @@ class PageController extends Controller
 
         session(['wizard_step' => $step]);
 
-        return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig'));
+        $dropdownOptions = $this->getDropdownOptions();
+
+        return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig', 'dropdownOptions'));
     }
 
     /**
@@ -599,7 +622,7 @@ class PageController extends Controller
         $editingRequest = null;
 
         if ($isEditMode) {
-            $editingRequest = $editTrackingId ? \App\Models\Request::where('tracking_id', $editTrackingId)->first() : null;
+            $editingRequest = $editTrackingId ? RequestModel::where('tracking_id', $editTrackingId)->first() : null;
             if (
                 !$editingRequest ||
                 !$this->hasActiveEditSession() ||
@@ -630,7 +653,8 @@ class PageController extends Controller
                 $sessionPayload['wizard_edit_expires_at'] = now()->addMinutes(30)->timestamp;
             }
             session($sessionPayload);
-            return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig'));
+            $dropdownOptions = $this->getDropdownOptions();
+            return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig', 'dropdownOptions'));
         }
 
         // Validation based on current step
@@ -639,6 +663,11 @@ class PageController extends Controller
         } elseif ($currentStep == 2) {
             $errors = $this->wizardService->validateStep2($formData, $formConfig);
             if (!empty($errors)) {
+                session([
+                    'wizard_data' => $formData,
+                    'wizard_step' => $currentStep,
+                ]);
+
                 return back()->withErrors($errors)->withInput();
             }
 
@@ -673,7 +702,7 @@ class PageController extends Controller
 
                 try {
                     $updatedRequest = \Illuminate\Support\Facades\DB::transaction(function () use ($editTrackingId, $formData, $originalUpdatedAt) {
-                        $requestModel = \App\Models\Request::where('tracking_id', $editTrackingId)->lockForUpdate()->first();
+                        $requestModel = RequestModel::where('tracking_id', $editTrackingId)->lockForUpdate()->first();
 
                         if (!$requestModel) {
                             throw new \RuntimeException('REQUEST_NOT_FOUND');
@@ -715,6 +744,9 @@ class PageController extends Controller
                             'phone' => $formData['phone'] ?? null,
                             'verification_token' => $formData['verification_token'] ?? $requestModel->verification_token,
                             'university' => $formData['university'] ?? $requestModel->university ?? '',
+                            'trainee_level' => $formData['trainee_level'] ?? null,
+                            'department' => $formData['department'] ?? null,
+                            'work_location' => $formData['work_location'] ?? null,
                             'purpose' => $formData['purpose'] ?? null,
                             'deadline' => $deadline,
                             'training_period' => $trainingPeriod,
@@ -740,10 +772,10 @@ class PageController extends Controller
                         return redirect()->route('public.tracking', $routeParams)->with('error', $message);
                     }
 
-                    \Log::error('Failed to update request: ' . $e->getMessage());
+                    Log::error('Failed to update request: ' . $e->getMessage());
                     return back()->with('error', 'Failed to update request. Please try again or contact support.');
                 } catch (\Exception $e) {
-                    \Log::error('Failed to update request: ' . $e->getMessage());
+                    Log::error('Failed to update request: ' . $e->getMessage());
                     return back()->with('error', 'Failed to update request. Please try again or contact support.');
                 }
 
@@ -755,22 +787,15 @@ class PageController extends Controller
                         'ip_address' => $request->ip(),
                     ]);
                 } catch (\Exception $e) {
-                    \Log::warning('Audit log write failed for student resubmission: ' . $e->getMessage());
+                    Log::warning('Audit log write failed for student resubmission: ' . $e->getMessage());
                 }
 
-                try {
-                    $admins = User::where('role', 'admin')->get();
-                    foreach ($admins as $admin) {
-                        try {
-                            Mail::to($admin->email)
-                                ->send(new RequestSubmittedToAdmin($updatedRequest));
-                        } catch (\Exception $e) {
-                            \Illuminate\Support\Facades\Log::error('Revision resubmission email failed for admin ' . $admin->email . ': ' . $e->getMessage());
-                        }
-                    }
-                } catch (\Exception $e) {
-                    \Log::error('Revision resubmission email notification failed: ' . $e->getMessage());
-                }
+                SendRequestSubmittedNotifications::dispatch(
+                    $updatedRequest->id,
+                    false,
+                    true,
+                    false
+                );
 
                 $this->clearEditWizardSession();
 
@@ -784,7 +809,7 @@ class PageController extends Controller
             }
 
             // Generate tracking ID
-            $trackingId = 'REC-' . date('Y') . '-' . strtoupper(\Str::random(8));
+            $trackingId = 'REC-' . date('Y') . '-' . strtoupper(Str::random(8));
 
             try {
                 // Create request with transaction
@@ -801,16 +826,19 @@ class PageController extends Controller
                         'custom_content' => $customContent,
                     ]);
 
-                    return \App\Models\Request::create([
+                    return RequestModel::create([
                         'tracking_id' => $trackingId,
                         'student_name' => $formData['student_name'] ?? '',
                         'middle_name' => $formData['middle_name'] ?? null,
                         'last_name' => $formData['last_name'] ?? null,
                         'student_email' => $formData['student_email'] ?? '',
                         'phone' => $formData['phone'] ?? null,
-                        'verification_token' => $formData['verification_token'] ?? \Str::random(60),
-                        'verify_token' => \Str::random(32), // For QR code verification
+                        'verification_token' => $formData['verification_token'] ?? Str::random(60),
+                        'verify_token' => Str::random(32), // For QR code verification
                         'university' => $formData['university'] ?? '',
+                        'trainee_level' => $formData['trainee_level'] ?? null,
+                        'department' => $formData['department'] ?? null,
+                        'work_location' => $formData['work_location'] ?? null,
                         'purpose' => $formData['purpose'] ?? null,
                         'deadline' => $formData['deadline'] ?? null,
                         'training_period' => $formData['training_period'] ?? null,
@@ -823,34 +851,11 @@ class PageController extends Controller
                 });
 
             } catch (\Exception $e) {
-                \Log::error('Failed to create request: ' . $e->getMessage());
+                Log::error('Failed to create request: ' . $e->getMessage());
                 return back()->with('error', 'Failed to submit request. Please try again or contact support.');
             }
 
-            $studentEmailSent = false;
-
-            // Send email notifications
-            try {
-                // Send confirmation to student
-                Mail::to($newRequest->student_email)->send(new RequestSubmittedToStudent($newRequest));
-                $studentEmailSent = true;
-
-                // Send notification to admin(s) only
-                $admins = User::where('role', 'admin')->get();
-                foreach ($admins as $admin) {
-                    Mail::to($admin->email)->send(new RequestSubmittedToAdmin($newRequest));
-                }
-            } catch (\Exception $e) {
-                // Log error but don't fail the request
-                \Log::error('Email notification failed: ' . $e->getMessage());
-            }
-
-            // Send Telegram Notification
-            try {
-                $this->telegramService->sendRequestNotification($newRequest);
-            } catch (\Exception $e) {
-                \Log::error('Telegram notification failed: ' . $e->getMessage());
-            }
+            SendRequestSubmittedNotifications::dispatch($newRequest->id);
 
             // Clear wizard session
             session()->forget(['wizard_data', 'wizard_step']);
@@ -860,7 +865,7 @@ class PageController extends Controller
                 'tracking_id' => $trackingId,
                 'telegram_bot_username' => $this->telegramService->getBotUsername(),
                 'confirmation_email_hint' => $this->maskEmail((string) $newRequest->student_email),
-                'confirmation_email_sent' => $studentEmailSent,
+                'confirmation_email_sent' => true,
             ]);
         }
 
@@ -874,8 +879,10 @@ class PageController extends Controller
             $sessionPayload['wizard_edit_expires_at'] = now()->addMinutes(30)->timestamp;
         }
         session($sessionPayload);
+        $step = (int) session('wizard_step', 1);
 
-        return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig'));
+        $dropdownOptions = $this->getDropdownOptions();
+        return view('public.request', compact('settings', 'templates', 'step', 'formData', 'formConfig', 'dropdownOptions'));
     }
 
     /**
@@ -888,7 +895,7 @@ class PageController extends Controller
         ]);
 
         $trackingId = trim((string) $request->input('tracking_id'));
-        $requestModel = \App\Models\Request::where('tracking_id', $trackingId)->first();
+        $requestModel = RequestModel::where('tracking_id', $trackingId)->first();
 
         if (!$requestModel) {
             return redirect()->route('public.tracking', ['id' => $trackingId])
@@ -966,7 +973,7 @@ class PageController extends Controller
         ]);
         $this->clearTrackingVerificationSession();
 
-        $result = \App\Models\Request::where('tracking_id', $trackingId)
+        $result = RequestModel::where('tracking_id', $trackingId)
             ->where('verification_token', $verificationToken)
             ->first();
 
@@ -1004,7 +1011,7 @@ class PageController extends Controller
         try {
             $this->issueTrackingVerificationCode($result);
         } catch (\Exception $e) {
-            \Log::error('Tracking OTP email failed: ' . $e->getMessage(), [
+            Log::error('Tracking OTP email failed: ' . $e->getMessage(), [
                 'tracking_id' => $result->tracking_id,
                 'request_id' => $result->id,
             ]);
@@ -1037,13 +1044,13 @@ class PageController extends Controller
         $expiresAt = session('2fa_expires');
 
         try {
-            $expiresAt = $expiresAt ? \Illuminate\Support\Carbon::parse($expiresAt) : null;
+            $expiresAt = $expiresAt ? Carbon::parse($expiresAt) : null;
         } catch (\Throwable $e) {
             $expiresAt = null;
         }
 
         $hasActiveCode = session()->has('2fa_otp')
-            && $expiresAt instanceof \Illuminate\Support\Carbon
+            && $expiresAt instanceof Carbon
             && now()->lessThan($expiresAt);
 
         return view('public.2fa_verify', compact('settings', 'deliveryMethod', 'deliveryHint', 'trackingId', 'expiresAt', 'hasActiveCode'));
@@ -1066,7 +1073,7 @@ class PageController extends Controller
         $isExpired = true;
         if ($expires) {
             try {
-                $isExpired = now()->greaterThan(\Illuminate\Support\Carbon::parse($expires));
+                $isExpired = now()->greaterThan(Carbon::parse($expires));
             } catch (\Throwable $e) {
                 $isExpired = true;
             }
@@ -1090,7 +1097,7 @@ class PageController extends Controller
         // OTP Valid - Clear session 2FA data but keep request context? 
         // Or just load the view directly.
 
-        $result = \App\Models\Request::find($requestId);
+        $result = RequestModel::find($requestId);
         if (!$result) {
             $this->clearTrackingVerificationSession();
             return redirect()->route('public.tracking')
@@ -1153,7 +1160,7 @@ class PageController extends Controller
         try {
             $this->issueTrackingVerificationCode($result);
         } catch (\Exception $e) {
-            \Log::error('Tracking OTP resend email failed: ' . $e->getMessage(), [
+            Log::error('Tracking OTP resend email failed: ' . $e->getMessage(), [
                 'tracking_id' => $result->tracking_id,
                 'request_id' => $result->id,
             ]);
@@ -1186,7 +1193,7 @@ class PageController extends Controller
      */
     public function viewLetter($tracking_id, Request $httpRequest)
     {
-        $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
+        $request = RequestModel::where('tracking_id', $tracking_id)->firstOrFail();
         $this->ensureApprovedLetterAccess($request);
 
         return view('public.letter-viewer', [
@@ -1204,7 +1211,7 @@ class PageController extends Controller
      */
     public function previewLetter($tracking_id, Request $httpRequest)
     {
-        $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
+        $request = RequestModel::where('tracking_id', $tracking_id)->firstOrFail();
         $this->ensureApprovedLetterAccess($request);
 
         $content = $this->letterService->generateLetterContent($request);
@@ -1230,7 +1237,7 @@ class PageController extends Controller
      */
     public function preparePdf($tracking_id, Request $httpRequest)
     {
-        $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
+        $request = RequestModel::where('tracking_id', $tracking_id)->firstOrFail();
         if ($error = $this->approvedLetterAccessError($request)) {
             return $this->blockedLetterAccessResponse($httpRequest, $request, $error);
         }
@@ -1257,7 +1264,7 @@ class PageController extends Controller
                 abort(404, 'Template not found');
             }
 
-            \Illuminate\Support\Facades\Log::error('PDF Preparation Failed: ' . $e->getMessage(), [
+            Log::error('PDF Preparation Failed: ' . $e->getMessage(), [
                 'request_id' => $request->id,
                 'tracking_id' => $request->tracking_id,
             ]);
@@ -1267,7 +1274,7 @@ class PageController extends Controller
                 'message' => 'The official PDF could not be prepared yet. Please try Download PDF again in a moment.',
             ], 500);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('PDF Preparation Failed: ' . $e->getMessage(), [
+            Log::error('PDF Preparation Failed: ' . $e->getMessage(), [
                 'request_id' => $request->id,
                 'tracking_id' => $request->tracking_id,
             ]);
@@ -1284,7 +1291,7 @@ class PageController extends Controller
      */
     public function downloadPdf($tracking_id, Request $httpRequest)
     {
-        $request = \App\Models\Request::where('tracking_id', $tracking_id)->firstOrFail();
+        $request = RequestModel::where('tracking_id', $tracking_id)->firstOrFail();
         if ($error = $this->approvedLetterAccessError($request)) {
             return $this->blockedLetterAccessResponse($httpRequest, $request, $error);
         }
@@ -1308,14 +1315,14 @@ class PageController extends Controller
                 abort(404, 'Template not found');
             }
 
-            \Illuminate\Support\Facades\Log::error('PDF Generation Failed: ' . $e->getMessage(), [
+            Log::error('PDF Generation Failed: ' . $e->getMessage(), [
                 'request_id' => $request->id,
                 'tracking_id' => $request->tracking_id,
             ]);
 
             abort(500, 'Failed to generate PDF. Please try again later.');
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('PDF Generation Failed: ' . $e->getMessage(), [
+            Log::error('PDF Generation Failed: ' . $e->getMessage(), [
                 'request_id' => $request->id,
                 'tracking_id' => $request->tracking_id,
             ]);
@@ -1326,7 +1333,7 @@ class PageController extends Controller
     /**
      * Helper to resolve template from request or defaults
      */
-    private function resolveTemplate(\App\Models\Request $request)
+    private function resolveTemplate(RequestModel $request)
     {
         $template = null;
         if ($request->template_id) {

@@ -2,25 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SendRequestSubmittedNotifications;
 use App\Models\Request as RequestModel;
-use App\Models\User;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
-use App\Mail\RequestSubmittedToStudent;
-use App\Mail\RequestSubmittedToAdmin;
 use App\Services\RequestStatusService;
 
 class RequestController extends Controller
 {
-    protected $telegramService;
     protected $requestStatusService;
 
-    public function __construct(\App\Services\TelegramService $telegramService, RequestStatusService $requestStatusService)
+    public function __construct(RequestStatusService $requestStatusService)
     {
-        $this->telegramService = $telegramService;
         $this->requestStatusService = $requestStatusService;
     }
 
@@ -175,23 +170,7 @@ class RequestController extends Controller
                 'ip_address' => $request->ip(),
             ]);
 
-            // Send Email (Notification)
-            try {
-                // Send confirmation to student
-                Mail::to($newRequest->student_email)->send(new RequestSubmittedToStudent($newRequest));
-
-                // Send notification to admin(s) only
-                $admins = User::where('role', 'admin')->get();
-                foreach ($admins as $admin) {
-                    Mail::to($admin->email)->send(new RequestSubmittedToAdmin($newRequest));
-                }
-
-                // Send Telegram Notification
-                $this->telegramService->sendRequestNotification($newRequest);
-            } catch (\Exception $e) {
-                // Log error but don't fail the request
-                \Illuminate\Support\Facades\Log::error('API Request Email notification failed: ' . $e->getMessage());
-            }
+            SendRequestSubmittedNotifications::dispatch($newRequest->id);
 
             $payload = $this->mapBackendToFrontend([$newRequest])[0];
             // Expose tracking credential to the creating client so it can be stored client-side.

@@ -14,11 +14,8 @@
     $showDigitalFooter = (bool) ($layout['footer']['enabled'] ?? true);
     $frameConfig = is_array($layout['frame'] ?? null) ? $layout['frame'] : [];
     $officialFrameEnabled = ($frameConfig['style'] ?? '') === 'ngha_green';
-    $safeFrameColor = static function ($color, string $fallback = '#2f8e55'): string {
-        $color = trim((string) $color);
-        return preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : $fallback;
-    };
-    $officialFrameColor = $safeFrameColor($frameConfig['color'] ?? ($layout['border']['color'] ?? '#2f8e55'));
+    $rawFrameColor = trim((string) ($frameConfig['color'] ?? ($layout['border']['color'] ?? '#2f8e55')));
+    $officialFrameColor = preg_match('/^#[0-9a-fA-F]{6}$/', $rawFrameColor) ? $rawFrameColor : '#2f8e55';
     $officialFrameTopInset = max(6, min((float) ($frameConfig['topInset'] ?? 9), 14));
     $officialFrameSideInset = max(7, min((float) ($frameConfig['sideInset'] ?? 9), 14));
     $rawFrameBottomInset = (float) ($frameConfig['bottomInset'] ?? 8);
@@ -677,7 +674,8 @@
             $borderLineStyle = in_array(($layout['border']['style'] ?? 'solid'), $allowedBorderStyles, true)
                 ? $layout['border']['style']
                 : 'solid';
-            $borderColor = $safeFrameColor($layout['border']['color'] ?? '#2f8e55');
+            $rawBorderColor = trim((string) ($layout['border']['color'] ?? '#2f8e55'));
+            $borderColor = preg_match('/^#[0-9a-fA-F]{6}$/', $rawBorderColor) ? $rawBorderColor : '#2f8e55';
             $customFrameStyle = "--custom-frame-border: {$borderWidth}px {$borderLineStyle} {$borderColor};";
         }
 

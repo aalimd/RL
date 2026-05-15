@@ -114,6 +114,88 @@
             </div>
         </div>
 
+        <!-- Dropdown Options Manager -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+            <div class="card-header">
+                <h3>Dropdown Options Manager</h3>
+                <span style="font-size: 0.875rem; color: var(--text-muted);">Manage the choices available in form dropdown lists</span>
+            </div>
+            <div class="card-body">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                    <!-- Trainee Levels -->
+                    <div class="dropdown-manager">
+                        <label class="form-label">Trainee Levels</label>
+                        <div id="traineeLevelsList" class="options-list">
+                            @foreach($dropdownOptions['trainee_level'] as $index => $option)
+                                <div class="option-item" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <input type="text" name="dropdownOptions[trainee_level][]" value="{{ $option }}" class="form-input" style="flex: 1;" required>
+                                    <button type="button" class="btn btn-ghost text-error" onclick="this.parentElement.remove()">✕</button>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                            <input type="text" id="newTraineeLevel" class="form-input" style="flex: 1;" placeholder="New Level...">
+                            <button type="button" class="btn btn-secondary" onclick="addDropdownOption('traineeLevelsList', 'trainee_level', 'newTraineeLevel')">Add</button>
+                        </div>
+                    </div>
+
+                    <!-- Departments -->
+                    <div class="dropdown-manager">
+                        <label class="form-label">Departments / Sections</label>
+                        <div id="departmentsList" class="options-list">
+                            @foreach($dropdownOptions['department'] as $index => $option)
+                                <div class="option-item" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <input type="text" name="dropdownOptions[department][]" value="{{ $option }}" class="form-input" style="flex: 1;" required>
+                                    <button type="button" class="btn btn-ghost text-error" onclick="this.parentElement.remove()">✕</button>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                            <input type="text" id="newDepartment" class="form-input" style="flex: 1;" placeholder="New Department...">
+                            <button type="button" class="btn btn-secondary" onclick="addDropdownOption('departmentsList', 'department', 'newDepartment')">Add</button>
+                        </div>
+                    </div>
+
+                    <!-- Work Locations -->
+                    <div class="dropdown-manager">
+                        <label class="form-label">Work Locations / Hospitals</label>
+                        <div id="workLocationsList" class="options-list">
+                            @foreach($dropdownOptions['work_location'] as $index => $option)
+                                <div class="option-item" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <input type="text" name="dropdownOptions[work_location][]" value="{{ $option }}" class="form-input" style="flex: 1;" required>
+                                    <button type="button" class="btn btn-ghost text-error" onclick="this.parentElement.remove()">✕</button>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                            <input type="text" id="newWorkLocation" class="form-input" style="flex: 1;" placeholder="New Location...">
+                            <button type="button" class="btn btn-secondary" onclick="addDropdownOption('workLocationsList', 'work_location', 'newWorkLocation')">Add</button>
+                        </div>
+                    </div>
+
+                    <!-- Purpose -->
+                    <div class="dropdown-manager">
+                        <label class="form-label">Purposes of Recommendation</label>
+                        <div id="purposesList" class="options-list">
+                            @foreach($dropdownOptions['purpose'] as $index => $option)
+                                <div class="option-item" style="display: flex; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <input type="text" name="dropdownOptions[purpose][]" value="{{ $option }}" class="form-input" style="flex: 1;" required>
+                                    <button type="button" class="btn btn-ghost text-error" onclick="this.parentElement.remove()">✕</button>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                            <input type="text" id="newPurpose" class="form-input" style="flex: 1;" placeholder="New Purpose...">
+                            <button type="button" class="btn btn-secondary" onclick="addDropdownOption('purposesList', 'purpose', 'newPurpose')">Add</button>
+                        </div>
+                    </div>
+                </div>
+                <small style="display: block; margin-top: 1rem; color: var(--text-muted);">
+                    Note: Empty options will be automatically removed when saving.
+                </small>
+            </div>
+        </div>
+
         <!-- Form Fields Configuration -->
         <div class="card">
             <div class="card-header">
@@ -139,6 +221,9 @@
                                     'gender' => 'Gender',
                                     'student_email' => 'Email Address',
                                     'university' => 'University / Institution',
+                                    'trainee_level' => 'Trainee Level',
+                                    'department' => 'Department / Section',
+                                    'work_location' => 'Work Location',
                                     'verification_token' => 'Student ID / National ID',
                                     'training_period' => 'Training Period',
                                     'phone' => 'Phone Number',
@@ -156,7 +241,7 @@
                                         $isRequired = isset($submittedFields[$fieldKey]['required']);
                                     } else {
                                         $isVisible = $fieldConfig[$fieldKey]['visible'] ?? true;
-                                        $isRequired = $fieldConfig[$fieldKey]['required'] ?? in_array($fieldKey, ['student_name', 'last_name', 'student_email', 'gender', 'university', 'verification_token', 'training_period', 'purpose', 'deadline']);
+                                        $isRequired = $fieldConfig[$fieldKey]['required'] ?? in_array($fieldKey, ['student_name', 'last_name', 'student_email', 'gender', 'university', 'trainee_level', 'department', 'work_location', 'verification_token', 'training_period', 'purpose', 'deadline']);
                                     }
 
                                     if (!$isVisible) {
@@ -258,5 +343,26 @@
             toggleTemplateOptions(modeSelect.value);
         }
     });
+
+    function addDropdownOption(listId, fieldName, inputId) {
+        const list = document.getElementById(listId);
+        const input = document.getElementById(inputId);
+        const value = input.value.trim();
+
+        if (value === '') return;
+
+        const div = document.createElement('div');
+        div.className = 'option-item';
+        div.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 0.5rem;';
+        
+        div.innerHTML = `
+            <input type="text" name="dropdownOptions[${fieldName}][]" value="${value.replace(/"/g, '&quot;')}" class="form-input" style="flex: 1;" required>
+            <button type="button" class="btn btn-ghost text-error" onclick="this.parentElement.remove()">✕</button>
+        `;
+
+        list.appendChild(div);
+        input.value = '';
+        input.focus();
+    }
 </script>
 @endsection

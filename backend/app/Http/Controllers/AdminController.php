@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\SyncRequestLetterToGoogleDrive;
 use App\Mail\TestEmailMail;
 use App\Models\Settings;
 use App\Models\Request as RequestModel;
@@ -41,6 +42,9 @@ class AdminController extends Controller
         'status',
         'search',
         'university',
+        'trainee_level',
+        'department',
+        'work_location',
         'date_from',
         'date_to',
     ];
@@ -90,6 +94,18 @@ class AdminController extends Controller
         $settings = Settings::all()->pluck('value', 'key')->toArray();
 
         return $this->publicAssetUrlService->normalizeSettings($settings);
+    }
+
+    private function resolveDropdownOptions(array $settings): array
+    {
+        $defaults = config('request_form.dropdown_defaults', []);
+
+        return [
+            'trainee_level' => json_decode($settings['dropdownOptions_trainee_level'] ?? json_encode($defaults['trainee_level'] ?? []), true),
+            'department' => json_decode($settings['dropdownOptions_department'] ?? json_encode($defaults['department'] ?? []), true),
+            'work_location' => json_decode($settings['dropdownOptions_work_location'] ?? json_encode($defaults['work_location'] ?? []), true),
+            'purpose' => json_decode($settings['dropdownOptions_purpose'] ?? json_encode($defaults['purpose'] ?? []), true),
+        ];
     }
 
     /**
@@ -165,7 +181,7 @@ class AdminController extends Controller
             'status' => $status,
         ];
 
-        foreach (['search', 'university', 'date_from', 'date_to'] as $key) {
+        foreach (['search', 'university', 'trainee_level', 'department', 'work_location', 'date_from', 'date_to'] as $key) {
             $value = trim((string) ($filters[$key] ?? ''));
             if ($value !== '') {
                 $normalized[$key] = $value;
@@ -197,6 +213,18 @@ class AdminController extends Controller
             $query->where('university', 'like', '%' . $filters['university'] . '%');
         }
 
+        if (!empty($filters['trainee_level'])) {
+            $query->where('trainee_level', $filters['trainee_level']);
+        }
+
+        if (!empty($filters['department'])) {
+            $query->where('department', $filters['department']);
+        }
+
+        if (!empty($filters['work_location'])) {
+            $query->where('work_location', $filters['work_location']);
+        }
+
         if (!empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
@@ -216,8 +244,9 @@ class AdminController extends Controller
         $settings = $this->getSettings();
         $request = RequestModel::findOrFail($id);
         $templates = Template::where('is_active', true)->orderBy('name')->get();
+        $dropdownOptions = $this->resolveDropdownOptions($settings);
 
-        return view('admin.request-details', compact('settings', 'request', 'templates'));
+        return view('admin.request-details', compact('settings', 'request', 'templates', 'dropdownOptions'));
     }
 
     /**
@@ -263,7 +292,7 @@ class AdminController extends Controller
 
         // Audit Log
         AuditLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'update_request_status',
             'details' => "Changed status of Request #{$requestModel->tracking_id} to {$validated['status']}"
         ]);
@@ -284,6 +313,9 @@ class AdminController extends Controller
             'last_name' => 'nullable|string|max:255',
             'student_email' => 'required|email|max:255',
             'university' => 'nullable|string|max:255',
+            'trainee_level' => 'nullable|string|max:100',
+            'department' => 'nullable|string|max:255',
+            'work_location' => 'nullable|string|max:255',
             'verification_token' => 'nullable|string|max:100',
             'purpose' => 'nullable|string|max:100',
             'deadline' => 'nullable|date',
@@ -443,6 +475,9 @@ class AdminController extends Controller
                 'Student Name',
                 'Email',
                 'University',
+                'Trainee Level',
+                'Department',
+                'Work Location',
                 'Purpose',
                 'Status',
                 'Deadline',
@@ -457,6 +492,9 @@ class AdminController extends Controller
                     $this->sanitizeCsvCell($req->student_name),
                     $this->sanitizeCsvCell($req->student_email),
                     $this->sanitizeCsvCell($req->university ?? ''),
+                    $this->sanitizeCsvCell($req->trainee_level ?? ''),
+                    $this->sanitizeCsvCell($req->department ?? ''),
+                    $this->sanitizeCsvCell($req->work_location ?? ''),
                     $this->sanitizeCsvCell($req->purpose ?? ''),
                     $this->sanitizeCsvCell($req->status),
                     $this->sanitizeCsvCell($req->deadline ? date('Y-m-d', strtotime($req->deadline)) : ''),
@@ -942,7 +980,7 @@ class AdminController extends Controller
             $deletedCount = (clone $selectionQuery)->delete();
 
             AuditLog::create([
-                'user_id' => auth()->id(),
+                'user_id' => Auth::id(),
                 'action' => 'bulk_request_delete',
                 'details' => json_encode([
                     'selection_scope' => $selectionScope,
@@ -982,7 +1020,7 @@ class AdminController extends Controller
             });
 
         AuditLog::create([
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'action' => 'bulk_request_status_update',
             'details' => json_encode([
                 'selection_scope' => $selectionScope,
@@ -1822,30 +1860,25 @@ class AdminController extends Controller
             return back()->with('error', 'Only approved requests can be backed up to Google Drive.');
         }
 
-        try {
-            $result = $this->googleDriveLetterBackupService->syncRequest($request);
-        } catch (\Throwable $e) {
-            Log::error('Admin single letter Google Drive export failed: ' . $e->getMessage(), [
-                'request_id' => $request->id,
-                'tracking_id' => $request->tracking_id,
-            ]);
+        $request->forceFill([
+            'drive_backup_status' => 'queued',
+            'drive_backup_error' => null,
+        ])->save();
 
-            return back()->with('error', 'We could not back up that letter to Google Drive right now. ' . $e->getMessage());
-        }
+        SyncRequestLetterToGoogleDrive::dispatch($request->id, Auth::id(), 'single');
 
         AuditLog::create([
             'user_id' => Auth::id(),
-            'action' => 'admin_sync_letter_google_drive',
+            'action' => 'admin_sync_letter_google_drive_queued',
             'target_type' => 'request',
             'target_id' => $request->id,
             'details' => json_encode([
                 'tracking_id' => $request->tracking_id,
-                'file_id' => $result['file_id'] ?? null,
-                'file_name' => $result['file_name'] ?? null,
+                'drive_backup_status' => 'queued',
             ]),
         ]);
 
-        return back()->with('success', 'Letter backed up to Google Drive successfully.');
+        return back()->with('success', 'Letter backup was queued for Google Drive processing.');
     }
 
     public function exportRequestLettersGoogleDrive(Request $request)
@@ -1872,23 +1905,22 @@ class AdminController extends Controller
             return back()->with('error', 'No approved letters were found in that selection.');
         }
 
-        try {
-            $summary = $this->googleDriveLetterBackupService->syncMany($approvedQuery->cursor());
-        } catch (\Throwable $e) {
-            Log::error('Admin bulk Google Drive export failed: ' . $e->getMessage(), [
-                'selection_scope' => $validated['selection_scope'],
-                'matched_count' => $matchedCount,
-                'approved_count' => $approvedCount,
-            ]);
-
-            return back()->with('error', 'We could not back up those letters to Google Drive right now. ' . $e->getMessage());
-        }
-
         $skippedCount = max(0, $matchedCount - $approvedCount);
+        $queuedCount = 0;
+
+        foreach ($approvedQuery->cursor() as $approvedRequest) {
+            $approvedRequest->forceFill([
+                'drive_backup_status' => 'queued',
+                'drive_backup_error' => null,
+            ])->save();
+
+            SyncRequestLetterToGoogleDrive::dispatch($approvedRequest->id, Auth::id(), 'bulk');
+            $queuedCount++;
+        }
 
         AuditLog::create([
             'user_id' => Auth::id(),
-            'action' => 'admin_export_letters_google_drive',
+            'action' => 'admin_export_letters_google_drive_queued',
             'target_type' => 'requests',
             'target_id' => null,
             'details' => json_encode([
@@ -1897,18 +1929,14 @@ class AdminController extends Controller
                 'selected_ids' => $validated['selection_scope'] === 'selected' ? $selectedIds : null,
                 'matched_count' => $matchedCount,
                 'approved_count' => $approvedCount,
-                'synced_count' => $summary['synced_count'],
+                'queued_count' => $queuedCount,
                 'skipped_unapproved_count' => $skippedCount,
-                'failed_count' => count($summary['failed'] ?? []),
             ]),
         ]);
 
-        $message = 'Backed up ' . $summary['synced_count'] . ' approved letter(s) to Google Drive.';
+        $message = 'Queued ' . $queuedCount . ' approved letter(s) for Google Drive backup.';
         if ($skippedCount > 0) {
             $message .= ' ' . $skippedCount . ' request(s) were skipped because they are not approved.';
-        }
-        if (!empty($summary['failed'])) {
-            $message .= ' ' . count($summary['failed']) . ' backup(s) failed and need another try.';
         }
 
         return back()->with('success', $message);
@@ -1934,7 +1962,9 @@ class AdminController extends Controller
             'formFieldConfig' => $settings['formFieldConfig'] ?? '{}',
         ];
 
-        return view('admin.form-settings', compact('settings', 'templates', 'formSettings'));
+        $dropdownOptions = $this->resolveDropdownOptions($settings);
+
+        return view('admin.form-settings', compact('settings', 'templates', 'formSettings', 'dropdownOptions'));
     }
 
     /**
@@ -1952,6 +1982,8 @@ class AdminController extends Controller
             'studentTemplateIds' => 'nullable|array',
             'studentTemplateIds.*' => 'integer|exists:templates,id',
             'fields' => 'nullable|array',
+            'dropdownOptions' => 'nullable|array',
+            'dropdownOptions.*' => 'nullable|array',
         ]);
 
         $templateSelectionMode = $validated['templateSelectionMode'];
@@ -2034,6 +2066,9 @@ class AdminController extends Controller
             'gender',
             'student_email',
             'university',
+            'trainee_level',
+            'department',
+            'work_location',
             'verification_token',
             'training_period',
             'phone',
@@ -2071,6 +2106,15 @@ class AdminController extends Controller
             ['key' => 'formFieldConfig'],
             ['value' => json_encode($fieldConfig)]
         );
+
+        $dropdownOptions = $request->input('dropdownOptions', []);
+        foreach (['trainee_level', 'department', 'work_location', 'purpose'] as $dropdownKey) {
+            $options = [];
+            if (isset($dropdownOptions[$dropdownKey]) && is_array($dropdownOptions[$dropdownKey])) {
+                $options = array_values(array_filter($dropdownOptions[$dropdownKey], fn($v) => trim((string)$v) !== ''));
+            }
+            Settings::updateOrCreate(['key' => "dropdownOptions_{$dropdownKey}"], ['value' => json_encode($options)]);
+        }
 
         return redirect()->route('admin.form-settings')->with('success', 'Form settings updated successfully!');
     }

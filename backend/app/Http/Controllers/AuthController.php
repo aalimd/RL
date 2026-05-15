@@ -130,7 +130,7 @@ class AuthController extends Controller
                 return false;
             }
 
-            return $this->google2fa()->verifyKey($secret, $code);
+            return $this->google2fa()->verifyKey((string) $secret, $code);
         }
 
         if ($user->two_factor_method === 'email') {

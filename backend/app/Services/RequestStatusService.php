@@ -2,19 +2,14 @@
 
 namespace App\Services;
 
-use App\Mail\RequestStatusUpdated;
+use App\Jobs\SendRequestStatusUpdatedNotifications;
+use App\Jobs\WarmApprovedLetterPdf;
 use App\Models\Request as RequestModel;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class RequestStatusService
 {
-    public function __construct(private TelegramService $telegramService)
-    {
-    }
-
     /**
      * Apply a normalized status transition to a request.
      *
@@ -59,8 +54,13 @@ class RequestStatusService
         }
 
         $request->save();
+        $request = $request->fresh();
 
-        return $request->fresh();
+        if ($request->status === 'Approved' && config('queue.default') !== 'sync') {
+            WarmApprovedLetterPdf::dispatch($request->id);
+        }
+
+        return $request;
     }
 
     /**
@@ -68,45 +68,7 @@ class RequestStatusService
      */
     public function notifyStudent(RequestModel $request): void
     {
-        try {
-            Mail::to($request->student_email)->send(new RequestStatusUpdated($request));
-        } catch (\Exception $e) {
-            Log::error('Status update email failed: ' . $e->getMessage(), [
-                'request_id' => $request->id,
-                'tracking_id' => $request->tracking_id,
-                'status' => $request->status,
-            ]);
-        }
-
-        if (!$request->telegram_chat_id) {
-            return;
-        }
-
-        $message = "🔔 <b>Update on your Request</b>\n\n";
-        $message .= "Your request status has been updated to: <b>{$request->status}</b>\n";
-
-        if ($request->status === 'Approved') {
-            $message .= "✅ Congratulations! Check your email for the recommendation letter.";
-        } elseif ($request->status === 'Rejected') {
-            $message .= "❌ We are sorry, but your request has been declined. Check your email for details.";
-        } elseif ($request->status === 'Needs Revision') {
-            $message .= "📝 Additional information is needed. Please check your email.";
-        }
-
-        $studentMessage = $this->studentMessage($request);
-        if ($studentMessage) {
-            $message .= "\n\n🗒️ <b>Message:</b> " . e($studentMessage);
-        }
-
-        try {
-            $this->telegramService->sendMessageToChat($request->telegram_chat_id, $message);
-        } catch (\Exception $e) {
-            Log::error('Failed to send Telegram update to student: ' . $e->getMessage(), [
-                'request_id' => $request->id,
-                'tracking_id' => $request->tracking_id,
-                'status' => $request->status,
-            ]);
-        }
+        SendRequestStatusUpdatedNotifications::dispatch($request->id);
     }
 
     public function studentMessage(RequestModel $request): ?string
