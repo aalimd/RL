@@ -748,6 +748,9 @@ class AdminController extends Controller
      */
     public function editTemplate($id)
     {
+        $settings = $this->getSettings();
+        $template = Template::findOrFail($id);
+        $draftLoaded = false;
         $dropdownOptions = $this->resolveDropdownOptions($settings);
 
         if (
