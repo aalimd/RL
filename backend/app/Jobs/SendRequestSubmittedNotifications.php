@@ -8,19 +8,14 @@ use App\Models\Request as RequestModel;
 use App\Models\User;
 use App\Services\TelegramService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
-class SendRequestSubmittedNotifications implements ShouldQueue
+class SendRequestSubmittedNotifications
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public int $tries = 3;
-    public int $timeout = 120;
+    use Dispatchable, Queueable, SerializesModels;
 
     public function __construct(
         public int $requestId,
@@ -28,7 +23,6 @@ class SendRequestSubmittedNotifications implements ShouldQueue
         public bool $notifyAdmins = true,
         public bool $notifyTelegram = true,
     ) {
-        $this->onQueue('notifications');
     }
 
     public function handle(TelegramService $telegramService): void

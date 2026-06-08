@@ -1245,7 +1245,7 @@ class PageController extends Controller
             'footer' => $this->letterService->sanitizeHtml($content['footer'] ?? ''),
             'signature' => $content['signature'] ?? [],
             'qrCode' => $content['qrCode'] ?? '',
-            'embedded' => $httpRequest->ajax() || $httpRequest->has('embedded'),
+            'embedded' => true,
             'isDraft' => $isDraft,
         ]);
     }

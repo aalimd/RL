@@ -4,8 +4,9 @@ Use this checklist when deploying the current RL changes to production.
 
 ## Confidence Summary
 
-- Local automated verification passed: `72 tests, 345 assertions`
-- Email system was refactored and verified with rendering tests
+- Local automated verification passed: `90 tests, 487 assertions`
+- Transactional request/status emails now send inline, so they do not depend on a queue worker
+- Email templates and delivery flows were verified with rendering and regression tests
 - Hostinger compatibility work is already included
 - The main remaining deployment risk is environment configuration, not application logic
 
@@ -73,7 +74,7 @@ After deploy, verify these pages first:
 1. `/`
 2. `/request`
 3. `/track`
-4. `/admin/login`
+4. `/login`
 5. `/admin/email-templates`
 
 Then verify these workflows:
@@ -104,6 +105,7 @@ Do not restore the database casually if production already accepted new requests
 - Forgetting writable permissions on `backend/storage` or `backend/bootstrap/cache`
 - Deploying with wrong `APP_URL`
 - Running with broken mail credentials and assuming emails are fine
+- Leaving old queued notification jobs unreviewed after a previous deploy
 - Skipping the DB backup before `migrate --force`
 
 ## Recommended Release Style

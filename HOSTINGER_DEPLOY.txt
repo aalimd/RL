@@ -79,6 +79,6 @@ TROUBLESHOOTING
   4. Create/writable framework folders: `mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache`.
   5. Run `php artisan optimize:clear` again.
 - "Cache table error" (e.g. SQL on `cache` table): set `CACHE_STORE=file` in the production `.env`, then delete `bootstrap/cache/*.php`.
-- "Emails appear successful but are not delivered": make sure `MAIL_FAILOVER_MAILERS` does not end with `log` in production.
+- "Emails appear successful but are not delivered": make sure `MAIL_FAILOVER_MAILERS` does not end with `log` in production. If this happened before the inline notification fix, inspect the `jobs` table before processing or deleting old `notifications` jobs.
 - "No laravel.log file": if `LOG_CHANNEL=errorlog`, check hosting PHP/Apache error logs.
 - "Uploaded logo/background not visible": confirm the file exists in `backend/storage/app/public`; if `storage:link` is unavailable, the app will serve it through `/media/...`.

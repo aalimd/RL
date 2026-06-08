@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Jobs\SendRequestStatusUpdatedNotifications;
 use App\Jobs\SyncRequestLetterToGoogleDrive;
 use App\Jobs\WarmApprovedLetterPdf;
 use App\Mail\TwoFactorCodeMail;
@@ -996,9 +995,10 @@ class SecurityRegressionTest extends TestCase
         Mail::assertSent(RequestStatusUpdated::class);
     }
 
-    public function test_admin_status_approval_queues_student_notification_and_pdf_warmup(): void
+    public function test_admin_status_approval_sends_student_notification_and_queues_pdf_warmup(): void
     {
         config(['queue.default' => 'database']);
+        Mail::fake();
         Queue::fake();
 
         $admin = $this->createAdminUser([
@@ -1025,9 +1025,7 @@ class SecurityRegressionTest extends TestCase
             ])
             ->assertRedirect();
 
-        Queue::assertPushed(SendRequestStatusUpdatedNotifications::class, function ($job) use ($request) {
-            return $job->requestId === $request->id;
-        });
+        Mail::assertSent(RequestStatusUpdated::class);
 
         Queue::assertPushed(WarmApprovedLetterPdf::class, function ($job) use ($request) {
             return $job->requestId === $request->id;

@@ -148,5 +148,4 @@ jobs:
           server-dir: ./
 
       - name: 🚀 Trigger Unzip on Server
-        run: curl -s "${{ secrets.APP_URL }}/unzip_${{ github.sha }}.php"
-        continue-on-error: true
+        run: curl --fail-with-body --show-error --silent --location "${{ secrets.APP_URL }}/unzip_${{ github.sha }}.php"
