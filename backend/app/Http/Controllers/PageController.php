@@ -1212,14 +1212,26 @@ class PageController extends Controller
     }
 
     /**
-     * Lightweight approved-letter HTML preview.
+     * Lightweight letter HTML preview (Official or Draft).
      */
     public function previewLetter($tracking_id, Request $httpRequest)
     {
         $request = RequestModel::where('tracking_id', $tracking_id)->firstOrFail();
-        $this->ensureApprovedLetterAccess($request);
+        
+        // Expert SWE Approach: Determine if this is a draft preview or official letter
+        $isDraft = $request->status !== 'Approved';
+        
+        // Security check: Must be verified to see ANY letter content
+        if (!$this->hasValidTrackingVerification($request)) {
+            abort(403, 'Please verify your request before previewing the letter.');
+        }
 
-        $content = $this->letterService->generateLetterContent($request);
+        // If it's a draft, it must be in an editable/reviewable status
+        if ($isDraft && in_array($request->status, ['Rejected'], true)) {
+            abort(403, 'Rejected requests cannot be previewed.');
+        }
+
+        $content = $this->letterService->generateLetterContent($request, null, $isDraft);
 
         if ($content === [] || empty($content['template'])) {
             abort(404, 'Template not found');
@@ -1233,7 +1245,8 @@ class PageController extends Controller
             'footer' => $this->letterService->sanitizeHtml($content['footer'] ?? ''),
             'signature' => $content['signature'] ?? [],
             'qrCode' => $content['qrCode'] ?? '',
-            'embedded' => true,
+            'embedded' => $httpRequest->ajax() || $httpRequest->has('embedded'),
+            'isDraft' => $isDraft,
         ]);
     }
 

@@ -9,8 +9,9 @@
     $direction = $layout['direction'] ?? ($language === 'ar' ? 'rtl' : 'ltr');
     $embedded = (bool) ($embedded ?? false);
     $watermarkConfig = $layout['watermark'] ?? [];
-    $watermarkEnabled = (bool) ($watermarkConfig['enabled'] ?? false);
-    $watermarkText = !empty($watermarkConfig['text']) ? $watermarkConfig['text'] : ($request->tracking_id ?? 'OFFICIAL COPY');
+    $isDraft = (bool) ($isDraft ?? false);
+    $watermarkEnabled = (bool) ($watermarkConfig['enabled'] ?? false) || $isDraft;
+    $watermarkText = $isDraft ? 'DRAFT - NOT OFFICIAL' : (!empty($watermarkConfig['text']) ? $watermarkConfig['text'] : ($request->tracking_id ?? 'OFFICIAL COPY'));
     $showDigitalFooter = (bool) ($layout['footer']['enabled'] ?? true);
     $frameConfig = is_array($layout['frame'] ?? null) ? $layout['frame'] : [];
     $officialFrameEnabled = ($frameConfig['style'] ?? '') === 'ngha_green';
@@ -427,6 +428,11 @@
             text-align: center;
         }
 
+        .letter-watermark.is-draft-watermark {
+            color: rgba(220, 38, 38, 0.12);
+            font-size: 84pt;
+        }
+
         .letter-header,
         .letter-body,
         .letter-closing,
@@ -636,6 +642,13 @@
     @unless($embedded)
         <div class="toolbar no-print">
             <div class="toolbar-actions">
+                @if($isDraft)
+                    <div style="background: rgba(220, 38, 38, 0.1); border: 1px solid rgba(220, 38, 38, 0.2); padding: 0.5rem 1.1rem; border-radius: 999px; display: flex; align-items: center; gap: 0.6rem; margin-right: auto;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span style="color: #991b1b; font-weight: 800; font-size: 0.8rem; letter-spacing: 0.02em;">DRAFT PREVIEW</span>
+                    </div>
+                @endif
+
                 <a href="{{ url('/track/' . $request->tracking_id) }}" class="btn btn-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -643,25 +656,33 @@
                     </svg>
                     Back
                 </a>
-                <button onclick="printOfficialLetter()" class="btn btn-secondary" type="button">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 6 2 18 2 18 9" />
-                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                        <rect x="6" y="14" width="12" height="8" />
-                    </svg>
-                    Print Preview
-                </button>
-                <a href="{{ route('public.letter.pdf', ['tracking_id' => $request->tracking_id, 'download' => 1]) }}"
-                    class="btn btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" x2="12" y1="15" y2="3" />
-                    </svg>
-                    Download Official PDF
-                </a>
+                
+                @if(!$isDraft)
+                    <button onclick="printOfficialLetter()" class="btn btn-secondary" type="button">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 6 2 18 2 18 9" />
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                            <rect x="6" y="14" width="12" height="8" />
+                        </svg>
+                        Print Preview
+                    </button>
+                    <a href="{{ route('public.letter.pdf', ['tracking_id' => $request->tracking_id, 'download' => 1]) }}"
+                        class="btn btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" x2="12" y1="15" y2="3" />
+                        </svg>
+                        Download Official PDF
+                    </a>
+                @else
+                    <div class="btn btn-secondary" style="opacity: 0.6; cursor: not-allowed;" title="Approval pending">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Export Restricted
+                    </div>
+                @endif
             </div>
         </div>
     @endunless
@@ -688,7 +709,7 @@
     <div class="{{ $pageClass }}" style="{{ $pageStyle }}">
         <div class="{{ $frameClass }}" style="{{ $customFrameStyle }}">
             @if($watermarkEnabled)
-                <div class="letter-watermark">{{ $watermarkText }}</div>
+                <div class="letter-watermark {{ $isDraft ? 'is-draft-watermark' : '' }}">{{ $watermarkText }}</div>
             @endif
 
             <!-- Header -->
@@ -777,7 +798,7 @@
                 </div>
             </div>
 
-            @if($showDigitalFooter && $verifyUrl)
+            @if($showDigitalFooter && $verifyUrl && !$isDraft)
                 <div class="letter-digital-footer">
                     <strong>Digitally verified document</strong>
                     <span>Reference ID: {{ $request->tracking_id }}</span>

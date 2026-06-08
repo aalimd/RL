@@ -839,7 +839,7 @@
 
                         @if($canEditRequest)
                             <div class="action-stack">
-                                <form method="POST" action="{{ route('public.request.edit') }}">
+                                <form method="POST" action="{{ route('public.request.edit') }}" style="display: contents;">
                                     @csrf
                                     <input type="hidden" name="tracking_id" value="{{ $request->tracking_id }}">
                                     <button type="submit" class="primary-action">
@@ -847,6 +847,12 @@
                                         Edit Request
                                     </button>
                                 </form>
+
+                                <a href="{{ route('public.letter.preview', ['tracking_id' => $request->tracking_id]) }}"
+                                    class="secondary-action" target="_blank">
+                                    <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                                    Preview Draft Letter
+                                </a>
                             </div>
                         @elseif($request->status === 'Approved')
                             <div class="action-stack">
@@ -854,6 +860,14 @@
                                     class="primary-action" target="_blank">
                                     <i data-lucide="eye" style="width: 18px; height: 18px;"></i>
                                     Review Official Letter
+                                </a>
+                            </div>
+                        @elseif(in_array($request->status, ['Submitted', 'Pending', 'Under Review'], true))
+                            <div class="action-stack">
+                                <a href="{{ route('public.letter.preview', ['tracking_id' => $request->tracking_id]) }}"
+                                    class="primary-action" target="_blank" style="background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-color);">
+                                    <i data-lucide="file-text" style="width: 18px; height: 18px;"></i>
+                                    Preview Draft Letter
                                 </a>
                             </div>
                         @endif

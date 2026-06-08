@@ -1003,25 +1003,24 @@
                             </button>
                         </div>
 
-                        <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 300px; margin: 0 auto;">
-                            @if(session('telegram_bot_username'))
-                                <a href="https://t.me/{{ session('telegram_bot_username') }}?start={{ session('tracking_id') }}"
-                                    target="_blank" class="btn-nav"
-                                    style="justify-content: center; background: #0088cc; color: white; border: none;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                                        style="margin-right: 8px;">
-                                        <path
-                                            d="M21.198 2.433a2.242 2.242 0 0 0-1.022.215l-8.609 3.33c-2.068.8-4.133 1.598-5.724 2.21a405.15 405.15 0 0 1-2.849 1.09c-.42.147-.99.332-1.473.901-.728.968.193 1.798.919 2.286 1.61.516 3.275 1.009 3.816 1.177l.176.056c.112.037.162.145.148.25l-.29 3.392a1.867 1.867 0 0 0 1.29 1.9c.706.182 1.98.486 2.502.584.453.085.803-.255 1.026-.52.545-.583 1.258-1.353 1.776-1.93.072-.08.183-.09.261-.023 1.54 1.154 3.352 2.515 4.966 3.722.652.486 1.611.332 1.956-.563.858-2.617 2.458-7.94 3.633-11.996a2.288 2.288 0 0 0-.256-1.897 2.27 2.27 0 0 0-1.246-.994z" />
-                                    </svg>
-                                    Subscribe to Updates
-                                </a>
-                            @endif
-                            <a href="{{ route('public.tracking') }}" class="btn-nav btn-next" style="justify-content: center;">
+                        <div class="email-guidance-card" style="border-color: rgba(99, 102, 241, 0.18); background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(99, 102, 241, 0.04));">
+                            <div class="email-guidance-icon" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                                <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+                            </div>
+                            <div>
+                                <p class="email-guidance-title">How to preview your letter</p>
+                                <p class="email-guidance-text">
+                                    Click <strong>Track Request</strong> below and verify your Student / National ID to access your secure <strong>Draft Preview</strong>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 300px; margin: 0.5rem auto 0;">
+                            <a href="{{ route('public.tracking', ['id' => session('tracking_id')]) }}" class="btn-nav btn-next" style="justify-content: center;">
+                                <i data-lucide="search" style="width: 18px; height: 18px;"></i>
                                 Track Request
                             </a>
-                            <a href="{{ route('home') }}" style="color: var(--text-secondary); text-decoration: none;">Return
-                                Home</a>
+                            <a href="{{ route('home') }}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem; font-weight: 600;">Return Home</a>
                         </div>
                     </div>
                 </div>

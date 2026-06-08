@@ -123,7 +123,7 @@ class LetterService
     /**
      * Generate all letter content sections with variables replaced
      */
-    public function generateLetterContent(Request $request, ?Template $template = null): array
+    public function generateLetterContent(Request $request, ?Template $template = null, bool $isDraft = false): array
     {
         $formData = [];
         $formData = $request->form_data ?? [];
@@ -154,7 +154,7 @@ class LetterService
         $variables = $this->getVariables($request);
 
         // Helper to replace signature placeholder
-        if ($template->signature_image && $request->status === 'Approved') {
+        if ($template->signature_image && $request->status === 'Approved' && !$isDraft) {
             $sigImg = '<div style="margin-bottom: 5px;"><img src="' . $template->signature_image . '" style="max-height: 80px;" alt="Signature"></div>';
             $stampImg = '';
             if ($template->stamp_image) {
@@ -192,7 +192,7 @@ class LetterService
         $layoutSettings['direction'] = $layoutSettings['direction'] ?? ($layoutSettings['language'] === 'ar' ? 'rtl' : 'ltr');
 
         $qrCodeEnabled = (bool) ($layoutSettings['qrCode']['enabled'] ?? true);
-        $variables['{{qrCode}}'] = $qrCodeEnabled ? $this->generateQrCodeHtml($request) : '';
+        $variables['{{qrCode}}'] = ($qrCodeEnabled && !$isDraft) ? $this->generateQrCodeHtml($request) : '';
 
         // Re-bind closure to use updated variables
         $replaceVars = function ($text) use ($variables) {
@@ -225,14 +225,22 @@ class LetterService
             'phone' => $replaceVars($template->signature_phone)
         ];
 
+        // Securely handle signature data for draft mode: keep metadata, strip official images
+        $signatureData = $signature;
+        if ($isDraft) {
+            $signatureData['image'] = null;
+            $signatureData['stamp'] = null;
+        }
+
         return [
             'template' => $template,
             'header' => $headerContent,
             'body' => $bodyContent,
             'footer' => $footerContent,
-            'signature' => $signature,
+            'signature' => $signatureData,
             'layout' => $layoutSettings,
-            'qrCode' => $qrCodeEnabled ? $this->generateQrCodeHtml($request) : '',
+            'qrCode' => ($qrCodeEnabled && !$isDraft) ? $this->generateQrCodeHtml($request) : '',
+            'isDraft' => $isDraft,
         ];
     }
 
@@ -509,6 +517,7 @@ class LetterService
             '{{him}}' => $pronouns['object'],
             '{{his}}' => $pronouns['possessive'],
             '{{himself}}' => $pronouns['reflexive'],
+            '{{hers}}' => $pronouns['possessive_pronoun'],
             // Gender-aware pronouns (capitalized for sentence starts)
             '{{He}}' => $pronounsCapitalized['subject'],
             '{{Him}}' => $pronounsCapitalized['object'],
@@ -517,7 +526,26 @@ class LetterService
             '{{title}}' => $pronouns['title'],
             // Gender value itself
             '{{gender}}' => $gender,
+            // A vs An helper (dynamic indefinite article)
+            '{{a_an}}' => $this->getIndefiniteArticle($request->trainee_level ?? ''),
+            '{{A_An}}' => ucfirst($this->getIndefiniteArticle($request->trainee_level ?? '')),
         ];
+    }
+
+    /**
+     * Determine correct indefinite article (a or an) based on phonetics
+     */
+    private function getIndefiniteArticle(string $word): string
+    {
+        $word = trim($word);
+        if ($word === '') {
+            return 'a';
+        }
+
+        $vowels = ['a', 'e', 'i', 'o', 'u'];
+        $firstLetter = strtolower(substr($word, 0, 1));
+
+        return in_array($firstLetter, $vowels, true) ? 'an' : 'a';
     }
 
 

@@ -312,7 +312,7 @@
                 </div>
             </div>
 
-            <iframe class="preview-frame" src="{{ $previewUrl }}" title="Official recommendation letter preview"></iframe>
+            <iframe class="preview-frame" src="{{ $previewUrl }}{{ str_contains($previewUrl, '?') ? '&' : '?' }}embedded=1" title="Official recommendation letter preview"></iframe>
 
             <p class="viewer-fallback">
                 If the preview does not open on your device, use
