@@ -151,6 +151,7 @@ jobs:
               if (file_exists(\$extractPath . '/vendor/autoload.php')) {
                   require \$extractPath . '/vendor/autoload.php';
                   \$app = require_once \$extractPath . '/bootstrap/app.php';
+                  \$app->instance('request', \Illuminate\Http\Request::create('http://localhost'));
                   \$kernel = \$app->make(Illuminate\Contracts\Http\Kernel::class);
                   \$kernel->bootstrap();
 
