@@ -199,7 +199,7 @@ jobs:
           timeout: 600000
           security: loose
           local-dir: ./deploy_package/
-          server-dir: ./
+          server-dir: /domains/aamd.sa/public_html/Apps/RL/
 
       - name: 🚀 Trigger Unzip on Server
         run: curl --fail-with-body --show-error --silent --location "${{ secrets.APP_URL }}/unzip_${{ github.sha }}.php?token=${{ github.sha }}"
