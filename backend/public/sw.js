@@ -1,12 +1,12 @@
-const CACHE_NAME = 'aamd-rl-cache-v1';
-const OFFLINE_URL = '/offline.html';
+const CACHE_NAME = 'aamd-rl-cache-v2';
+const OFFLINE_URL = '/RL/offline.html';
 
 // Assets to cache immediately on install
 const PRECACHE_ASSETS = [
     OFFLINE_URL,
-    '/icons/icon-192x192.png',
-    '/icons/icon-512x512.png',
-    '/manifest.json'
+    '/RL/icons/icon-192x192.png',
+    '/RL/icons/icon-512x512.png',
+    '/RL/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {

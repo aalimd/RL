@@ -9,6 +9,20 @@ if (config('app.env') === 'production') {
     URL::forceScheme('https');
 }
 
+// Serve PWA static files (fallback if .htaccess rewrite doesn't catch)
+Route::get('/sw.js', function () {
+    return response()->file(public_path('sw.js'), ['Content-Type' => 'application/javascript']);
+});
+Route::get('/offline.html', function () {
+    return response()->file(public_path('offline.html'));
+});
+Route::get('/manifest.json', function () {
+    return response()->file(public_path('manifest.json'), ['Content-Type' => 'application/manifest+json']);
+});
+Route::get('/icons/{path}', function ($path) {
+    return response()->file(public_path("icons/$path"));
+})->where('path', '.*');
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes

@@ -1500,7 +1500,7 @@
 
         // PWA / Service Worker Registration
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/Apps/RL/sw.js')
+            navigator.serviceWorker.register('{{ asset("sw.js") }}')
                 .catch(() => {});
         }
 

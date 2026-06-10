@@ -15,7 +15,11 @@
     RewriteRule \.(?:sql|zip)$ - [F,L,NC]
 
     # RewriteBase /
-    
+
+    # Serve PWA files (sw.js, manifest.json, offline.html, icons) from backend/public/
+    RewriteRule ^(sw\.js|manifest\.json|offline\.html)$ backend/public/$1 [L]
+    RewriteRule ^icons/(.*)$ backend/public/icons/$1 [L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
