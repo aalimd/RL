@@ -10,6 +10,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="{{ $settings['primaryColor'] ?? '#4F46E5' }}">
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="{{ $settings['siteName'] ?? 'AAMD RL' }}">
+    <link rel="apple-touch-icon" href="{{ asset('icons/icon-192x192.png') }}">
     <title>@yield('title', 'Admin Panel')</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1491,6 +1497,26 @@
         })();
 
         feather.replace();
+
+        // PWA / Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/Apps/RL/sw.js')
+                .catch(() => {});
+        }
+
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('installPwaBtn');
+            if (btn) btn.style.display = 'inline-flex';
+        });
+
+        window.installPwa = function () {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+        };
 
         // Dark Mode Toggle
         function toggleDarkMode() {

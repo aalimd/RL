@@ -8,6 +8,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="{{ $settings['primaryColor'] ?? '#6366F1' }}">
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="{{ $settings['siteName'] ?? 'AAMD RL' }}">
+    <link rel="apple-touch-icon" href="{{ asset('icons/icon-192x192.png') }}">
     <title>@yield('title', $settings['siteName'] ?? 'Academic Portal')</title>
 
     <!-- Google Fonts -->
@@ -373,7 +379,29 @@
         .nav-links {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.5rem;
+        }
+
+        .pwa-install-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.375rem;
+            padding: 0.5rem 0.875rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.8125rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .pwa-install-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--primary);
+            border-color: var(--primary);
+            transform: translateY(-2px);
         }
 
         /* ========================================
@@ -445,6 +473,10 @@
             color: var(--primary);
             border-color: var(--primary);
             transform: translateY(-2px);
+        }
+
+        #installPwaBtn {
+            display: none;
         }
 
         /* ========================================
@@ -702,7 +734,7 @@
         }
 
         @media (max-width: 768px) {
-            .nav-links {
+            .nav-links, #installPwaBtn {
                 display: none;
             }
 
@@ -767,6 +799,27 @@
 
         // Initialize Lucide Icons
         lucide.createIcons();
+
+        // ========== PWA / Service Worker Registration ==========
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/Apps/RL/sw.js')
+                .then(() => console.log('SW registered'))
+                .catch(() => console.log('SW registration failed'));
+        }
+
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const btn = document.getElementById('installPwaBtn');
+            if (btn) btn.style.display = 'inline-flex';
+        });
+
+        window.installPwa = function () {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+        };
 
         // Mobile Menu Toggle
         function toggleMobileMenu() {

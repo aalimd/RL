@@ -879,6 +879,10 @@
                         <i data-lucide="moon" class="moon-icon"></i>
                         <i data-lucide="sun" class="sun-icon"></i>
                     </button>
+                    <button id="installPwaBtn" class="pwa-install-btn" onclick="installPwa()" title="Install App">
+                        <i data-lucide="download" style="width: 16px; height: 16px;"></i>
+                        Install
+                    </button>
                     <a href="/RL/login" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
                         <i data-lucide="shield" style="width: 16px; height: 16px;"></i>
                         Admin
