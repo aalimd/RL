@@ -188,18 +188,16 @@ jobs:
           }
           ?>" > "../deploy_package/$SCRIPT_NAME"
 
-      - name: 📂 Sync files (Upload Zip)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: 📂 Upload Zip via SFTP
+        uses: appleboy/scp-action@v0.1.7
         with:
-          server: ${{ secrets.FTP_SERVER }}
+          host: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          protocol: sftp
           port: 65002
-          timeout: 600000
-          security: loose
-          local-dir: ./deploy_package/
-          server-dir: /domains/aamd.sa/public_html/Apps/RL/
+          source: "deploy_package/*"
+          target: "domains/aamd.sa/public_html/Apps/RL/"
+          strip_components: 1
 
       - name: 🚀 Trigger Unzip on Server
         run: curl --fail-with-body --show-error --silent --location "${{ secrets.APP_URL }}/unzip_${{ github.sha }}.php?token=${{ github.sha }}"
