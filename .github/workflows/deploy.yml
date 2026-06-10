@@ -27,16 +27,28 @@ jobs:
       - name: 📦 Create Deployment Package
         run: |
           mkdir deploy_package
+          
+          # Copy root files to deploy_package
+          cp index.php deploy_package/
+          cp .htaccess deploy_package/
+          if [ -d "install" ]; then cp -r install deploy_package/install/; fi
+          
           cd backend
           # Define unique names
           ZIP_NAME="release_${{ github.sha }}.zip"
           SCRIPT_NAME="unzip_${{ github.sha }}.php"
+          TOKEN="${{ github.sha }}"
           
           # Zip the contents
           zip -r "../deploy_package/$ZIP_NAME" . -x "*.git*" "*.github*" "node_modules/*" "storage/*.key" "storage/logs/*" ".env" "phpunit.xml" ".DS_Store" "tests/*"
           
           # Create Smart & SAFE Extraction Script
           echo "<?php
+          if (!isset(\$_GET['token']) || \$_GET['token'] !== '$TOKEN') {
+              http_response_code(403);
+              die('Forbidden');
+          }
+
           // Increase limits
           ini_set('memory_limit', '512M');
           ini_set('max_execution_time', 300);
@@ -46,7 +58,6 @@ jobs:
 
           \$zipFile = '$ZIP_NAME';
           \$extractPath = __DIR__ . '/backend';
-          \$lockFile = 'deploy.lock';
 
           try {
               // 1. INTEGRITY CHECK (Verify Zip before touching anything)
@@ -63,6 +74,28 @@ jobs:
               }
               @unlink(\$testFile);
               echo '✅ Write Permission Verified.'.PHP_EOL;
+
+              // 2.5 SMART CLEANUP (Prevent Ghost Code, Protect .env)
+              \$foldersToDelete = [
+                  'app', 'bootstrap/cache', 'config', 'database', 'public/build', 'resources', 'routes', 'vendor'
+              ];
+              foreach (\$foldersToDelete as \$folder) {
+                  \$target = \$extractPath . '/' . \$folder;
+                  if (file_exists(\$target)) {
+                      echo '🧹 Removing old ' . \$folder . '...'.PHP_EOL;
+                      // recursive delete
+                      \$files = new RecursiveIteratorIterator(
+                          new RecursiveDirectoryIterator(\$target, RecursiveDirectoryIterator::SKIP_DOTS),
+                          RecursiveIteratorIterator::CHILD_FIRST
+                      );
+                      foreach (\$files as \$fileinfo) {
+                          \$todo = (\$fileinfo->isDir() ? 'rmdir' : 'unlink');
+                          @\$todo(\$fileinfo->getRealPath());
+                      }
+                      @rmdir(\$target);
+                  }
+              }
+              echo '✅ Smart Cleanup Complete (Kept .env and storage).'.PHP_EOL;
 
               // 3. EXTRACTION
               if (!file_exists(\$extractPath)) {
@@ -98,6 +131,11 @@ jobs:
               echo '✅ Permissions Fixed.'.PHP_EOL;
 
               // 4. POST-DEPLOYMENT OPTIMIZATION
+              if (function_exists('opcache_reset')) {
+                  opcache_reset();
+                  echo '✅ OpCache Reset.'.PHP_EOL;
+              }
+
               if (file_exists(\$extractPath . '/vendor/autoload.php')) {
                   require \$extractPath . '/vendor/autoload.php';
                   \$app = require_once \$extractPath . '/bootstrap/app.php';
@@ -106,11 +144,9 @@ jobs:
 
                   echo '✅ Laravel Bootstrapped.'.PHP_EOL;
 
-                  // Force maintenance mode off if stuck? No, just standard routine.
                   Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
                   echo '✅ Database Migrated.'.PHP_EOL;
 
-                  // Encrypt sensitive settings (Safe to run multiple times)
                   Illuminate\Support\Facades\Artisan::call('settings:encrypt');
                   echo '✅ Settings Encrypted.'.PHP_EOL;
 
@@ -148,4 +184,4 @@ jobs:
           server-dir: ./
 
       - name: 🚀 Trigger Unzip on Server
-        run: curl --fail-with-body --show-error --silent --location "${{ secrets.APP_URL }}/unzip_${{ github.sha }}.php"
+        run: curl --fail-with-body --show-error --silent --location "${{ secrets.APP_URL }}/unzip_${{ github.sha }}.php?token=${{ github.sha }}"

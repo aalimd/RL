@@ -14,14 +14,20 @@ Updated: Apr 24, 2026
    - Extract the files.
 
 3. AUTOMATED DEPLOYMENT (GitHub Actions) - **RECOMMENDED**
+   - **CRITICAL:** Turn OFF Hostinger's built-in Git Auto-Deploy! If you leave it on, Hostinger will automatically delete your `.env` and `storage/` files on every push.
+   - Go to your GitHub Repository Settings -> Secrets and variables -> Actions.
+   - Add these 4 Repository Secrets:
+     1. `FTP_SERVER` (e.g., ftp.yourdomain.com)
+     2. `FTP_USERNAME`
+     3. `FTP_PASSWORD`
+     4. `APP_URL` (e.g., https://yourdomain.com)
    - Just push your changes to the `main` branch.
-   - The system will automatically:
-     1. Upload files.
-     2. Extract them to the correct `backend/` folder.
-     3. Update the database (`migrate --force`).
-     4. Clear the cache.
+   - The GitHub Action will automatically:
+     1. Safely package your code.
+     2. Upload files via secure FTP.
+     3. Safely delete old backend files (preventing ghost code) while protecting `.env` and `storage`.
+     4. Extract the new code and run `migrate --force`.
    - **No manual intervention required.**
-
 4. MANUAL INSTALLATION (Emergency Only)
    - Create a database in Hostinger.
    - Import the file: `/install/database/fresh_install.sql` via phpMyAdmin.
